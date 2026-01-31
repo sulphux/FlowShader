@@ -16,7 +16,6 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   const meshRef = useRef<THREE.Mesh | null>(null);
   const bufferRef = useRef<Float32Array>(new Float32Array(4)); 
   
-  // Refy do kontroli pętli
   const requestRef = useRef<number>();
   const lastUpdateRef = useRef<number>(0);
   const isMountedRef = useRef(true);
@@ -26,23 +25,23 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
       if (!connection) return 'vec4';
       const sourceNode = nodes.find(n => n.id === connection.source);
       if (!sourceNode) return 'vec4';
-      const outputDef = sourceNode.data.definition.outputs.find((o: any) => o.id === connection.sourceHandle);
-      return outputDef ? outputDef.type : 'vec4';
+      // Dla splita bierzemy typ wejścia jako źródło, dla reszty wyjście
+      if (sourceNode.data.definition.id.includes('split')) {
+          return sourceNode.data.definition.inputs[0].type;
+      }
+      return sourceNode.data.definition.outputs.find((o: any) => o.id === connection.sourceHandle)?.type || 'vec4';
   }, [edges, nodes, id]);
 
   useEffect(() => {
       isMountedRef.current = true;
       const width = 1;
       const height = 1;
-      
       const renderer = new THREE.WebGLRenderer({ alpha: true });
       renderer.setSize(width, height);
       
       const target = new THREE.WebGLRenderTarget(width, height, {
-          type: THREE.FloatType, 
-          format: THREE.RGBAFormat,
-          minFilter: THREE.NearestFilter,
-          magFilter: THREE.NearestFilter,
+          type: THREE.FloatType, format: THREE.RGBAFormat,
+          minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter,
       });
 
       const scene = new THREE.Scene();
@@ -72,14 +71,12 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   useEffect(() => {
       const updateShader = () => {
           if (!rendererRef.current || !meshRef.current || !isMountedRef.current) return;
-
           try {
               const currentNodes = getNodes();
               const currentEdges = getEdges();
               const safeNodes: GraphNode[] = currentNodes.map(node => ({
                 id: node.id, type: node.type || 'shaderNode', data: node.data
               }));
-
               const code = compileGraphToGLSL(safeNodes, currentEdges, id);
               
               const oldMat = meshRef.current.material as THREE.ShaderMaterial;
@@ -90,11 +87,8 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
               });
               meshRef.current.material = newMat;
               oldMat.dispose();
-          } catch (e) {
-              // Błędy w trakcie pisania ignorujemy
-          }
+          } catch (e) {}
       };
-
       const interval = setInterval(updateShader, 500); 
       updateShader();
       return () => clearInterval(interval);
@@ -102,47 +96,34 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
 
   useEffect(() => {
       const startTime = Date.now();
-
       const loop = () => {
           if (!isMountedRef.current) return;
-
           requestRef.current = requestAnimationFrame(loop);
-
-          // OGRANICZNIK 10 FPS
+          
           const now = Date.now();
-          if (now - lastUpdateRef.current < 100) return;
+          if (now - lastUpdateRef.current < 100) return; // 10 FPS Limit
           lastUpdateRef.current = now;
 
           if(rendererRef.current && sceneRef.current && meshRef.current && targetRef.current) {
               const mat = meshRef.current.material as THREE.ShaderMaterial;
               mat.uniforms.iTime.value = (now - startTime) * 0.001;
-
               try {
                   rendererRef.current.setRenderTarget(targetRef.current);
                   rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
                   rendererRef.current.readRenderTargetPixels(targetRef.current, 0, 0, 1, 1, bufferRef.current);
                   rendererRef.current.setRenderTarget(null);
-
-                  if (isMountedRef.current) {
-                      setValues([bufferRef.current[0], bufferRef.current[1], bufferRef.current[2], bufferRef.current[3]]);
-                  }
-              } catch (e) { }
+                  if (isMountedRef.current) setValues([bufferRef.current[0], bufferRef.current[1], bufferRef.current[2], bufferRef.current[3]]);
+              } catch (e) {}
           }
       };
-      
       loop();
-
-      return () => {
-          if (requestRef.current) cancelAnimationFrame(requestRef.current);
-      };
+      return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
   }, []);
 
   const Row = ({ label, value, color }: { label: string, value: number, color: string }) => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <span style={{ fontWeight: 'bold', color: color, fontSize: '14px', marginRight: '10px' }}>{label}:</span> 
-          <span style={{ color: color, fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace' }}>
-            {value.toFixed(3)}
-          </span>
+          <span style={{ color: color, fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace' }}>{value.toFixed(3)}</span>
       </div>
   );
 
@@ -156,7 +137,7 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
           </div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <Row label="X" value={values[0]} color="#ff5252" />
-              {(inputType === 'vec2' || inputType === 'vec3' || inputType === 'vec4') && <Row label="Y" value={values[1]} color="#69f0ae" />}
+              {inputType !== 'float' && (inputType === 'vec2' || inputType === 'vec3' || inputType === 'vec4') && <Row label="Y" value={values[1]} color="#69f0ae" />}
               {(inputType === 'vec3' || inputType === 'vec4') && <Row label="Z" value={values[2]} color="#448aff" />}
               {inputType === 'vec4' && <div style={{ borderTop: '1px solid #333', marginTop: '4px', paddingTop: '4px' }}><Row label="W" value={values[3]} color="#aaa" /></div>}
           </div>

@@ -30,16 +30,12 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
     if (node) sorted.push(node);
   };
 
-  if (targetNodeId) {
-      visit(targetNodeId);
-  } else {
-      nodes.forEach(node => visit(node.id));
-  }
+  if (targetNodeId) visit(targetNodeId);
+  else nodes.forEach(node => visit(node.id));
   
   return sorted;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeId?: string): string => {
   const safeEdges = edges as GraphEdge[];
   const sortedNodes = sortNodesTopologically(nodes, safeEdges, targetNodeId);
@@ -50,56 +46,61 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
   sortedNodes.forEach(node => {
     const def = node.data?.definition;
     if (!def) return;
-    if (def.outputs.length === 0 && def.id !== 'output' && node.id !== targetNodeId) {
-        return; 
-    }
+    // Pomiń nody bez wyjść (chyba że to Output lub Target)
+    if (def.outputs.length === 0 && def.id !== 'output' && node.id !== targetNodeId) return;
     
     const inputs: Record<string, string> = {}; 
     
     def.inputs.forEach(inputDef => {
-      const potentialEdges = safeEdges.filter(e => e.target === node.id && e.targetHandle === inputDef.id);
-      const validEdge = potentialEdges.find(e => nodeVarMap[e.source]);
+      const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
       
-      if (validEdge) {
-        let sourceVarName = `var_${validEdge.source.replace(/-/g, '_')}`;
+      if (edge && nodeVarMap[edge.source]) {
+        let sourceVarName = nodeVarMap[edge.source];
+        const sourceNode = nodes.find(n => n.id === edge.source);
         
-        const swizzleChannels = ['x', 'y', 'z', 'w', 'r', 'g', 'b', 'a'];
-        let isSwizzled = false;
-        if (validEdge.sourceHandle && swizzleChannels.includes(validEdge.sourceHandle)) {
-            sourceVarName += `.${validEdge.sourceHandle}`;
-            isSwizzled = true;
+        // 1. USTALANIE TYPU ŹRÓDŁA
+        // Musimy wiedzieć, jaki typ ma zmienna źródłowa, żeby ją poprawnie rzutować
+        let sourceRawType = 'float';
+        
+        // Specjalna obsługa dla Splita - jego zmienna ma typ wejścia, a nie wyjścia
+        if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
+             sourceRawType = sourceNode.data.definition.inputs[0].type;
+        } else {
+             sourceRawType = sourceNode?.data.definition.outputs.find(o => o.id === edge.sourceHandle)?.type || 'float';
         }
 
-        const sourceNode = nodes.find(n => n.id === validEdge.source);
-        let finalExpression = sourceVarName;
+        // Obsługa swizzlingu (np. .x, .y, .z)
+        const isSwizzled = edge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(edge.sourceHandle);
+        
+        // Jeśli swizzling, to efektywny typ to float (dla pojedynczych kanałów)
+        const effectiveSourceType = isSwizzled ? 'float' : sourceRawType;
+        const sourceExpression = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
 
-        if (sourceNode?.data?.definition) {
-             let sourceType = sourceNode.data.definition.outputs?.[0]?.type || 'float';
-             if (isSwizzled) sourceType = 'float';
-             
-             const targetType = inputDef.type;
+        // 2. JAWNA KONWERSJA (EXPLICIT CASTING)
+        // GLSL nie wybacza. Musimy użyć konstruktorów.
+        const targetType = inputDef.type;
+        let finalExpr = sourceExpression;
 
-             // --- AUTO-CASTING (Wewnątrz grafu) ---
-             if (targetType === 'vec4') {
-                 if (sourceType === 'float') finalExpression = `vec4(${sourceVarName}, ${sourceVarName}, ${sourceVarName}, 1.0)`;
-                 else if (sourceType === 'vec2') finalExpression = `vec4(${sourceVarName}, 0.0, 1.0)`;
-                 else if (sourceType === 'vec3') finalExpression = `vec4(${sourceVarName}, 1.0)`;
-             }
-             else if (targetType === 'vec3') {
-                 if (sourceType === 'float') finalExpression = `vec3(${sourceVarName})`;
-                 else if (sourceType === 'vec2') finalExpression = `vec3(${sourceVarName}, 0.0)`;
-                 else if (sourceType === 'vec4') finalExpression = `vec3(${sourceVarName})`; 
-             }
-             else if (targetType === 'vec2') {
-                 if (sourceType === 'float') finalExpression = `vec2(${sourceVarName})`;
-                 else if (sourceType === 'vec3' || sourceType === 'vec4') finalExpression = `vec2(${sourceVarName})`; 
-             }
-             // COMPOSE FIX: Jeśli wejście to float, a podłączono wektor -> wyciągamy X
-             else if (targetType === 'float') {
-                 if (['vec2', 'vec3', 'vec4'].includes(sourceType)) finalExpression = `${sourceVarName}.x`;
-             }
+        if (effectiveSourceType !== targetType) {
+          if (targetType === 'float') {
+            if (['vec2', 'vec3', 'vec4'].includes(effectiveSourceType)) finalExpr = `${sourceExpression}.x`;
+          } 
+          else if (targetType === 'vec2') {
+            if (effectiveSourceType === 'float') finalExpr = `vec2(${sourceExpression})`;
+            else if (effectiveSourceType === 'vec3' || effectiveSourceType === 'vec4') finalExpr = `${sourceExpression}.xy`;
+          } 
+          else if (targetType === 'vec3') {
+            if (effectiveSourceType === 'float') finalExpr = `vec3(${sourceExpression})`;
+            else if (effectiveSourceType === 'vec2') finalExpr = `vec3(${sourceExpression}, 0.0)`;
+            else if (effectiveSourceType === 'vec4') finalExpr = `${sourceExpression}.xyz`;
+          } 
+          else if (targetType === 'vec4') {
+            if (effectiveSourceType === 'float') finalExpr = `vec4(${sourceExpression}, ${sourceExpression}, ${sourceExpression}, 1.0)`;
+            else if (effectiveSourceType === 'vec2') finalExpr = `vec4(${sourceExpression}, 0.0, 1.0)`;
+            else if (effectiveSourceType === 'vec3') finalExpr = `vec4(${sourceExpression}, 1.0)`;
+          }
         }
-        inputs[inputDef.id] = finalExpression;
+        inputs[inputDef.id] = finalExpr;
       }
     });
 
@@ -107,69 +108,57 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
     const outputVar = `var_${node.id.replace(/-/g, '_')}`;
     nodeVarMap[node.id] = outputVar;
     
-    let type = def.outputs.length > 0 ? def.outputs[0].type : 'vec3';
-    // Fix dla Smart Node: typ zmiennej musi zgadzać się z definicją (dynamiczną)
-    if (node.data.definition.outputs.length > 0) {
-        type = node.data.definition.outputs[0].type;
+    // --- TYPE DETERMINATION (FIXED) ---
+    // Tu był błąd. Dla Split Node zmienna musi być typu wejściowego (wektor), 
+    // a nie wyjściowego (float), bo przechowuje całość do podziału.
+    let nodeType = 'vec3';
+    
+    if (def.id.includes('split')) {
+        // Dla Split: typ zmiennej = typ wejścia (np. vec3)
+        if (node.data.definition.inputs.length > 0) {
+            nodeType = node.data.definition.inputs[0].type;
+        }
+    } else {
+        // Dla reszty: typ zmiennej = typ pierwszego wyjścia (standard)
+        if (node.data.definition.outputs.length > 0) {
+            nodeType = node.data.definition.outputs[0].type;
+        }
     }
     
     if (def.id !== 'output' && def.id !== 'preview') {
-        const line = `    ${type} ${outputVar} = ${glslCode};\n`;
-        mainBody += line;
+        mainBody += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
     }
   });
 
+  // 3. FINAL LINE GENERATION (Monitor / Output)
   let finalLine = 'gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);';
+  const targetId = targetNodeId || nodes.find(n => n.data.definition.id === 'output')?.id;
 
-  // --- FINAL LINE GENERATION (Fix dla Monitora i Outputu) ---
-  if (targetNodeId) {
-      const targetNode = nodes.find(n => n.id === targetNodeId);
-      const inputEdge = safeEdges.find(e => e.target === targetNodeId);
+  if (targetId) {
+    const lastEdge = safeEdges.find(e => e.target === targetId);
+    if (lastEdge && nodeVarMap[lastEdge.source]) {
+      const srcNode = nodes.find(n => n.id === lastEdge.source);
       
-      if (inputEdge && nodeVarMap[inputEdge.source]) {
-          let varName = nodeVarMap[inputEdge.source];
-          
-          let isSwizzled = false;
-          if (inputEdge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(inputEdge.sourceHandle)) {
-              varName += `.${inputEdge.sourceHandle}`;
-              isSwizzled = true;
-          }
-
-          const sourceNode = nodes.find(n => n.id === inputEdge.source);
-          let sourceType = sourceNode?.data?.definition?.outputs?.[0]?.type || 'vec3';
-          if (isSwizzled) sourceType = 'float';
-
-          // BRUTALNE RZUTOWANIE DO VEC4 (DLA MONITORA)
-          if (sourceType === 'float') {
-              finalLine = `gl_FragColor = vec4(${varName}, ${varName}, ${varName}, 1.0);`;
-          } else if (sourceType === 'vec2') {
-              finalLine = `gl_FragColor = vec4(${varName}, 0.0, 1.0);`;
-          } else if (sourceType === 'vec3') {
-              finalLine = `gl_FragColor = vec4(${varName}, 1.0);`;
-          } else if (sourceType === 'vec4') {
-              finalLine = `gl_FragColor = ${varName};`;
-          } else {
-              // Fallback
-              finalLine = `gl_FragColor = vec4(vec3(${varName}), 1.0);`;
-          }
+      // Podobna logika dla typu źródłowego jak wyżej
+      let srcType = 'float';
+      if (srcNode?.data.definition.id.includes('split')) {
+          srcType = srcNode.data.definition.inputs[0].type;
+      } else {
+          srcType = srcNode?.data.definition.outputs.find(o => o.id === lastEdge.sourceHandle)?.type || 'float';
       }
-  } 
-  else {
-      // Logic for Main Output Node (to samo, ale prościej)
-      const outputNode = nodes.find(n => n.data?.definition?.id === 'output');
-      if (outputNode) {
-          const inputEdge = safeEdges.find(e => e.target === outputNode.id);
-          if (inputEdge && nodeVarMap[inputEdge.source]) {
-               const srcNode = nodes.find(n => n.id === inputEdge.source);
-               let srcType = srcNode?.data?.definition?.outputs?.[0]?.type || 'vec3';
-               let vName = nodeVarMap[inputEdge.source];
 
-               if (srcType === 'float') finalLine = `gl_FragColor = vec4(vec3(${vName}), 1.0);`;
-               else if (srcType === 'vec2') finalLine = `gl_FragColor = vec4(${vName}, 0.0, 1.0);`;
-               else if (srcType === 'vec3') finalLine = `gl_FragColor = vec4(${vName}, 1.0);`;
-               else if (srcType === 'vec4') finalLine = `gl_FragColor = ${vName};`;
-          }
-      }
+      const isSwizzled = lastEdge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(lastEdge.sourceHandle);
+      if (isSwizzled) srcType = 'float';
+      
+      let varName = nodeVarMap[lastEdge.source];
+      if (isSwizzled) varName += `.${lastEdge.sourceHandle}`;
+
+      // JAWNE RZUTOWANIE NA VEC4 (Dla gl_FragColor)
+      if (srcType === 'vec4') finalLine = `gl_FragColor = ${varName};`;
+      else if (srcType === 'vec3') finalLine = `gl_FragColor = vec4(${varName}, 1.0);`;
+      else if (srcType === 'vec2') finalLine = `gl_FragColor = vec4(${varName}, 0.0, 1.0);`;
+      else if (srcType === 'float') finalLine = `gl_FragColor = vec4(vec3(${varName}), 1.0);`;
+    }
   }
 
   return `
