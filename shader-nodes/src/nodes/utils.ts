@@ -96,3 +96,11 @@ export const GroupNode: ShaderNodeDefinition = {
   controls: { type: 'text', defaultValue: 'My Group' },
   glslTemplate: () => '' 
 };
+
+export const PreviewNodeDef: ShaderNodeDefinition = {
+  id: 'preview',
+  label: 'Preview',
+  inputs: [{ id: 'in', label: 'In', type: 'vec3' }],
+  outputs: [],
+  glslTemplate: () => ''
+};

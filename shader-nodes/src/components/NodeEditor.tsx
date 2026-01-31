@@ -19,6 +19,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'; 
 
 import { ShaderNode } from './ShaderNode';
+import { PreviewNode } from './PreviewNode'; // <--- NOWY IMPORT
 import ContextMenu from './ContextMenu';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
@@ -27,6 +28,7 @@ import { TYPE_COLORS } from '../core/theme';
 
 const nodeTypes: NodeTypes = {
   shaderNode: ShaderNode,
+  previewNode: PreviewNode, // <--- REJESTRACJA PREVIEW
 };
 
 const initialNodesDefault = [
@@ -64,6 +66,8 @@ function EditorInner({ onChange }: Props) {
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
             return {
                 ...n,
+                // Przywracamy poprawny typ dla PreviewNode
+                type: defId === 'preview' ? 'previewNode' : 'shaderNode',
                 data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
             };
         });
@@ -85,6 +89,8 @@ function EditorInner({ onChange }: Props) {
   const [menuFilter, setMenuFilter] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean } | null>(null);
   
+  // Stan do trzymania informacji o "wiszącym kablu"
+  const [pendingConnection, setPendingConnection] = useState<OnConnectStartParams | null>(null);
   const connectionStartRef = useRef<OnConnectStartParams | null>(null);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -130,6 +136,7 @@ function EditorInner({ onChange }: Props) {
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
             return {
                 ...n,
+                type: defId === 'preview' ? 'previewNode' : 'shaderNode',
                 data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
             };
         });
@@ -275,6 +282,9 @@ function EditorInner({ onChange }: Props) {
 
               setMenu({ x: clientX, y: clientY, visible: true });
               setMenuFilter(type); 
+              
+              // ZAPISUJEMY, ŻE CHCEMY POŁĄCZYĆ
+              setPendingConnection(connectionStartRef.current);
           }
       }
       connectionStartRef.current = null;
@@ -330,20 +340,66 @@ function EditorInner({ onChange }: Props) {
       event.preventDefault(); 
       setMenu({ x: event.clientX, y: event.clientY, visible: true });
       setMenuFilter(null); 
+      setPendingConnection(null);
   }, []);
 
+  // --- TUTAJ JEST LOGIKA DODAWANIA I ŁĄCZENIA ---
   const onAddNode = useCallback((typeId: string) => {
     if (!menu) return;
     const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y });
     const isGroup = typeId === 'special_group';
+    const isPreview = typeId === 'preview';
+    const newNodeId = `${typeId}_${Date.now()}`;
+    
     const newNode: Node = {
-      id: `${typeId}_${Date.now()}`, type: 'shaderNode', position,
+      id: newNodeId, 
+      type: isPreview ? 'previewNode' : 'shaderNode', // Używamy custom component dla preview
+      position,
       data: { definition: NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY] },
       zIndex: isGroup ? -10 : 0,
       style: isGroup ? { width: 400, height: 300 } : undefined,
     };
+    
     setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode));
-  }, [menu, reactFlowInstance, setNodes]);
+
+    // --- AUTO-CONNECT ---
+    if (pendingConnection) {
+        const { nodeId, handleId, handleType } = pendingConnection;
+        const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY];
+        
+        let newEdge: Edge | null = null;
+
+        if (handleType === 'source') {
+            // Source -> Input nowego noda
+            const input = def.inputs[0]; // Bierzemy pierwszy input
+            if (input) {
+                newEdge = {
+                    id: `e_${nodeId}_${newNodeId}`,
+                    source: nodeId, sourceHandle: handleId,
+                    target: newNodeId, targetHandle: input.id,
+                    style: { stroke: '#fff', strokeWidth: 3 }
+                };
+            }
+        } else {
+            // Target <- Output nowego noda
+            const output = def.outputs[0]; // Bierzemy pierwszy output
+            if (output) {
+                 newEdge = {
+                    id: `e_${newNodeId}_${nodeId}`,
+                    source: newNodeId, sourceHandle: output.id,
+                    target: nodeId, targetHandle: handleId,
+                    style: { stroke: '#fff', strokeWidth: 3 }
+                };
+            }
+        }
+
+        if (newEdge) {
+            setEdges((eds) => addEdge(newEdge!, eds));
+        }
+        setPendingConnection(null);
+    }
+
+  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
       event.preventDefault(); setEdges((eds) => eds.filter((e) => e.id !== edge.id));
@@ -380,12 +436,13 @@ function EditorInner({ onChange }: Props) {
         <Controls />
         <Legend /> 
         
+        {/* PORTAL DO KOSZA */}
         {createPortal(
             <div 
                 onClick={deleteSelected}
                 title="Delete Selected (Del)"
                 style={{
-                    position: 'fixed', bottom: 20, right: 20, zIndex: 100000,
+                    position: 'fixed', bottom: 20, right: 20, zIndex: 99999,
                     width: 50, height: 50, borderRadius: '50%',
                     background: '#ff007a', color: 'white', fontSize: '24px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -400,6 +457,7 @@ function EditorInner({ onChange }: Props) {
             document.body
         )}
 
+        {/* PORTAL DO MENU */}
         {menu && menu.visible && createPortal(
           <ContextMenu 
             x={menu.x} 

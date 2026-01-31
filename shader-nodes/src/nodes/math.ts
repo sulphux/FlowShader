@@ -1,85 +1,81 @@
 import type { ShaderNodeDefinition } from '../core/types';
 
 // --- Operacje Podstawowe (Float) ---
-
 export const AddNode: ShaderNodeDefinition = {
-  id: 'math_add', label: '+', compact: true,
+  id: 'math_add', label: '+', compact: true, description: 'Adds two numbers (A + B)',
   inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Sum', type: 'float' }],
   glslTemplate: ({ a, b }) => `(${a || '0.0'} + ${b || '0.0'})`
 };
 
 export const SubNode: ShaderNodeDefinition = {
-  id: 'math_sub', label: '-', compact: true,
+  id: 'math_sub', label: '-', compact: true, description: 'Subtracts B from A',
   inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Sub', type: 'float' }],
   glslTemplate: ({ a, b }) => `(${a || '0.0'} - ${b || '0.0'})`
 };
 
 export const MultNode: ShaderNodeDefinition = {
-  id: 'math_mult', label: '×', compact: true,
+  id: 'math_mult', label: '×', compact: true, description: 'Multiplies two numbers',
   inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Mul', type: 'float' }],
   glslTemplate: ({ a, b }) => `(${a || '1.0'} * ${b || '1.0'})`
 };
 
 export const DivNode: ShaderNodeDefinition = {
-  id: 'math_div', label: '÷', compact: true,
+  id: 'math_div', label: '÷', compact: true, description: 'Divides A by B',
   inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Div', type: 'float' }],
   glslTemplate: ({ a, b }) => `(${a || '1.0'} / ${b || '1.0'})`
 };
 
 // --- Funkcje Matematyczne (Float) ---
-
 export const SinNode: ShaderNodeDefinition = {
-  id: 'math_sin', label: 'SIN', compact: true,
+  id: 'math_sin', label: 'SIN', compact: true, description: 'Returns sine of input',
   inputs: [{ id: 'in', label: 'In', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Sin', type: 'float' }],
   glslTemplate: ({ in: val }) => `sin(${val || '0.0'})`
 };
 
 export const CosNode: ShaderNodeDefinition = {
-  id: 'math_cos', label: 'COS', compact: true,
+  id: 'math_cos', label: 'COS', compact: true, description: 'Returns cosine of input',
   inputs: [{ id: 'in', label: 'In', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Cos', type: 'float' }],
   glslTemplate: ({ in: val }) => `cos(${val || '0.0'})`
 };
 
 export const AbsNode: ShaderNodeDefinition = {
-  id: 'math_abs', label: 'ABS', compact: true,
+  id: 'math_abs', label: 'ABS', compact: true, description: 'Returns absolute value (positive)',
   inputs: [{ id: 'in', label: 'In', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Abs', type: 'float' }],
   glslTemplate: ({ in: val }) => `abs(${val || '0.0'})`
 };
 
 export const ExpNode: ShaderNodeDefinition = {
-  id: 'math_exp', label: 'EXP', compact: true,
+  id: 'math_exp', label: 'EXP', compact: true, description: 'Returns e raised to the power of input',
   inputs: [{ id: 'in', label: 'In', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Exp', type: 'float' }],
   glslTemplate: ({ in: val }) => `exp(${val || '0.0'})`
 };
 
 export const PowNode: ShaderNodeDefinition = {
-  id: 'math_pow', label: 'POW', compact: true,
+  id: 'math_pow', label: 'POW', compact: true, description: 'Returns Base raised to Exp',
   inputs: [{ id: 'base', label: 'Base', type: 'float' }, { id: 'exp', label: 'Exp', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Pow', type: 'float' }],
   glslTemplate: ({ base, exp }) => `pow(${base || '0.0'}, ${exp || '1.0'})`
 };
 
 // --- Operacje na Kolorach ---
-// Te zostawiamy duże, albo też zmniejszamy, jak wolisz. Tutaj przykład zmniejszenia Add.
-
 export const ColorAddNode: ShaderNodeDefinition = {
-  id: 'color_add', label: 'Add (Color)', compact: true,
+  id: 'color_add', label: 'Add (Color)', compact: true, description: 'Adds two colors together (brightens)',
   inputs: [{ id: 'a', label: 'A', type: 'vec3' }, { id: 'b', label: 'B', type: 'vec3' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'vec3' }],
+  outputs: [{ id: 'out', label: 'RGB', type: 'vec3' }],
   glslTemplate: ({ a, b }) => `(${a || 'vec3(0.0)'} + ${b || 'vec3(0.0)'})`
 };
 
 export const ColorMultNode: ShaderNodeDefinition = {
-  id: 'color_mult', label: 'Scale', compact: true,
+  id: 'color_mult', label: 'Scale', compact: true, description: 'Multiplies color by a number (darkens/brightens)',
   inputs: [{ id: 'col', label: 'Col', type: 'vec3' }, { id: 'fac', label: 'F', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'vec3' }],
+  outputs: [{ id: 'out', label: 'RGB', type: 'vec3' }],
   glslTemplate: ({ col, fac }) => `(${col || 'vec3(1.0)'} * ${fac || '1.0'})`
 };

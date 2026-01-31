@@ -24,8 +24,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isUV = def.id === 'uv';
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
 
+  // Logika kolorów (jak wcześniej)
   let headerType = def.outputs[0]?.type || 'default';
-  
   if (headerType === 'float' && def.inputs.length > 0) {
       const firstInputType = def.inputs[0].type;
       if (firstInputType.startsWith('vec')) {
@@ -35,7 +35,12 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   
   const headerColorBase = TYPE_COLORS[headerType] || '#555';
   
-  const uvStyle = isUV ? { borderTop: `4px solid ${TYPE_COLORS['vec2']}` } : {};
+  // FIX UV: Box-shadow zamiast border
+  const uvStyle = isUV ? { 
+      boxShadow: selected 
+          ? `0 0 15px rgba(255, 0, 122, 0.4), inset 0 4px 0 0 ${TYPE_COLORS['vec2']}` 
+          : `0 4px 8px rgba(0,0,0,0.5), inset 0 4px 0 0 ${TYPE_COLORS['vec2']}` 
+  } : {};
 
   const baseStyle: React.CSSProperties = {
     background: '#1a1a1a',
@@ -54,11 +59,29 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       setTimeout(() => target.select(), 10);
   };
 
-  const preventDrag = (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const preventDrag = (e: React.MouseEvent) => { e.stopPropagation(); };
+
+  // IKONA INFO (i)
+  const renderInfoIcon = () => {
+      if (!def.description) return null;
+      return (
+        <div 
+            title={def.description}
+            style={{ 
+                position: 'absolute', top: '-8px', right: '-8px', 
+                background: '#444', color: '#ccc', fontSize: '10px', 
+                width: '14px', height: '14px', borderRadius: '50%', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'help', border: '1px solid #555', zIndex: 10
+            }}
+        >
+            i
+        </div>
+      );
   };
 
   if (isNote) {
+      // (Kod notatki bez zmian - skopiuj z poprzedniej wersji)
       return (
         <>
             <NodeResizer minWidth={160} minHeight={100} isVisible={selected} lineStyle={{ border: '1px solid #ff007a' }} />
@@ -73,6 +96,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
   
   if (isGroup) {
+      // (Kod grupy bez zmian)
       const groupColor = data.value || 'rgba(255, 255, 255, 0.05)';
       return (
         <>
@@ -89,7 +113,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
   if (def.compact) {
     return (
-      <div style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <div 
+        title={def.description}
+        style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+      >
         <div style={{ position: 'absolute', left: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {def.inputs.map((input, i) => {
                  let topOffset = 0;
@@ -108,11 +135,13 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   if (isFloatParam) {
+    // (Kod param float bez zmian)
     const valString = currentValue.toString();
     const dynamicWidth = `${Math.max(3, valString.length) + 2}ch`;
 
     return (
         <div style={{ ...baseStyle, minWidth: 'auto' }}> 
+             {renderInfoIcon()}
              <div style={{ height: '4px', background: headerColorBase, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
              
              <div style={{ padding: '2px 8px', background: '#222', borderBottom: '1px solid #333' }}>
@@ -149,6 +178,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
   return (
     <div style={{ ...baseStyle, minWidth: '100px' }}>
+      {renderInfoIcon()}
       <div style={{ height: '4px', background: headerColorBase, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
       <div style={{ padding: '4px 8px', background: '#222', borderBottom: '1px solid #333' }}>
         <input 

@@ -6,6 +6,7 @@ import * as MathNodes from './math';
 import * as VecNodes from './vector';
 import * as Utils from './utils';
 import * as Params from './params';
+import { PreviewNodeDef } from './utils';
 
 export const NODE_REGISTRY = {
   output: OutputNode,
@@ -57,4 +58,6 @@ export const NODE_REGISTRY = {
 
   special_note: Utils.NoteNode,
   special_group: Utils.GroupNode,
+
+  preview: PreviewNodeDef,
 };

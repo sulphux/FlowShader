@@ -11,6 +11,7 @@ export interface ShaderNodeDefinition {
   label: string;
   inputs: { id: string; label: string; type: string }[];
   outputs: { id: string; label: string; type: string }[];
+  description?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   glslTemplate: (inputs: Record<string, string>, data?: any) => string;
   
