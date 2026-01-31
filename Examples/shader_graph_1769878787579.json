@@ -2757,8 +2757,8 @@
       "id": "preview_1769878731172_naw3p",
       "type": "previewNode",
       "position": {
-        "x": 4765.274653065405,
-        "y": 653.4511429447034
+        "x": 4561.380695053431,
+        "y": 700.0895479255565
       },
       "data": {
         "definition": {
@@ -2767,15 +2767,15 @@
       },
       "zIndex": 0,
       "style": {
-        "width": 353,
-        "height": 319
+        "width": 482,
+        "height": 426
       },
-      "width": 353,
-      "height": 319,
+      "width": 482,
+      "height": 426,
       "selected": false,
       "positionAbsolute": {
-        "x": 4765.274653065405,
-        "y": 653.4511429447034
+        "x": 4561.380695053431,
+        "y": 700.0895479255565
       },
       "dragging": false,
       "resizing": false
@@ -2826,7 +2826,7 @@
       },
       "width": 353,
       "height": 319,
-      "selected": true,
+      "selected": false,
       "positionAbsolute": {
         "x": 1421.224978201844,
         "y": 916.8775541365958
@@ -4890,11 +4890,25 @@
       "targetHandle": "in",
       "animated": false,
       "id": "reactflow__edge-color_add_1769826422826out-preview_1769878753816_ukedkin"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769878985797",
+      "sourceHandle": "t",
+      "target": "sdf_circle_1769879049789",
+      "targetHandle": "radius",
+      "animated": false,
+      "id": "reactflow__edge-time_1769878985797t-sdf_circle_1769879049789radius"
     }
   ],
   "viewport": {
-    "x": -317.8532877094225,
-    "y": 274.4146486408606,
-    "zoom": 0.17411011265922505
+    "x": -2778.7323588020563,
+    "y": -594.365008367438,
+    "zoom": 0.8000000000000023
   }
 }

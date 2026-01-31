@@ -4,9 +4,10 @@ interface Props {
   onSave: () => void;
   onLoad: () => void;
   onClear: () => void;
+  onShowCode: () => void; // <--- NOWY PROP
 }
 
-export default function Toolbar({ onSave, onLoad, onClear }: Props) {
+export default function Toolbar({ onSave, onLoad, onClear, onShowCode }: Props) {
   const btnStyle: React.CSSProperties = {
     background: '#333',
     border: '1px solid #555',
@@ -18,13 +19,8 @@ export default function Toolbar({ onSave, onLoad, onClear }: Props) {
     fontWeight: 'bold',
     transition: 'background 0.2s',
   };
-
-  const hoverStyle = (e: React.MouseEvent) => {
-    e.currentTarget.style.background = '#444';
-  };
-  const leaveStyle = (e: React.MouseEvent) => {
-    e.currentTarget.style.background = '#333';
-  };
+  const hoverStyle = (e: React.MouseEvent) => { e.currentTarget.style.background = '#444'; };
+  const leaveStyle = (e: React.MouseEvent) => { e.currentTarget.style.background = '#333'; };
 
   return (
     <div style={{
@@ -39,33 +35,20 @@ export default function Toolbar({ onSave, onLoad, onClear }: Props) {
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
     }}>
-      <button 
-        onClick={onSave} 
-        style={btnStyle} 
-        onMouseEnter={hoverStyle} 
-        onMouseLeave={leaveStyle}
-      >
-        💾 Save JSON
-      </button>
+      <button onClick={onSave} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>💾 Save JSON</button>
+      <button onClick={onLoad} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>📂 Load JSON</button>
       
-      <button 
-        onClick={onLoad} 
-        style={btnStyle} 
-        onMouseEnter={hoverStyle} 
-        onMouseLeave={leaveStyle}
-      >
-        📂 Load JSON
+      <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
+      
+      {/* NOWY PRZYCISK */}
+      <button onClick={onShowCode} style={{ ...btnStyle, color: '#81c784', borderColor: '#2e7d32' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1b5e20'} onMouseLeave={leaveStyle}>
+        {'< > Code'}
       </button>
 
       <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
 
-      <button 
-        onClick={onClear} 
-        style={{ ...btnStyle, borderColor: '#722', color: '#f88' }} 
-        onMouseEnter={(e) => e.currentTarget.style.background = '#411'} 
-        onMouseLeave={(e) => e.currentTarget.style.background = '#333'}
-      >
-        🗑️ Clear
+      <button onClick={onClear} style={{ ...btnStyle, borderColor: '#722', color: '#f88' }} onMouseEnter={(e) => e.currentTarget.style.background = '#411'} onMouseLeave={(e) => e.currentTarget.style.background = '#333'}>
+         🗑️ Clear
       </button>
     </div>
   );
