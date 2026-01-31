@@ -2,20 +2,22 @@ import type { ShaderNodeDefinition } from '../core/types';
 
 export const UVNode: ShaderNodeDefinition = {
   id: 'uv', label: 'UV Coord',
+  compact: true,
   inputs: [],
   outputs: [{
       id: 'out', type: 'vec2',
       label: ''
   }],
-  glslTemplate: () => 'uv' // Nasz kompilator dostarcza zmienną 'uv'
+  glslTemplate: () => 'uv'
 };
 
 export const LengthNode: ShaderNodeDefinition = {
   id: 'vec_length', label: 'Length',
+  compact: true,
   inputs: [{
       id: 'in', type: 'vec2',
       label: ''
-  }], // Długość wektora UV
+  }],
   outputs: [{
       id: 'out', type: 'float',
       label: ''
@@ -25,6 +27,7 @@ export const LengthNode: ShaderNodeDefinition = {
 
 export const FractNode: ShaderNodeDefinition = {
   id: 'vec_fract', label: 'Fract (Vec2)',
+  compact: true,
   inputs: [{
       id: 'in', type: 'vec2',
       label: ''
@@ -39,6 +42,7 @@ export const FractNode: ShaderNodeDefinition = {
 // Specjalne operacje dla UV (mnożenie wektora przez liczbę)
 export const UVScaleNode: ShaderNodeDefinition = {
   id: 'uv_scale', label: 'UV Scale (*)',
+  compact: true,
   inputs: [{
       id: 'uv', type: 'vec2',
       label: ''
@@ -55,6 +59,7 @@ export const UVScaleNode: ShaderNodeDefinition = {
 
 export const UVShiftNode: ShaderNodeDefinition = {
   id: 'uv_shift', label: 'UV Shift (+/-)',
+  compact: true,
   inputs: [{
       id: 'uv', type: 'vec2',
       label: ''

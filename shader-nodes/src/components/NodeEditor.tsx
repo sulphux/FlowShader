@@ -51,7 +51,6 @@ const getLogicHash = (nodes: Node[], edges: Edge[]) => {
 };
 
 function EditorInner({ onChange }: Props) {
-  // --- 1. SAFE INIT (Wczytaj ZANIM stworzysz stan) ---
   const getInitialData = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -63,10 +62,7 @@ function EditorInner({ onChange }: Props) {
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
             return {
                 ...n,
-                data: { 
-                    ...n.data, 
-                    definition: def || NODE_REGISTRY['output'] 
-                }
+                data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
             };
         });
         return { nodes: restoredNodes, edges: parsed.edges, viewport: parsed.viewport };
@@ -77,10 +73,7 @@ function EditorInner({ onChange }: Props) {
     return { nodes: initialNodesDefault, edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
   };
 
-  // Uruchamiamy to RAZ, synchronicznie
   const initialData = getInitialData();
-
-  // --- STATE ---
   const [nodes, setNodes] = useNodesState(initialData.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
   const [clipboard, setClipboard] = useState<{ nodes: Node[], edges: Edge[] } | null>(null);
@@ -93,10 +86,8 @@ function EditorInner({ onChange }: Props) {
   
   const lastLogicHash = useRef<string>("");
   const mousePos = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
-  const isLoadedRef = useRef(false); // Flaga, żeby nie nadpisać viewportu przy pierwszym renderze
+  const isLoadedRef = useRef(false);
 
-  // --- VIEWPORT RESTORE ---
-  // Viewport musimy ustawić w useEffect, bo ReactFlow musi się najpierw wyrenderować
   useEffect(() => {
     if (!isLoadedRef.current && initialData.viewport) {
         reactFlowInstance.setViewport(initialData.viewport);
@@ -104,11 +95,7 @@ function EditorInner({ onChange }: Props) {
     }
   }, [reactFlowInstance, initialData.viewport]);
 
-  // --- AUTO-SAVE (Przy zmianach) ---
   useEffect(() => {
-    // Zabezpieczenie: Nie zapisuj, jeśli nodes są puste (chyba że użytkownik faktycznie wszystko usunął)
-    // Ale w tym flow, nodes są inicjalizowane poprawnie, więc ryzyko jest minimalne.
-    
     const dataToSave = {
       nodes: nodes.map(n => ({
         ...n,
@@ -128,7 +115,6 @@ function EditorInner({ onChange }: Props) {
     }
   }, [nodes, edges, onChange, reactFlowInstance]);
 
-  // --- RESTORE FUNCTION (Dla Load z pliku) ---
   const restoreGraph = (jsonString: string) => {
       try {
         const parsed = JSON.parse(jsonString);
@@ -138,26 +124,18 @@ function EditorInner({ onChange }: Props) {
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
             return {
                 ...n,
-                data: { 
-                    ...n.data, 
-                    definition: def || NODE_REGISTRY['output'] 
-                }
+                data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
             };
         });
-
         setNodes(restoredNodes);
         setEdges(parsed.edges);
-        
-        if (parsed.viewport) {
-            reactFlowInstance.setViewport(parsed.viewport);
-        }
+        if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
       } catch (e) {
           console.error("Restore Error:", e);
           alert("Nie udało się wczytać pliku.");
       }
   };
 
-  // --- FILE HANDLERS ---
   const handleSaveFile = useCallback(() => {
       const dataToSave = {
         nodes: nodes.map(n => ({
@@ -177,23 +155,16 @@ function EditorInner({ onChange }: Props) {
       URL.revokeObjectURL(url);
   }, [nodes, edges, reactFlowInstance]);
 
-  const handleLoadFileClick = useCallback(() => {
-      fileInputRef.current?.click();
-  }, []);
-
+  const handleLoadFileClick = useCallback(() => { fileInputRef.current?.click(); }, []);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = (event) => {
-          const content = event.target?.result as string;
-          restoreGraph(content);
-      };
+      reader.onload = (event) => { restoreGraph(event.target?.result as string); };
       reader.readAsText(file);
       e.target.value = ''; 
   }, [setNodes, setEdges, reactFlowInstance]);
-
+  
   const handleClear = useCallback(() => {
       if(window.confirm("Czy na pewno chcesz wyczyścić wszystko?")) {
           setNodes(initialNodesDefault);
@@ -202,8 +173,6 @@ function EditorInner({ onChange }: Props) {
       }
   }, [setNodes, setEdges]);
 
-
-  // --- STANDARD HANDLERS ---
   const onNodesChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -227,7 +196,6 @@ function EditorInner({ onChange }: Props) {
         const sourceType = outputDef.type;
         const targetType = inputDef.type;
 
-        // Auto-Split Logic
         if (targetType === 'float' && (sourceType === 'vec2' || sourceType === 'vec3' || sourceType === 'vec4')) {
             let splitNodeTypeId = '';
             if (sourceType === 'vec2') splitNodeTypeId = 'split_vec2';
@@ -261,7 +229,6 @@ function EditorInner({ onChange }: Props) {
         setEdges((eds) => addEdge(newEdge, eds));
     }, [nodes, setNodes, setEdges]);
 
-  // Copy/Paste Logic
   const onMouseMove = useCallback((e: React.MouseEvent) => {
       if(ref.current) {
           const bounds = ref.current.getBoundingClientRect();
@@ -314,42 +281,27 @@ function EditorInner({ onChange }: Props) {
   }, [handleCopy, handlePaste]);
 
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
-      event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, visible: true });
+      event.preventDefault(); 
+      // TU BYŁ BŁĄD: Przekazujemy clientX/Y prosto do stanu, bez kombinowania
+      setMenu({ x: event.clientX, y: event.clientY, visible: true });
   }, []);
 
   const onAddNode = useCallback((typeId: string) => {
     if (!menu) return;
     const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y });
-    
     const isGroup = typeId === 'special_group';
-
     const newNode: Node = {
-      id: `${typeId}_${Date.now()}`,
-      type: 'shaderNode',
-      position,
+      id: `${typeId}_${Date.now()}`, type: 'shaderNode', position,
       data: { definition: NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY] },
-      
-      // FIX GRUPY:
-      // 1. Grupa musi być pod spodem (zIndex: -10)
       zIndex: isGroup ? -10 : 0,
-      
-      // 2. Domyślny styl (rozmiar) dla Grupy, żeby NodeResizer miał co robić
       style: isGroup ? { width: 400, height: 300 } : undefined,
     };
-    
-    // Dodajemy noda. Jeśli to grupa, najlepiej dodać ją na początek listy (unshift), 
-    // choć zIndex i tak powinien załatwić sprawę.
     setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode));
   }, [menu, reactFlowInstance, setNodes]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
       event.preventDefault(); setEdges((eds) => eds.filter((e) => e.id !== edge.id));
   }, [setEdges]);
-  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
-      event.preventDefault(); if (node.data.definition.id === 'output') return;
-      setNodes((nds) => nds.filter((n) => n.id !== node.id));
-      setEdges((eds) => eds.filter((edge) => edge.source !== node.id && edge.target !== node.id));
-  }, [setNodes, setEdges]);
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', background: '#111', position: 'relative' }} onMouseMove={onMouseMove}>
@@ -365,12 +317,12 @@ function EditorInner({ onChange }: Props) {
         minZoom={0.1}
         maxZoom={4}
         fitView
-        onPaneContextMenu={onPaneContextMenu}
+        onPaneContextMenu={onPaneContextMenu} // <--- TO MUSI TU BYĆ
         onEdgeContextMenu={onEdgeContextMenu}
-        onNodeContextMenu={onNodeContextMenu}
+        // USUNIĘTE: onNodeContextMenu (żeby prawy klik nie usuwał noda)
         onPaneClick={() => setMenu(null)}
         selectionOnDrag={true}
-        panOnDrag={[1, 2]}
+        panOnDrag={[1]}
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Control"
         defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
@@ -379,7 +331,8 @@ function EditorInner({ onChange }: Props) {
         <Controls />
         <Legend /> 
         {menu && menu.visible && (
-          <ContextMenu x={menu.x - (ref.current?.getBoundingClientRect().left || 0)} y={menu.y - (ref.current?.getBoundingClientRect().top || 0)} onClose={() => setMenu(null)} onAddNode={onAddNode} />
+          // NAPRAWA: Przekazujemy surowe współrzędne, bo ContextMenu jest teraz fixed overlayem
+          <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} onAddNode={onAddNode} />
         )}
       </ReactFlow>
     </div>
@@ -392,4 +345,4 @@ export default function NodeEditor(props: Props) {
       <EditorInner {...props} />
     </ReactFlowProvider>
   );
-}
+} 

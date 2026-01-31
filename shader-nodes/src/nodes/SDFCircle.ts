@@ -12,12 +12,8 @@ export const SDFCircle: ShaderNodeDefinition = {
   ],
   
   glslTemplate: (vars) => {
-    // --- POPRAWKA: Wartości domyślne (fallbacki) ---
-    // Jeśli vars.uv nie istnieje (brak kabla), użyj zmiennej 'uv' z kodu głównego
     const uv = vars.uv || 'uv'; 
-    // Jeśli radius nie istnieje, użyj 0.5
     const radius = vars.radius || '0.5';
-
     return `length(${uv}) - ${radius}`;
   }
 };
