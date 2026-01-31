@@ -13,7 +13,13 @@ const MENU_STRUCTURE = {
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_float", "relay_vec3"],
-  "Utils": ["special_note", "special_group", "split_vec2", "split_vec3", "split_vec4", "combine_vec2", "combine_vec3", "combine_vec4", "preview"],
+    "Utils": [
+      "special_note", "special_group", 
+      "smart_split",
+      "smart_compose",
+      "monitor",
+      "preview"
+  ],
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
 

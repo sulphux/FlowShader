@@ -7,6 +7,7 @@ import * as VecNodes from './vector';
 import * as Utils from './utils';
 import * as Params from './params';
 import { PreviewNodeDef } from './utils';
+import { MonitorNodeDef, SmartSplitNode, SmartComposeNode } from './utils';
 
 export const NODE_REGISTRY = {
   output: OutputNode,
@@ -15,6 +16,9 @@ export const NODE_REGISTRY = {
   palette: PaletteNode,
   
   // Utils - Split
+  monitor: MonitorNodeDef,
+  smart_split: SmartSplitNode,
+  smart_compose: SmartComposeNode,
   split_vec2: Utils.SplitVec2Node,
   split_vec3: Utils.SplitVec3Node,
   split_vec4: Utils.SplitVec4Node,

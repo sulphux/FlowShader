@@ -104,3 +104,47 @@ export const PreviewNodeDef: ShaderNodeDefinition = {
   outputs: [],
   glslTemplate: () => ''
 };
+
+export const MonitorNodeDef: ShaderNodeDefinition = {
+  id: 'monitor', label: 'Value Watcher',
+  inputs: [{ id: 'in', label: 'In', type: 'vec4' }], // Zmieniono na vec4
+  outputs: [{ id: 'out', label: 'Passthrough', type: 'vec3' }],
+  glslTemplate: ({ in: val }) => `${val ? `vec3(${val})` : 'vec3(0.0)'}`, 
+  description: 'Displays numeric values of the signal (R, G, B, A).'
+};
+
+export const SmartSplitNode: ShaderNodeDefinition = {
+  id: 'smart_split', label: 'Split (Auto)',
+  inputs: [{ id: 'in', label: 'Input', type: 'vec3' }],
+  outputs: [
+      { id: 'x', label: 'X', type: 'float' },
+      { id: 'y', label: 'Y', type: 'float' },
+      { id: 'z', label: 'Z', type: 'float' }
+  ], 
+  glslTemplate: ({ in: val }) => `${val || 'vec3(0.0)'}`,
+  description: 'Automatically adapts outputs based on input connection.'
+};
+
+export const SmartComposeNode: ShaderNodeDefinition = {
+  id: 'smart_compose', label: 'Compose',
+  inputs: [
+      { id: 'x', label: 'X', type: 'float' },
+      { id: 'y', label: 'Y', type: 'float' },
+      { id: 'z', label: 'Z', type: 'float' }
+  ],
+  outputs: [{ id: 'out', label: 'Vec3', type: 'vec3' }],
+  glslTemplate: (inputs, data) => {
+      // FIX: Zawsze patrzymy na typ z definicji noda!
+      const outputType = data?.definition?.outputs?.[0]?.type || 'vec3';
+      
+      const x = inputs.x || '0.0';
+      const y = inputs.y || '0.0';
+      const z = inputs.z || '0.0';
+      const w = inputs.w || '1.0';
+
+      if (outputType === 'vec2') return `vec2(${x}, ${y})`;
+      if (outputType === 'vec4') return `vec4(${x}, ${y}, ${z}, ${w})`;
+      return `vec3(${x}, ${y}, ${z})`;
+  },
+  description: 'Combines floats into a Vector. Change mode on the node.'
+};

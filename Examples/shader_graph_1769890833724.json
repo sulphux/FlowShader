@@ -1,0 +1,178 @@
+{
+  "nodes": [
+    {
+      "id": "out1",
+      "type": "shaderNode",
+      "position": {
+        "x": 551.3365214919737,
+        "y": 132.08532593248358
+      },
+      "data": {
+        "definition": {
+          "id": "output"
+        }
+      },
+      "width": 182,
+      "height": 66,
+      "positionAbsolute": {
+        "x": 551.3365214919737,
+        "y": 132.08532593248358
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "monitor_1769888621157",
+      "type": "monitorNode",
+      "position": {
+        "x": 296.8236737226005,
+        "y": -45.66364977957728
+      },
+      "data": {
+        "definition": {
+          "id": "monitor"
+        },
+        "label": "Value Watcher"
+      },
+      "zIndex": 0,
+      "width": 182,
+      "height": 214,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 296.8236737226005,
+        "y": -45.66364977957728
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769888639833",
+      "type": "shaderNode",
+      "position": {
+        "x": -211.40788904793945,
+        "y": -113.68454075644239
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "4.63",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": -211.40788904793945,
+        "y": -113.68454075644239
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "smart_compose_1769888660838",
+      "type": "shaderNode",
+      "position": {
+        "x": 30.70037619981025,
+        "y": -47.73441607612578
+      },
+      "data": {
+        "definition": {
+          "id": "smart_compose"
+        },
+        "label": "Compose"
+      },
+      "zIndex": 0,
+      "width": 182,
+      "height": 114,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 30.70037619981025,
+        "y": -47.73441607612578
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769888679923_bjphg",
+      "type": "shaderNode",
+      "position": {
+        "x": -248.16182136360504,
+        "y": 21.94256712977151
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "4.63",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": -248.16182136360504,
+        "y": 21.94256712977151
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769890669307_p5zw2",
+      "type": "shaderNode",
+      "position": {
+        "x": -244.66827001194537,
+        "y": 136.32696943578296
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "4.63",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": -244.66827001194537,
+        "y": 136.32696943578296
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769888639833",
+      "sourceHandle": "out",
+      "target": "smart_compose_1769888660838",
+      "targetHandle": "x",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769888639833out-smart_compose_1769888660838x"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769888679923_bjphg",
+      "sourceHandle": "out",
+      "target": "smart_compose_1769888660838",
+      "targetHandle": "y",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769888679923_bjphgout-smart_compose_1769888660838y"
+    }
+  ],
+  "viewport": {
+    "x": 245.02490984718233,
+    "y": 321.3763056446969,
+    "zoom": 0.8243426134953359
+  }
+}
