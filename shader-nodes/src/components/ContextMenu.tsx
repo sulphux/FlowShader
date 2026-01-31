@@ -10,43 +10,56 @@ interface Props {
   filterType?: string | null;
 }
 
+// Struktura menu
 const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_float", "relay_vec3"],
-  "Utils": ["special_note", "special_group", "split_vec2", "split_vec3", "split_vec4", "combine_vec2", "combine_vec3", "combine_vec4", "preview"],
+  "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
 
 export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Stan pozycji i kierunku otwierania
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
-  const [openLeft, setOpenLeft] = useState(false); // NOWE: Czy otwierać w lewo?
+  const [openLeft, setOpenLeft] = useState(false); 
 
+  // useLayoutEffect pozwala obliczyć pozycję PRZED narysowaniem klatki (brak mrugania)
   useLayoutEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
+      const submenuWidth = 200; // Zakładana szerokość sub-menu
+      
       let newX = x;
       let newY = y;
       
-      // Główne menu - sprawdzenie krawędzi
-      if (x + rect.width > window.innerWidth) newX = x - rect.width;
-      if (y + rect.height > window.innerHeight) newY = y - rect.height;
+      // 1. Utrzymaj główne menu w pionie
+      if (y + rect.height > window.innerHeight) {
+          newY = y - rect.height;
+      }
+      
+      // 2. Utrzymaj główne menu w poziomie
+      if (x + rect.width > window.innerWidth) {
+          newX = x - rect.width;
+      }
       
       setAdjustedPos({ x: newX, y: newY });
 
-      // Decyzja dla Submenu: jeśli po prawej jest mało miejsca, otwieramy w lewo
-      if (newX + rect.width + 180 > window.innerWidth) {
-          setOpenLeft(true);
+      // 3. LOGIKA SUBSZUFLADY:
+      // Jeśli prawa krawędź menu + szerokość sub-menu wychodzi poza ekran...
+      if (newX + rect.width + submenuWidth > window.innerWidth) {
+          setOpenLeft(true); // ...otwieramy w lewo
       } else {
-          setOpenLeft(false);
+          setOpenLeft(false); // ...standardowo w prawo
       }
     }
   }, [x, y]);
 
-  // (reszta bez zmian: isNodeCompatible, filteredStructure)
+  // Filtrowanie (bez zmian)
   const isNodeCompatible = (nodeId: string) => {
       if (!filterType) return true;
       const def = NODE_REGISTRY[nodeId as keyof typeof NODE_REGISTRY];
@@ -113,19 +126,24 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
           <div key={category} onMouseEnter={() => setActiveCategory(category)} style={{ position: 'relative' }}>
             <div style={itemStyle(activeCategory === category)}>
               <span>{category}</span>
-              <span style={{ fontSize: '10px', opacity: 0.7 }}>▶</span>
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>{openLeft ? '◀' : '▶'}</span>
             </div>
+            
+            {/* SUBSZUFLADA */}
             {activeCategory === category && (
               <div style={{
-                position: 'absolute', top: 0,
-                // SMART POSITIONING:
+                position: 'absolute', 
+                top: -4, // Lekka korekta, żeby było równo z itemem
+                // FLIP LOGIC:
                 left: openLeft ? 'auto' : '100%', 
                 right: openLeft ? '100%' : 'auto',
-                marginLeft: openLeft ? 0 : '6px',
-                marginRight: openLeft ? '6px' : 0,
+                marginLeft: openLeft ? 0 : '4px',
+                marginRight: openLeft ? '4px' : 0,
+                
                 background: '#1a1a1a', border: '1px solid #444', borderRadius: '6px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.8)', padding: '4px',
-                minWidth: '180px', maxHeight: '400px', overflowY: 'auto'
+                minWidth: '180px', maxHeight: '400px', overflowY: 'auto',
+                zIndex: 100001
               }}>
                  {items.map((id) => {
                    const def = NODE_REGISTRY[id as keyof typeof NODE_REGISTRY];

@@ -24,11 +24,8 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
   const visit = (nodeId: string) => {
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
-    
-    // Odwiedzamy zależności (inputy)
     const inputEdges = edges.filter(e => e.target === nodeId);
     inputEdges.forEach(edge => visit(edge.source));
-    
     const node = nodeMap.get(nodeId);
     if (node) sorted.push(node);
   };
@@ -82,7 +79,7 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
              
              const targetType = inputDef.type;
 
-             // --- AUTO-CASTING FIX ---
+             // --- AUTO-CASTING (Wewnątrz grafu) ---
              if (targetType === 'vec4') {
                  if (sourceType === 'float') finalExpression = `vec4(${sourceVarName}, ${sourceVarName}, ${sourceVarName}, 1.0)`;
                  else if (sourceType === 'vec2') finalExpression = `vec4(${sourceVarName}, 0.0, 1.0)`;
@@ -91,17 +88,15 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
              else if (targetType === 'vec3') {
                  if (sourceType === 'float') finalExpression = `vec3(${sourceVarName})`;
                  else if (sourceType === 'vec2') finalExpression = `vec3(${sourceVarName}, 0.0)`;
-                 else if (sourceType === 'vec4') finalExpression = `vec3(${sourceVarName})`;
+                 else if (sourceType === 'vec4') finalExpression = `vec3(${sourceVarName})`; 
              }
              else if (targetType === 'vec2') {
                  if (sourceType === 'float') finalExpression = `vec2(${sourceVarName})`;
-                 else if (sourceType === 'vec3' || sourceType === 'vec4') finalExpression = `vec2(${sourceVarName})`;
+                 else if (sourceType === 'vec3' || sourceType === 'vec4') finalExpression = `vec2(${sourceVarName})`; 
              }
-             // COMPOSE FIX: Jeśli wejście to float, a podłączono wektor -> weź .x
+             // COMPOSE FIX: Jeśli wejście to float, a podłączono wektor -> wyciągamy X
              else if (targetType === 'float') {
-                 if (sourceType === 'vec2') finalExpression = `${sourceVarName}.x`;
-                 else if (sourceType === 'vec3') finalExpression = `${sourceVarName}.x`;
-                 else if (sourceType === 'vec4') finalExpression = `${sourceVarName}.x`;
+                 if (['vec2', 'vec3', 'vec4'].includes(sourceType)) finalExpression = `${sourceVarName}.x`;
              }
         }
         inputs[inputDef.id] = finalExpression;
@@ -112,8 +107,8 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
     const outputVar = `var_${node.id.replace(/-/g, '_')}`;
     nodeVarMap[node.id] = outputVar;
     
-    // Fix dla Split/Compose: użyj typu z aktualnej definicji noda, a nie template'u
     let type = def.outputs.length > 0 ? def.outputs[0].type : 'vec3';
+    // Fix dla Smart Node: typ zmiennej musi zgadzać się z definicją (dynamiczną)
     if (node.data.definition.outputs.length > 0) {
         type = node.data.definition.outputs[0].type;
     }
@@ -126,28 +121,53 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
 
   let finalLine = 'gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);';
 
+  // --- FINAL LINE GENERATION (Fix dla Monitora i Outputu) ---
   if (targetNodeId) {
       const targetNode = nodes.find(n => n.id === targetNodeId);
       const inputEdge = safeEdges.find(e => e.target === targetNodeId);
       
       if (inputEdge && nodeVarMap[inputEdge.source]) {
           let varName = nodeVarMap[inputEdge.source];
+          
+          let isSwizzled = false;
           if (inputEdge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(inputEdge.sourceHandle)) {
               varName += `.${inputEdge.sourceHandle}`;
+              isSwizzled = true;
           }
-          
-          finalLine = `
-          vec3 finalCol = vec3(0.0);
-          finalCol = vec3(${varName}); 
-          gl_FragColor = vec4(finalCol, 1.0);`;
+
+          const sourceNode = nodes.find(n => n.id === inputEdge.source);
+          let sourceType = sourceNode?.data?.definition?.outputs?.[0]?.type || 'vec3';
+          if (isSwizzled) sourceType = 'float';
+
+          // BRUTALNE RZUTOWANIE DO VEC4 (DLA MONITORA)
+          if (sourceType === 'float') {
+              finalLine = `gl_FragColor = vec4(${varName}, ${varName}, ${varName}, 1.0);`;
+          } else if (sourceType === 'vec2') {
+              finalLine = `gl_FragColor = vec4(${varName}, 0.0, 1.0);`;
+          } else if (sourceType === 'vec3') {
+              finalLine = `gl_FragColor = vec4(${varName}, 1.0);`;
+          } else if (sourceType === 'vec4') {
+              finalLine = `gl_FragColor = ${varName};`;
+          } else {
+              // Fallback
+              finalLine = `gl_FragColor = vec4(vec3(${varName}), 1.0);`;
+          }
       }
   } 
   else {
+      // Logic for Main Output Node (to samo, ale prościej)
       const outputNode = nodes.find(n => n.data?.definition?.id === 'output');
       if (outputNode) {
           const inputEdge = safeEdges.find(e => e.target === outputNode.id);
           if (inputEdge && nodeVarMap[inputEdge.source]) {
-               finalLine = `gl_FragColor = vec4(vec3(${nodeVarMap[inputEdge.source]}), 1.0);`;
+               const srcNode = nodes.find(n => n.id === inputEdge.source);
+               let srcType = srcNode?.data?.definition?.outputs?.[0]?.type || 'vec3';
+               let vName = nodeVarMap[inputEdge.source];
+
+               if (srcType === 'float') finalLine = `gl_FragColor = vec4(vec3(${vName}), 1.0);`;
+               else if (srcType === 'vec2') finalLine = `gl_FragColor = vec4(${vName}, 0.0, 1.0);`;
+               else if (srcType === 'vec3') finalLine = `gl_FragColor = vec4(${vName}, 1.0);`;
+               else if (srcType === 'vec4') finalLine = `gl_FragColor = ${vName};`;
           }
       }
   }

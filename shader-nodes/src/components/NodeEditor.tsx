@@ -36,8 +36,7 @@ const getLogicHash = (nodes: Node[], edges: Edge[]) => {
 };
 
 function EditorInner({ onChange }: Props) {
-  // FIX: Memoizacja nodeTypes - KLUCZOWE DLA WYDAJNOŚCI!
-  // Zapobiega niszczeniu i tworzeniu nodów przy każdym renderze
+  // FIX: Memoizacja nodeTypes - WAŻNE!
   const nodeTypes = useMemo<NodeTypes>(() => ({
     shaderNode: ShaderNode,
     previewNode: PreviewNode,
@@ -53,11 +52,9 @@ function EditorInner({ onChange }: Props) {
         const restoredNodes = parsed.nodes.map((n: any) => {
             const defId = n.data.definition.id;
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
-            
             let type = 'shaderNode';
             if (defId === 'preview') type = 'previewNode';
             if (defId === 'monitor') type = 'monitorNode';
-
             return {
                 ...n, type,
                 data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
@@ -224,7 +221,6 @@ function EditorInner({ onChange }: Props) {
         if (!outputDef) { setEdges((eds) => addEdge(params, eds)); return; }
         const sourceType = outputDef.type;
 
-        // Smart Split
         if (targetDef.id === 'smart_split') {
             const type = outputDef.type;
             let newOutputs = targetDef.outputs;
