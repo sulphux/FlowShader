@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactFlow, {
   addEdge,
   Background,
@@ -68,7 +69,7 @@ function EditorInner({ onChange }: Props) {
         });
         return { nodes: restoredNodes, edges: parsed.edges, viewport: parsed.viewport };
       } catch (e) {
-        console.error("Auto-Save Load Error:", e);
+        console.error(e);
       }
     }
     return { nodes: initialNodesDefault, edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
@@ -81,11 +82,9 @@ function EditorInner({ onChange }: Props) {
   
   const reactFlowInstance = useReactFlow();
   
-  // NOWE: Stan do trzymania informacji o typie filtru (dla Drag & Drop)
   const [menuFilter, setMenuFilter] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean } | null>(null);
   
-  // NOWE: Stan startu połączenia
   const connectionStartRef = useRef<OnConnectStartParams | null>(null);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -138,8 +137,8 @@ function EditorInner({ onChange }: Props) {
         setEdges(parsed.edges);
         if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
       } catch (e) {
-          console.error("Restore Error:", e);
-          alert("Nie udało się wczytać pliku.");
+          console.error(e);
+          alert("Error loading file.");
       }
   };
 
@@ -173,18 +172,15 @@ function EditorInner({ onChange }: Props) {
   }, [setNodes, setEdges, reactFlowInstance]);
   
   const handleClear = useCallback(() => {
-      if(window.confirm("Czy na pewno chcesz wyczyścić wszystko?")) {
+      if(window.confirm("Clear all?")) {
           setNodes(initialNodesDefault);
           setEdges([]);
           localStorage.removeItem(STORAGE_KEY);
       }
   }, [setNodes, setEdges]);
 
-  // --- DELETE SELECTED FUNCTION ---
   const deleteSelected = useCallback(() => {
-      // Filtrujemy nody: usuwamy te zaznaczone, ale Output musi zostać
       setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
-      // Usuwamy zaznaczone krawędzie
       setEdges((eds) => eds.filter((e) => !e.selected));
   }, [setNodes, setEdges]);
 
@@ -251,22 +247,18 @@ function EditorInner({ onChange }: Props) {
       }
   }, []);
 
-  // --- UE STYLE DRAG & DROP LOGIC ---
   const onConnectStart = useCallback((_, params: OnConnectStartParams) => {
       connectionStartRef.current = params;
   }, []);
 
   const onConnectEnd = useCallback((event: any) => {
-      // Sprawdzamy czy upuszczono na tło (pane)
       const targetIsPane = event.target.classList.contains('react-flow__pane');
       
       if (targetIsPane && connectionStartRef.current && ref.current) {
-          // Użytkownik upuścił kabel na tło!
           const { nodeId, handleId, handleType } = connectionStartRef.current;
           const node = nodes.find(n => n.id === nodeId);
           
           if (node) {
-              // Znajdź typ tego pinu
               let type = 'default';
               if (handleType === 'source') {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,13 +270,11 @@ function EditorInner({ onChange }: Props) {
                   if(inDef) type = inDef.type;
               }
 
-              // Oblicz pozycję myszy
               const clientX = event.clientX;
               const clientY = event.clientY;
 
-              // Otwórz menu z filtrem!
               setMenu({ x: clientX, y: clientY, visible: true });
-              setMenuFilter(type); // Przekazujemy typ do filtra
+              setMenuFilter(type); 
           }
       }
       connectionStartRef.current = null;
@@ -330,7 +320,7 @@ function EditorInner({ onChange }: Props) {
       const handleKeyDown = (e: KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy();
           if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste();
-          if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); // Delete też działa
+          if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
@@ -339,7 +329,7 @@ function EditorInner({ onChange }: Props) {
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
       event.preventDefault(); 
       setMenu({ x: event.clientX, y: event.clientY, visible: true });
-      setMenuFilter(null); // Prawy klik na tło = brak filtra (pokaż wszystko)
+      setMenuFilter(null); 
   }, []);
 
   const onAddNode = useCallback((typeId: string) => {
@@ -373,16 +363,15 @@ function EditorInner({ onChange }: Props) {
         minZoom={0.1}
         maxZoom={4}
         fitView
-        onPaneContextMenu={onPaneContextMenu} // <--- TO MUSI TU BYĆ
+        onPaneContextMenu={onPaneContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
-        // USUNIĘTE: onNodeContextMenu (żeby prawy klik nie usuwał noda)
         
-        onConnectStart={onConnectStart} // <--- WAŻNE DLA DRAG & DROP
-        onConnectEnd={onConnectEnd}     // <--- WAŻNE DLA DRAG & DROP
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
 
         onPaneClick={() => setMenu(null)}
         selectionOnDrag={true}
-        panOnDrag={[1]} // Tylko środkowy
+        panOnDrag={[1]}
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Control"
         defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
@@ -391,32 +380,35 @@ function EditorInner({ onChange }: Props) {
         <Controls />
         <Legend /> 
         
-        {/* KOSZ NA EKRANIE (Floating Action Button) */}
-        <div 
-            onClick={deleteSelected}
-            title="Delete Selected (Del)"
-            style={{
-                position: 'absolute', bottom: 20, right: 20, zIndex: 3000,
-                width: 50, height: 50, borderRadius: '50%',
-                background: '#ff007a', color: 'white', fontSize: '24px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
-                transition: 'transform 0.1s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}
-        >
-            🗑️
-        </div>
+        {createPortal(
+            <div 
+                onClick={deleteSelected}
+                title="Delete Selected (Del)"
+                style={{
+                    position: 'fixed', bottom: 20, right: 20, zIndex: 100000,
+                    width: 50, height: 50, borderRadius: '50%',
+                    background: '#ff007a', color: 'white', fontSize: '24px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
+                    transition: 'transform 0.1s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}
+            >
+                🗑️
+            </div>,
+            document.body
+        )}
 
-        {menu && menu.visible && (
+        {menu && menu.visible && createPortal(
           <ContextMenu 
             x={menu.x} 
             y={menu.y} 
             onClose={() => setMenu(null)} 
             onAddNode={onAddNode}
-            filterType={menuFilter} // Przekazujemy filtr
-          />
+            filterType={menuFilter} 
+          />,
+          document.body
         )}
       </ReactFlow>
     </div>
