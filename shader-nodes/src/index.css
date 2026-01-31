@@ -1,0 +1,91 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Brak pasków przewijania */
+  background-color: #000;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  isolation: isolate; /* Nowy kontekst renderowania */
+}
+
+/* --- 1. NAPRAWA PINÓW (Handles) --- */
+
+/* Płynne przejście dla zwykłego stanu */
+.react-flow__handle {
+  transition: transform 0.2s ease, border-color 0.2s, background-color 0.2s;
+}
+
+/* Stan Hover */
+.react-flow__handle:hover {
+  /* WAŻNE: Dodajemy translate(0, -50%), żeby utrzymać pin w pionie na środku! */
+  transform: translate(0, -50%) scale(1.4) !important;
+  
+  border-color: #fff !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); /* Dodatkowy blask */
+  cursor: crosshair;
+  z-index: 10; /* Żeby powiększony pin nie chował się pod sąsiadami */
+}
+
+
+/* --- 2. NAPRAWA KABLI (Edges) --- */
+
+/* Sztuczka: ":hover" dajemy na kontener (.react-flow__edge), 
+   który dzięki 'interactionWidth={25}' jest gruby i łatwy do trafienia.
+   Ale stylujemy dziecko (.react-flow__edge-path), czyli widoczną linię.
+*/
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #fff !important;      /* Biały kolor */
+  stroke-width: 4 !important;   /* Pogrubienie */
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5)); /* Lekka poświata */
+  cursor: pointer;
+}
+
+/* Opcjonalnie: Podświetl kabel, gdy jest zaznaczony (kliknięty) */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #ff007a !important;
+  stroke-width: 3 !important;
+}
+
+/* ... Twoje istniejące style ... */
+
+/* --- 3. SPLITTER (Uchwyt zmiany rozmiaru) --- */
+.resizer {
+  width: 10px; /* Szersze pole trafienia */
+  background: #111;
+  border-left: 1px solid #333;
+  border-right: 1px solid #333;
+  cursor: col-resize;
+  transition: background 0.2s;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer:hover, .resizer:active {
+  background: #ff007a; /* Podświetlenie przy łapaniu */
+  border-color: #ff007a;
+}
+
+/* Dekoracja na środku uchwytu (kropeczki) */
+.resizer::after {
+  content: "⋮";
+  color: #555;
+  font-size: 14px;
+  font-weight: bold;
+}
+.resizer:hover::after {
+  color: #fff;
+}

@@ -1,0 +1,4777 @@
+{
+  "nodes": [
+    {
+      "id": "out1",
+      "type": "shaderNode",
+      "position": {
+        "x": 6588.9516787607345,
+        "y": -84.59156022958098
+      },
+      "data": {
+        "definition": {
+          "id": "output"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 6588.9516787607345,
+        "y": -84.59156022958098
+      },
+      "dragging": false
+    },
+    {
+      "id": "special_note_1769824609023",
+      "type": "shaderNode",
+      "position": {
+        "x": 1076.1740972282264,
+        "y": 1156.6377616843458
+      },
+      "data": {
+        "definition": {
+          "id": "special_note"
+        },
+        "value": "ETAP 1: \"Święte Źródła\" (Setup)\nNa samym początku, po lewej stronie, ustawiamy zmienne, które będą potrzebne w każdym kroku.\n\nUV Coord (To jest nasze uv0).\n\nRelay (Vec2) – Podłącz do niego UV. Nazwijmy go \"Rura UV0\". Będziemy ciągnąć z niego kabel do każdej iteracji.\n\nTime (lub Param Float jako symulacja czasu).\n\nRelay (Float) – Podłącz do niego Time. Nazwijmy go \"Rura Czasu\".\n\nETAP 2: Budowa \"Silnika Iteracji\" (Krok 0)\nTeraz budujemy serce układu. To będzie skomplikowane, ale robisz to tylko raz. Skup się! 🧠\n\nPotrzebujemy 3 grup nodów w tym silniku:\n\nA. Łamanie Przestrzeni (Space Folding)\nTo odpowiada za: uv = fract(uv * 1.5) - 0.5;\n\nWeź UV (z poprzedniego kroku/źródła).\n\nUV Scale (ustaw 1.5).\n\nFract (Vec2).\n\nUV Shift (ustaw 0.5).\n\n👉 To jest \"Nowe UV\" (wyjście do następnej iteracji).\n\nB. Matematyka Kształtu (Distance)\nTo odpowiada za: d = length(uv) * exp(-length(uv0));\n\nLength (podłącz \"Nowe UV\" z punktu A).\n\nLength (podłącz \"Rurę UV0\" z Etapu 1).\n\nNegate (podłącz Length z UV0).\n\nExp (podłącz Negate).\n\nMultiply (pomnóż wynik kroku 1 i kroku 4).\n\n👉 To jest nasze surowe d.\n\nC. Neonowy Blask (Glow)\nTo odpowiada za: sin(d*8 + t)/8, abs, pow(0.01/d, 1.2)\n\nBierzemy d (z punktu B).\n\nMultiply (razy 8.0).\n\nAdd (dodaj \"Rurę Czasu\").\n\nSin.\n\nDiv (podziel przez 8.0).\n\nAbs.\n\nDiv (UWAGA: Wejście A = 0.01 z Parametru/Suwaka, Wejście B = wynik z Abs).\n\nPow (Wykładnik = 1.2).\n\n👉 To jest jasność neonu.\n\nD. Kolorowanie (Palette)\nTo odpowiada za: palette(length(uv0) + i*.4 + t*.4)\n\nLength (z \"Rury UV0\").\n\nAdd (dodaj \"Rurę Czasu\").\n\nAdd (dodaj Param Float – to będzie nasz Index, ustaw na 0.0 dla pierwszej pętli).\n\nPalette.\n\nMultiply (Color) (Pomnóż wynik Palette przez wynik Glow z punktu C).\n\n👉 To jest gotowy Kolor tej iteracji.\n\nE. Sumator (Accumulator)\nWeź kolor z poprzedniego etapu (na początku to Czarny vec3(0,0,0)).\n\nColor Add (Dodaj Kolor tej iteracji do poprzedniego).\n\n👉 To jest Wyjście Koloru do następnej iteracji.\n\nETAP 3: Klonowanie (Ctrl+C, Ctrl+V) 🐑\nTeraz masz jeden, wielki, skomplikowany blok nodów.\n\nZaznacz wszystko co stworzyłeś w Etapie 2 (Shift + Drag).\n\nWciśnij Ctrl + C.\n\nPrzesuń myszkę w prawo.\n\nWciśnij Ctrl + V.\n\nMasz Iterację 1!\n\nZmień w niej Param Float (Index) z 0.0 na 0.4.\n\nWciśnij Ctrl + V jeszcze raz (Iteracja 2, Index 0.8).\n\nWciśnij Ctrl + V jeszcze raz (Iteracja 3, Index 1.2).\n\nETAP 4: Łączenie Rury 🔧\nTeraz musisz połączyć te 4 wyspy w jeden łańcuch.\n\nKable Lokalne:\n\nWyjście \"Nowe UV\" z Iteracji 0 -> wejście UV Iteracji 1.\n\nWyjście \"Suma Koloru\" z Iteracji 0 -> wejście \"Poprzedni Kolor\" Iteracji 1.\n\n(Powtórz dla Iteracji 1 -> 2 i 2 -> 3).\n\nKable Globalne (Relay):\n\nPociągnij kable z \"Rury UV0\" do wejść UV0 w każdej kopii (to trochę klikania, ale Relay pomaga).\n\nPociągnij kable z \"Rury Czasu\" do każdej kopii.\n\nETAP 5: Wielki Finał 🎆\nOstatnie wyjście \"Suma Koloru\" z 4. iteracji podłącz do Output (Screen)."
+      },
+      "width": 515,
+      "height": 660,
+      "positionAbsolute": {
+        "x": 1076.1740972282264,
+        "y": 1156.6377616843458
+      },
+      "selected": false,
+      "dragging": false,
+      "style": {
+        "width": 515,
+        "height": 660
+      },
+      "resizing": false
+    },
+    {
+      "id": "uv_1769824852775",
+      "type": "shaderNode",
+      "position": {
+        "x": -362.77006214743244,
+        "y": -367.2876781892754
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "positionAbsolute": {
+        "x": -362.77006214743244,
+        "y": -367.2876781892754
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "uv_scale_1769825038719",
+      "type": "shaderNode",
+      "position": {
+        "x": -110.88407416618469,
+        "y": -276.42140282771754
+      },
+      "data": {
+        "definition": {
+          "id": "uv_scale"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -110.88407416618469,
+        "y": -276.42140282771754
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825065923",
+      "type": "shaderNode",
+      "position": {
+        "x": -377.6501898720147,
+        "y": -262.77995372912403
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -377.6501898720147,
+        "y": -262.77995372912403
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_fract_1769825101203",
+      "type": "shaderNode",
+      "position": {
+        "x": 122.53627707641652,
+        "y": -268.84281999516554
+      },
+      "data": {
+        "definition": {
+          "id": "vec_fract"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 122.53627707641652,
+        "y": -268.84281999516554
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_shift_1769825138808",
+      "type": "shaderNode",
+      "position": {
+        "x": 392.3338259152674,
+        "y": -271.87425312818635
+      },
+      "data": {
+        "definition": {
+          "id": "uv_shift"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 392.3338259152674,
+        "y": -271.87425312818635
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825163347_eqtfn",
+      "type": "shaderNode",
+      "position": {
+        "x": 115.042137333082,
+        "y": -114.56391785115784
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 115.042137333082,
+        "y": -114.56391785115784
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769825259695",
+      "type": "shaderNode",
+      "position": {
+        "x": -244.36008561884933,
+        "y": -54.07602061323513
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": -244.36008561884933,
+        "y": -54.07602061323513
+      }
+    },
+    {
+      "id": "uv_1769825274571",
+      "type": "shaderNode",
+      "position": {
+        "x": -369.42188596004416,
+        "y": 103.07421887035662
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -369.42188596004416,
+        "y": 103.07421887035662
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769825283380_b8t2z",
+      "type": "shaderNode",
+      "position": {
+        "x": -117.80707566265278,
+        "y": 94.59286556519976
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": -117.80707566265278,
+        "y": 94.59286556519976
+      }
+    },
+    {
+      "id": "math_negate_1769825309251",
+      "type": "shaderNode",
+      "position": {
+        "x": 130.76458098838702,
+        "y": 159.15573183124133
+      },
+      "data": {
+        "definition": {
+          "id": "math_negate"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 130.76458098838702,
+        "y": 159.15573183124133
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_exp_1769825356783",
+      "type": "shaderNode",
+      "position": {
+        "x": 259.6004891417707,
+        "y": 160.6714483977517
+      },
+      "data": {
+        "definition": {
+          "id": "math_exp"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 259.6004891417707,
+        "y": 160.6714483977517
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769825380543",
+      "type": "shaderNode",
+      "position": {
+        "x": 400.0149801277065,
+        "y": 113.1184384415551
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 400.0149801277065,
+        "y": 113.1184384415551
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769825428967",
+      "type": "shaderNode",
+      "position": {
+        "x": 53.9355990165153,
+        "y": 353.2489653054569
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 53.9355990165153,
+        "y": 353.2489653054569
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825432559",
+      "type": "shaderNode",
+      "position": {
+        "x": -242.3287544445825,
+        "y": 270.04401724409814
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "7.99"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -242.3287544445825,
+        "y": 270.04401724409814
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769825501319",
+      "type": "shaderNode",
+      "position": {
+        "x": 241.77805883219528,
+        "y": 360.236907591369
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 241.77805883219528,
+        "y": 360.236907591369
+      }
+    },
+    {
+      "id": "time_1769825531183",
+      "type": "shaderNode",
+      "position": {
+        "x": -11.954178224018484,
+        "y": 417.8804929885631
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -11.954178224018484,
+        "y": 417.8804929885631
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_sin_1769825567223",
+      "type": "shaderNode",
+      "position": {
+        "x": 361.86942445120263,
+        "y": 362.0484315906607
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 361.86942445120263,
+        "y": 362.0484315906607
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769825581087",
+      "type": "shaderNode",
+      "position": {
+        "x": 537.3639765839976,
+        "y": 281.5584490335141
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 537.3639765839976,
+        "y": 281.5584490335141
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_abs_1769825615731",
+      "type": "shaderNode",
+      "position": {
+        "x": 661.3977201966495,
+        "y": 281.55844903351414
+      },
+      "data": {
+        "definition": {
+          "id": "math_abs"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 661.3977201966495,
+        "y": 281.55844903351414
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769825659203",
+      "type": "shaderNode",
+      "position": {
+        "x": 811.8216220247597,
+        "y": 252.52927499651042
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 811.8216220247597,
+        "y": 252.52927499651042
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825676810_18ys1",
+      "type": "shaderNode",
+      "position": {
+        "x": 574.0513230366973,
+        "y": 123.69289527941156
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.01"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 574.0513230366973,
+        "y": 123.69289527941156
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_pow_1769825722091",
+      "type": "shaderNode",
+      "position": {
+        "x": 970.162571317507,
+        "y": 268.36336992578515
+      },
+      "data": {
+        "definition": {
+          "id": "math_pow"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 970.162571317507,
+        "y": 268.36336992578515
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825732760_varpo",
+      "type": "shaderNode",
+      "position": {
+        "x": 580.6488625905617,
+        "y": 354.606779664668
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.2"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 580.6488625905617,
+        "y": 354.606779664668
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769825775195",
+      "type": "shaderNode",
+      "position": {
+        "x": -265.45289645210505,
+        "y": 521.0621403176058
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -265.45289645210505,
+        "y": 521.0621403176058
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769825789863",
+      "type": "shaderNode",
+      "position": {
+        "x": -6.829345940617827,
+        "y": 523.7011561391515
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -6.829345940617827,
+        "y": 523.7011561391515
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769825815823",
+      "type": "shaderNode",
+      "position": {
+        "x": -1.5513142975262326,
+        "y": 660.9299788595324
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -1.5513142975262326,
+        "y": 660.9299788595324
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769825825911",
+      "type": "shaderNode",
+      "position": {
+        "x": 280.8233786078731,
+        "y": 569.8839330162028
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 280.8233786078731,
+        "y": 569.8839330162028
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769825935646_bj15a",
+      "type": "shaderNode",
+      "position": {
+        "x": -24.475068516471993,
+        "y": 800.698502400696
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0",
+        "label": "I",
+        "max": 4
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -24.475068516471993,
+        "y": 800.698502400696
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826024633_konnr",
+      "type": "shaderNode",
+      "position": {
+        "x": 416.9602572507587,
+        "y": 572.0603648707068
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 416.9602572507587,
+        "y": 572.0603648707068
+      },
+      "dragging": false
+    },
+    {
+      "id": "palette_1769826085175",
+      "type": "shaderNode",
+      "position": {
+        "x": 557.6867951833156,
+        "y": 537.6410326182455
+      },
+      "data": {
+        "definition": {
+          "id": "palette"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 557.6867951833156,
+        "y": 537.6410326182455
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_mult_1769826388998",
+      "type": "shaderNode",
+      "position": {
+        "x": 961.9376001849043,
+        "y": 486.17887995369006
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 961.9376001849043,
+        "y": 486.17887995369006
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_add_1769826422826",
+      "type": "shaderNode",
+      "position": {
+        "x": 1143.6408496246927,
+        "y": 535.764351441436
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1143.6408496246927,
+        "y": 535.764351441436
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_color_1769826528262",
+      "type": "shaderNode",
+      "position": {
+        "x": 842.9726838395034,
+        "y": 638.0614813257856
+      },
+      "data": {
+        "definition": {
+          "id": "param_color"
+        },
+        "value": "#000000"
+      },
+      "width": 194,
+      "height": 121,
+      "positionAbsolute": {
+        "x": 842.9726838395034,
+        "y": 638.0614813257856
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826773914_pj24d",
+      "type": "shaderNode",
+      "position": {
+        "x": 1313.6833090534926,
+        "y": -468.1134124344658
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "positionAbsolute": {
+        "x": 1313.6833090534926,
+        "y": -468.1134124344658
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "uv_scale_1769826773914_z1hv3",
+      "type": "shaderNode",
+      "position": {
+        "x": 1565.5692970347404,
+        "y": -377.2471370729079
+      },
+      "data": {
+        "definition": {
+          "id": "uv_scale"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1565.5692970347404,
+        "y": -377.2471370729079
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_6bcds",
+      "type": "shaderNode",
+      "position": {
+        "x": 1298.8031813289103,
+        "y": -363.6056879743144
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1298.8031813289103,
+        "y": -363.6056879743144
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_fract_1769826773914_82r1s",
+      "type": "shaderNode",
+      "position": {
+        "x": 1798.9896482773415,
+        "y": -369.6685542403559
+      },
+      "data": {
+        "definition": {
+          "id": "vec_fract"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1798.9896482773415,
+        "y": -369.6685542403559
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_shift_1769826773914_wj9g9",
+      "type": "shaderNode",
+      "position": {
+        "x": 2068.7871971161926,
+        "y": -372.69998737337664
+      },
+      "data": {
+        "definition": {
+          "id": "uv_shift"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2068.7871971161926,
+        "y": -372.69998737337664
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_7y3by",
+      "type": "shaderNode",
+      "position": {
+        "x": 1791.495508534007,
+        "y": -215.3896520963482
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1791.495508534007,
+        "y": -215.3896520963482
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826773914_z997q",
+      "type": "shaderNode",
+      "position": {
+        "x": 1432.0932855820756,
+        "y": -154.90175485842548
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 1432.0932855820756,
+        "y": -154.90175485842548
+      }
+    },
+    {
+      "id": "uv_1769826773914_ks12o",
+      "type": "shaderNode",
+      "position": {
+        "x": 1307.031485240881,
+        "y": 2.2484846251662702
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1307.031485240881,
+        "y": 2.2484846251662702
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826773914_qt1e6",
+      "type": "shaderNode",
+      "position": {
+        "x": 1558.6462955382722,
+        "y": -6.232868679990588
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 1558.6462955382722,
+        "y": -6.232868679990588
+      }
+    },
+    {
+      "id": "math_negate_1769826773914_2y5l0",
+      "type": "shaderNode",
+      "position": {
+        "x": 1807.2179521893122,
+        "y": 58.32999758605098
+      },
+      "data": {
+        "definition": {
+          "id": "math_negate"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1807.2179521893122,
+        "y": 58.32999758605098
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_exp_1769826773914_59tfd",
+      "type": "shaderNode",
+      "position": {
+        "x": 1936.0538603426958,
+        "y": 59.84571415256136
+      },
+      "data": {
+        "definition": {
+          "id": "math_exp"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1936.0538603426958,
+        "y": 59.84571415256136
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826773914_q4ajc",
+      "type": "shaderNode",
+      "position": {
+        "x": 2076.468351328632,
+        "y": 12.292704196364753
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2076.468351328632,
+        "y": 12.292704196364753
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826773914_6ef3y",
+      "type": "shaderNode",
+      "position": {
+        "x": 1730.3889702174404,
+        "y": 252.42323106026657
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1730.3889702174404,
+        "y": 252.42323106026657
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_upqjy",
+      "type": "shaderNode",
+      "position": {
+        "x": 1434.1246167563427,
+        "y": 169.2182829989078
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "7.99"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1434.1246167563427,
+        "y": 169.2182829989078
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826773914_sw8cd",
+      "type": "shaderNode",
+      "position": {
+        "x": 1918.2314300331204,
+        "y": 259.41117334617866
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1918.2314300331204,
+        "y": 259.41117334617866
+      }
+    },
+    {
+      "id": "time_1769826773914_tk9u8",
+      "type": "shaderNode",
+      "position": {
+        "x": 1664.4991929769067,
+        "y": 317.05475874337276
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1664.4991929769067,
+        "y": 317.05475874337276
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_sin_1769826773914_0900z",
+      "type": "shaderNode",
+      "position": {
+        "x": 2038.3227956521278,
+        "y": 261.22269734547035
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2038.3227956521278,
+        "y": 261.22269734547035
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826773914_vykhn",
+      "type": "shaderNode",
+      "position": {
+        "x": 2213.8173477849227,
+        "y": 180.73271478832373
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2213.8173477849227,
+        "y": 180.73271478832373
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_abs_1769826773914_2ubi5",
+      "type": "shaderNode",
+      "position": {
+        "x": 2337.8510913975747,
+        "y": 180.7327147883238
+      },
+      "data": {
+        "definition": {
+          "id": "math_abs"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2337.8510913975747,
+        "y": 180.7327147883238
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826773914_uf0qg",
+      "type": "shaderNode",
+      "position": {
+        "x": 2488.2749932256847,
+        "y": 151.70354075132008
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2488.2749932256847,
+        "y": 151.70354075132008
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_fmtdm",
+      "type": "shaderNode",
+      "position": {
+        "x": 2250.5046942376225,
+        "y": 22.867161034221226
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.01"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2250.5046942376225,
+        "y": 22.867161034221226
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_pow_1769826773914_421x0",
+      "type": "shaderNode",
+      "position": {
+        "x": 2646.615942518432,
+        "y": 167.5376356805948
+      },
+      "data": {
+        "definition": {
+          "id": "math_pow"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2646.615942518432,
+        "y": 167.5376356805948
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_8gmaj",
+      "type": "shaderNode",
+      "position": {
+        "x": 2257.102233791487,
+        "y": 253.78104541947766
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.2"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2257.102233791487,
+        "y": 253.78104541947766
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826773914_4wbhx",
+      "type": "shaderNode",
+      "position": {
+        "x": 1411.0004747488201,
+        "y": 420.23640607241543
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1411.0004747488201,
+        "y": 420.23640607241543
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826773914_q9muz",
+      "type": "shaderNode",
+      "position": {
+        "x": 1669.6240252603072,
+        "y": 422.8754218939612
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1669.6240252603072,
+        "y": 422.8754218939612
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769826773914_fl189",
+      "type": "shaderNode",
+      "position": {
+        "x": 1674.9020569033987,
+        "y": 560.1042446143421
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1674.9020569033987,
+        "y": 560.1042446143421
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826773914_rxvhx",
+      "type": "shaderNode",
+      "position": {
+        "x": 1957.2767498087983,
+        "y": 469.0581987710125
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1957.2767498087983,
+        "y": 469.0581987710125
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826773914_ix0yb",
+      "type": "shaderNode",
+      "position": {
+        "x": 1651.978302684453,
+        "y": 699.8727681555057
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.4",
+        "label": "I",
+        "max": 4
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1651.978302684453,
+        "y": 699.8727681555057
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826773914_xhc7e",
+      "type": "shaderNode",
+      "position": {
+        "x": 2093.4136284516835,
+        "y": 471.2346306255165
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2093.4136284516835,
+        "y": 471.2346306255165
+      },
+      "dragging": false
+    },
+    {
+      "id": "palette_1769826773914_pipd9",
+      "type": "shaderNode",
+      "position": {
+        "x": 2234.1401663842407,
+        "y": 436.81529837305516
+      },
+      "data": {
+        "definition": {
+          "id": "palette"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2234.1401663842407,
+        "y": 436.81529837305516
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_mult_1769826773914_u8dr8",
+      "type": "shaderNode",
+      "position": {
+        "x": 2638.3909713858293,
+        "y": 385.3531457084997
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2638.3909713858293,
+        "y": 385.3531457084997
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_add_1769826773914_cem0v",
+      "type": "shaderNode",
+      "position": {
+        "x": 2820.094220825618,
+        "y": 434.9386171962457
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 2820.094220825618,
+        "y": 434.9386171962457
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826779960_jrizs",
+      "type": "shaderNode",
+      "position": {
+        "x": 3059.683309053493,
+        "y": -460.1134124344658
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "positionAbsolute": {
+        "x": 3059.683309053493,
+        "y": -460.1134124344658
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "uv_scale_1769826779960_2mxms",
+      "type": "shaderNode",
+      "position": {
+        "x": 3311.5692970347404,
+        "y": -369.2471370729079
+      },
+      "data": {
+        "definition": {
+          "id": "uv_scale"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3311.5692970347404,
+        "y": -369.2471370729079
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_ejrtl",
+      "type": "shaderNode",
+      "position": {
+        "x": 3044.8031813289103,
+        "y": -355.6056879743144
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3044.8031813289103,
+        "y": -355.6056879743144
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_fract_1769826779960_ugibj",
+      "type": "shaderNode",
+      "position": {
+        "x": 3544.9896482773415,
+        "y": -361.6685542403559
+      },
+      "data": {
+        "definition": {
+          "id": "vec_fract"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3544.9896482773415,
+        "y": -361.6685542403559
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_shift_1769826779960_kt4m2",
+      "type": "shaderNode",
+      "position": {
+        "x": 3814.7871971161926,
+        "y": -364.69998737337664
+      },
+      "data": {
+        "definition": {
+          "id": "uv_shift"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3814.7871971161926,
+        "y": -364.69998737337664
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_1fxwr",
+      "type": "shaderNode",
+      "position": {
+        "x": 3537.495508534007,
+        "y": -207.3896520963482
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3537.495508534007,
+        "y": -207.3896520963482
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826779960_6kdyv",
+      "type": "shaderNode",
+      "position": {
+        "x": 3178.0932855820756,
+        "y": -146.90175485842548
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 3178.0932855820756,
+        "y": -146.90175485842548
+      }
+    },
+    {
+      "id": "uv_1769826779960_t6r9i",
+      "type": "shaderNode",
+      "position": {
+        "x": 3053.031485240881,
+        "y": 10.24848462516627
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3053.031485240881,
+        "y": 10.24848462516627
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826779960_kl927",
+      "type": "shaderNode",
+      "position": {
+        "x": 3304.646295538272,
+        "y": 1.7671313200094119
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 3304.646295538272,
+        "y": 1.7671313200094119
+      }
+    },
+    {
+      "id": "math_negate_1769826779960_lclgm",
+      "type": "shaderNode",
+      "position": {
+        "x": 3553.217952189312,
+        "y": 66.32999758605098
+      },
+      "data": {
+        "definition": {
+          "id": "math_negate"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3553.217952189312,
+        "y": 66.32999758605098
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_exp_1769826779960_9gq63",
+      "type": "shaderNode",
+      "position": {
+        "x": 3682.0538603426958,
+        "y": 67.84571415256136
+      },
+      "data": {
+        "definition": {
+          "id": "math_exp"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3682.0538603426958,
+        "y": 67.84571415256136
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826779960_ka1v6",
+      "type": "shaderNode",
+      "position": {
+        "x": 3822.468351328632,
+        "y": 20.292704196364753
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3822.468351328632,
+        "y": 20.292704196364753
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826779960_xo74y",
+      "type": "shaderNode",
+      "position": {
+        "x": 3476.38897021744,
+        "y": 260.4232310602666
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3476.38897021744,
+        "y": 260.4232310602666
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_vft1i",
+      "type": "shaderNode",
+      "position": {
+        "x": 3180.1246167563427,
+        "y": 177.2182829989078
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "7.99"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3180.1246167563427,
+        "y": 177.2182829989078
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826779960_vyjur",
+      "type": "shaderNode",
+      "position": {
+        "x": 3664.2314300331204,
+        "y": 267.41117334617866
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3664.2314300331204,
+        "y": 267.41117334617866
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769826779960_45e3l",
+      "type": "shaderNode",
+      "position": {
+        "x": 3410.4991929769067,
+        "y": 325.05475874337276
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3410.4991929769067,
+        "y": 325.05475874337276
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_sin_1769826779960_bsaai",
+      "type": "shaderNode",
+      "position": {
+        "x": 3784.3227956521278,
+        "y": 269.22269734547035
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3784.3227956521278,
+        "y": 269.22269734547035
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826779960_ehedd",
+      "type": "shaderNode",
+      "position": {
+        "x": 3959.8173477849227,
+        "y": 188.73271478832373
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3959.8173477849227,
+        "y": 188.73271478832373
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_abs_1769826779960_fmx9p",
+      "type": "shaderNode",
+      "position": {
+        "x": 4083.8510913975747,
+        "y": 188.7327147883238
+      },
+      "data": {
+        "definition": {
+          "id": "math_abs"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4083.8510913975747,
+        "y": 188.7327147883238
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826779960_rxmsb",
+      "type": "shaderNode",
+      "position": {
+        "x": 4234.274993225685,
+        "y": 159.70354075132008
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4234.274993225685,
+        "y": 159.70354075132008
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_uub39",
+      "type": "shaderNode",
+      "position": {
+        "x": 3996.5046942376225,
+        "y": 30.867161034221226
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.01"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3996.5046942376225,
+        "y": 30.867161034221226
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_pow_1769826779960_bwaqb",
+      "type": "shaderNode",
+      "position": {
+        "x": 4392.615942518432,
+        "y": 175.5376356805948
+      },
+      "data": {
+        "definition": {
+          "id": "math_pow"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4392.615942518432,
+        "y": 175.5376356805948
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_lr8wp",
+      "type": "shaderNode",
+      "position": {
+        "x": 4003.102233791487,
+        "y": 261.78104541947766
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.2"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4003.102233791487,
+        "y": 261.78104541947766
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826779960_o2nyi",
+      "type": "shaderNode",
+      "position": {
+        "x": 3157.00047474882,
+        "y": 428.23640607241543
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3157.00047474882,
+        "y": 428.23640607241543
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826779960_64lf9",
+      "type": "shaderNode",
+      "position": {
+        "x": 3415.6240252603075,
+        "y": 430.8754218939612
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3415.6240252603075,
+        "y": 430.8754218939612
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769826779960_br3o8",
+      "type": "shaderNode",
+      "position": {
+        "x": 3420.9020569033987,
+        "y": 568.1042446143421
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3420.9020569033987,
+        "y": 568.1042446143421
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826779960_xk5ji",
+      "type": "shaderNode",
+      "position": {
+        "x": 3703.2767498087983,
+        "y": 477.0581987710125
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3703.2767498087983,
+        "y": 477.0581987710125
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826779960_xwpkt",
+      "type": "shaderNode",
+      "position": {
+        "x": 3397.978302684453,
+        "y": 707.8727681555057
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.8",
+        "label": "I",
+        "max": 4
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3397.978302684453,
+        "y": 707.8727681555057
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826779960_1gxiz",
+      "type": "shaderNode",
+      "position": {
+        "x": 3839.4136284516835,
+        "y": 479.2346306255165
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3839.4136284516835,
+        "y": 479.2346306255165
+      },
+      "dragging": false
+    },
+    {
+      "id": "palette_1769826779960_gn4kv",
+      "type": "shaderNode",
+      "position": {
+        "x": 3980.1401663842407,
+        "y": 444.81529837305516
+      },
+      "data": {
+        "definition": {
+          "id": "palette"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 3980.1401663842407,
+        "y": 444.81529837305516
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_mult_1769826779960_6g9fd",
+      "type": "shaderNode",
+      "position": {
+        "x": 4384.390971385829,
+        "y": 393.3531457084997
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4384.390971385829,
+        "y": 393.3531457084997
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_add_1769826779960_kev8c",
+      "type": "shaderNode",
+      "position": {
+        "x": 4566.094220825618,
+        "y": 442.9386171962457
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4566.094220825618,
+        "y": 442.9386171962457
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826787990_v5tzr",
+      "type": "shaderNode",
+      "position": {
+        "x": 4762.54745537713,
+        "y": -358.32698539625187
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "positionAbsolute": {
+        "x": 4762.54745537713,
+        "y": -358.32698539625187
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "uv_scale_1769826787990_wjfg1",
+      "type": "shaderNode",
+      "position": {
+        "x": 5014.433443358378,
+        "y": -267.460710034694
+      },
+      "data": {
+        "definition": {
+          "id": "uv_scale"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5014.433443358378,
+        "y": -267.460710034694
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_arkqm",
+      "type": "shaderNode",
+      "position": {
+        "x": 4747.667327652548,
+        "y": -253.81926093610048
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4747.667327652548,
+        "y": -253.81926093610048
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_fract_1769826787990_n8bno",
+      "type": "shaderNode",
+      "position": {
+        "x": 5247.853794600979,
+        "y": -259.882127202142
+      },
+      "data": {
+        "definition": {
+          "id": "vec_fract"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5247.853794600979,
+        "y": -259.882127202142
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_shift_1769826787990_kqcqv",
+      "type": "shaderNode",
+      "position": {
+        "x": 5517.65134343983,
+        "y": -262.91356033516274
+      },
+      "data": {
+        "definition": {
+          "id": "uv_shift"
+        }
+      },
+      "width": 194,
+      "height": 149,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5517.65134343983,
+        "y": -262.91356033516274
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_7v8u8",
+      "type": "shaderNode",
+      "position": {
+        "x": 5240.359654857645,
+        "y": -105.60322505813429
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.5"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5240.359654857645,
+        "y": -105.60322505813429
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826787990_ufanq",
+      "type": "shaderNode",
+      "position": {
+        "x": 4880.957431905714,
+        "y": -45.11532782021152
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 4880.957431905714,
+        "y": -45.11532782021152
+      }
+    },
+    {
+      "id": "uv_1769826787990_lpogp",
+      "type": "shaderNode",
+      "position": {
+        "x": 4755.895631564518,
+        "y": 112.03491166338023
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4755.895631564518,
+        "y": 112.03491166338023
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826787990_0wj1s",
+      "type": "shaderNode",
+      "position": {
+        "x": 5007.51044186191,
+        "y": 103.55355835822337
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 5007.51044186191,
+        "y": 103.55355835822337
+      }
+    },
+    {
+      "id": "math_negate_1769826787990_k5pw7",
+      "type": "shaderNode",
+      "position": {
+        "x": 5256.082098512949,
+        "y": 168.11642462426494
+      },
+      "data": {
+        "definition": {
+          "id": "math_negate"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5256.082098512949,
+        "y": 168.11642462426494
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_exp_1769826787990_01z26",
+      "type": "shaderNode",
+      "position": {
+        "x": 5384.918006666333,
+        "y": 169.63214119077531
+      },
+      "data": {
+        "definition": {
+          "id": "math_exp"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5384.918006666333,
+        "y": 169.63214119077531
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826787990_g3399",
+      "type": "shaderNode",
+      "position": {
+        "x": 5525.332497652269,
+        "y": 122.07913123457871
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5525.332497652269,
+        "y": 122.07913123457871
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1769826787990_0noxi",
+      "type": "shaderNode",
+      "position": {
+        "x": 5179.253116541078,
+        "y": 362.20965809848053
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5179.253116541078,
+        "y": 362.20965809848053
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_5u345",
+      "type": "shaderNode",
+      "position": {
+        "x": 4882.98876307998,
+        "y": 279.00471003712175
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "7.99"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4882.98876307998,
+        "y": 279.00471003712175
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826787990_n1hsl",
+      "type": "shaderNode",
+      "position": {
+        "x": 5367.095576356758,
+        "y": 369.1976003843926
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5367.095576356758,
+        "y": 369.1976003843926
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769826787990_tvpqo",
+      "type": "shaderNode",
+      "position": {
+        "x": 5113.363339300544,
+        "y": 426.8411857815867
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5113.363339300544,
+        "y": 426.8411857815867
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_sin_1769826787990_3lyu2",
+      "type": "shaderNode",
+      "position": {
+        "x": 5487.186941975765,
+        "y": 371.0091243836843
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5487.186941975765,
+        "y": 371.0091243836843
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826787990_22u7y",
+      "type": "shaderNode",
+      "position": {
+        "x": 5662.68149410856,
+        "y": 290.5191418265377
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5662.68149410856,
+        "y": 290.5191418265377
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_abs_1769826787990_9piz6",
+      "type": "shaderNode",
+      "position": {
+        "x": 5786.715237721212,
+        "y": 290.51914182653775
+      },
+      "data": {
+        "definition": {
+          "id": "math_abs"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5786.715237721212,
+        "y": 290.51914182653775
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_div_1769826787990_gmd93",
+      "type": "shaderNode",
+      "position": {
+        "x": 5937.139139549322,
+        "y": 261.48996778953403
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5937.139139549322,
+        "y": 261.48996778953403
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_oyjgb",
+      "type": "shaderNode",
+      "position": {
+        "x": 5699.36884056126,
+        "y": 132.65358807243518
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.01",
+        "label": "Float "
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5699.36884056126,
+        "y": 132.65358807243518
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_pow_1769826787990_igclr",
+      "type": "shaderNode",
+      "position": {
+        "x": 6095.48008884207,
+        "y": 277.32406271880876
+      },
+      "data": {
+        "definition": {
+          "id": "math_pow"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 6095.48008884207,
+        "y": 277.32406271880876
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_4tsin",
+      "type": "shaderNode",
+      "position": {
+        "x": 5705.966380115125,
+        "y": 363.5674724576916
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.2"
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5705.966380115125,
+        "y": 363.5674724576916
+      },
+      "dragging": false
+    },
+    {
+      "id": "uv_1769826787990_s003i",
+      "type": "shaderNode",
+      "position": {
+        "x": 4859.864621072457,
+        "y": 530.0228331106293
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 4859.864621072457,
+        "y": 530.0228331106293
+      },
+      "dragging": false
+    },
+    {
+      "id": "vec_length_1769826787990_ir8mo",
+      "type": "shaderNode",
+      "position": {
+        "x": 5118.488171583945,
+        "y": 532.6618489321752
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5118.488171583945,
+        "y": 532.6618489321752
+      },
+      "dragging": false
+    },
+    {
+      "id": "time_1769826787990_uaiaq",
+      "type": "shaderNode",
+      "position": {
+        "x": 5123.766203227036,
+        "y": 669.890671652556
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      },
+      "width": 194,
+      "height": 72,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5123.766203227036,
+        "y": 669.890671652556
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826787990_elkzi",
+      "type": "shaderNode",
+      "position": {
+        "x": 5406.140896132436,
+        "y": 578.8446258092264
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5406.140896132436,
+        "y": 578.8446258092264
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1769826787990_wv54i",
+      "type": "shaderNode",
+      "position": {
+        "x": 5100.842449008091,
+        "y": 809.6591951937196
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "1.2",
+        "label": "I",
+        "max": 4
+      },
+      "width": 209,
+      "height": 131,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5100.842449008091,
+        "y": 809.6591951937196
+      },
+      "dragging": false
+    },
+    {
+      "id": "math_add_1769826787990_pwhe2",
+      "type": "shaderNode",
+      "position": {
+        "x": 5542.277774775322,
+        "y": 581.0210576637304
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5542.277774775322,
+        "y": 581.0210576637304
+      },
+      "dragging": false
+    },
+    {
+      "id": "palette_1769826787990_gjcc9",
+      "type": "shaderNode",
+      "position": {
+        "x": 5683.004312707878,
+        "y": 546.6017254112692
+      },
+      "data": {
+        "definition": {
+          "id": "palette"
+        }
+      },
+      "width": 194,
+      "height": 117,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 5683.004312707878,
+        "y": 546.6017254112692
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_mult_1769826787990_67x6w",
+      "type": "shaderNode",
+      "position": {
+        "x": 6087.255117709467,
+        "y": 495.13957274671367
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 6087.255117709467,
+        "y": 495.13957274671367
+      },
+      "dragging": false
+    },
+    {
+      "id": "color_add_1769826787990_91qe5",
+      "type": "shaderNode",
+      "position": {
+        "x": 6268.9583671492555,
+        "y": 544.7250442344596
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      },
+      "width": 102,
+      "height": 42,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 6268.9583671492555,
+        "y": 544.7250442344596
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769824852775",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769825038719",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "reactflow__edge-uv_1769824852775out-uv_scale_1769825038719uv",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825065923",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769825038719",
+      "targetHandle": "scale",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825065923out-uv_scale_1769825038719scale",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_scale_1769825038719",
+      "sourceHandle": "out",
+      "target": "vec_fract_1769825101203",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-uv_scale_1769825038719out-vec_fract_1769825101203in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "vec_fract_1769825101203",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769825138808",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "reactflow__edge-vec_fract_1769825101203out-uv_shift_1769825138808uv",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825163347_eqtfn",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769825138808",
+      "targetHandle": "shift",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825163347_eqtfnout-uv_shift_1769825138808shift",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_shift_1769825138808",
+      "sourceHandle": "out",
+      "target": "vec_length_1769825259695",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-uv_shift_1769825138808out-vec_length_1769825259695in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769825274571",
+      "sourceHandle": "out",
+      "target": "vec_length_1769825283380_b8t2z",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-uv_1769825274571out-vec_length_1769825283380_b8t2zin",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769825283380_b8t2z",
+      "sourceHandle": "out",
+      "target": "math_negate_1769825309251",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-vec_length_1769825283380_b8t2zout-math_negate_1769825309251in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_negate_1769825309251",
+      "sourceHandle": "out",
+      "target": "math_exp_1769825356783",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-math_negate_1769825309251out-math_exp_1769825356783in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_exp_1769825356783",
+      "sourceHandle": "out",
+      "target": "math_mult_1769825380543",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-math_exp_1769825356783out-math_mult_1769825380543b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769825259695",
+      "sourceHandle": "out",
+      "target": "math_mult_1769825380543",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-vec_length_1769825259695out-math_mult_1769825380543a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769825380543",
+      "sourceHandle": "out",
+      "target": "math_mult_1769825428967",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1769825380543out-math_mult_1769825428967a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825432559",
+      "sourceHandle": "out",
+      "target": "math_mult_1769825428967",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825432559out-math_mult_1769825428967b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769825428967",
+      "sourceHandle": "out",
+      "target": "math_add_1769825501319",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1769825428967out-math_add_1769825501319a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769825531183",
+      "sourceHandle": "t",
+      "target": "math_add_1769825501319",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-time_1769825531183t-math_add_1769825501319b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825432559",
+      "sourceHandle": "out",
+      "target": "math_div_1769825581087",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825432559out-math_div_1769825581087b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769825501319",
+      "sourceHandle": "out",
+      "target": "math_sin_1769825567223",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-math_add_1769825501319out-math_sin_1769825567223in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_sin_1769825567223",
+      "sourceHandle": "out",
+      "target": "math_div_1769825581087",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-math_sin_1769825567223out-math_div_1769825581087a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769825581087",
+      "sourceHandle": "out",
+      "target": "math_abs_1769825615731",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-math_div_1769825581087out-math_abs_1769825615731in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_abs_1769825615731",
+      "sourceHandle": "out",
+      "target": "math_div_1769825659203",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-math_abs_1769825615731out-math_div_1769825659203b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825676810_18ys1",
+      "sourceHandle": "out",
+      "target": "math_div_1769825659203",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825676810_18ys1out-math_div_1769825659203a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769825659203",
+      "sourceHandle": "out",
+      "target": "math_pow_1769825722091",
+      "targetHandle": "base",
+      "animated": false,
+      "id": "reactflow__edge-math_div_1769825659203out-math_pow_1769825722091base",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825732760_varpo",
+      "sourceHandle": "out",
+      "target": "math_pow_1769825722091",
+      "targetHandle": "exp",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825732760_varpoout-math_pow_1769825722091exp",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769825775195",
+      "sourceHandle": "out",
+      "target": "vec_length_1769825789863",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-uv_1769825775195out-vec_length_1769825789863in",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769825789863",
+      "sourceHandle": "out",
+      "target": "math_add_1769825825911",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-vec_length_1769825789863out-math_add_1769825825911a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769825815823",
+      "sourceHandle": "t",
+      "target": "math_add_1769825825911",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-time_1769825815823t-math_add_1769825825911b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769825935646_bj15a",
+      "sourceHandle": "out",
+      "target": "math_add_1769826024633_konnr",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1769825935646_bj15aout-math_add_1769826024633_konnrb",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769825825911",
+      "sourceHandle": "out",
+      "target": "math_add_1769826024633_konnr",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-math_add_1769825825911out-math_add_1769826024633_konnra",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826024633_konnr",
+      "sourceHandle": "out",
+      "target": "palette_1769826085175",
+      "targetHandle": "t",
+      "animated": false,
+      "id": "reactflow__edge-math_add_1769826024633_konnrout-palette_1769826085175t",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_pow_1769825722091",
+      "sourceHandle": "out",
+      "target": "color_mult_1769826388998",
+      "targetHandle": "fac",
+      "animated": false,
+      "id": "reactflow__edge-math_pow_1769825722091out-color_mult_1769826388998fac",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "palette_1769826085175",
+      "sourceHandle": "color",
+      "target": "color_mult_1769826388998",
+      "targetHandle": "col",
+      "animated": false,
+      "id": "reactflow__edge-palette_1769826085175color-color_mult_1769826388998col",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_mult_1769826388998",
+      "sourceHandle": "out",
+      "target": "color_add_1769826422826",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-color_mult_1769826388998out-color_add_1769826422826a",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "param_color_1769826528262",
+      "sourceHandle": "rgb",
+      "target": "color_add_1769826422826",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_color_1769826528262rgb-color_add_1769826422826b",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826773914_pj24d",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826773914_z1hv3",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_uv_1769826773914_pj24d_uv_scale_1769826773914_z1hv3_0.8604843896303178",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_6bcds",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826773914_z1hv3",
+      "targetHandle": "scale",
+      "animated": false,
+      "id": "e_param_float_1769826773914_6bcds_uv_scale_1769826773914_z1hv3_0.5345032126541293",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_scale_1769826773914_z1hv3",
+      "sourceHandle": "out",
+      "target": "vec_fract_1769826773914_82r1s",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_scale_1769826773914_z1hv3_vec_fract_1769826773914_82r1s_0.93470296069629",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "vec_fract_1769826773914_82r1s",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826773914_wj9g9",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_vec_fract_1769826773914_82r1s_uv_shift_1769826773914_wj9g9_0.11171763903297227",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_7y3by",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826773914_wj9g9",
+      "targetHandle": "shift",
+      "animated": false,
+      "id": "e_param_float_1769826773914_7y3by_uv_shift_1769826773914_wj9g9_0.8912323824888535",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_shift_1769826773914_wj9g9",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826773914_z997q",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_shift_1769826773914_wj9g9_vec_length_1769826773914_z997q_0.3014348398808254",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826773914_ks12o",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826773914_qt1e6",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826773914_ks12o_vec_length_1769826773914_qt1e6_0.9709511183265209",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826773914_qt1e6",
+      "sourceHandle": "out",
+      "target": "math_negate_1769826773914_2y5l0",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_vec_length_1769826773914_qt1e6_math_negate_1769826773914_2y5l0_0.0753805222755971",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_negate_1769826773914_2y5l0",
+      "sourceHandle": "out",
+      "target": "math_exp_1769826773914_59tfd",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_negate_1769826773914_2y5l0_math_exp_1769826773914_59tfd_0.8385572719701492",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_exp_1769826773914_59tfd",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826773914_q4ajc",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_exp_1769826773914_59tfd_math_mult_1769826773914_q4ajc_0.11279211622604812",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826773914_z997q",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826773914_q4ajc",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826773914_z997q_math_mult_1769826773914_q4ajc_0.008651826652832928",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826773914_q4ajc",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826773914_6ef3y",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826773914_q4ajc_math_mult_1769826773914_6ef3y_0.9976911402778837",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_upqjy",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826773914_6ef3y",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826773914_upqjy_math_mult_1769826773914_6ef3y_0.9306259245537439",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826773914_6ef3y",
+      "sourceHandle": "out",
+      "target": "math_add_1769826773914_sw8cd",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826773914_6ef3y_math_add_1769826773914_sw8cd_0.04083312821090068",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826773914_tk9u8",
+      "sourceHandle": "t",
+      "target": "math_add_1769826773914_sw8cd",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826773914_tk9u8_math_add_1769826773914_sw8cd_0.3255468267578958",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_upqjy",
+      "sourceHandle": "out",
+      "target": "math_div_1769826773914_vykhn",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826773914_upqjy_math_div_1769826773914_vykhn_0.7640604392536203",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826773914_sw8cd",
+      "sourceHandle": "out",
+      "target": "math_sin_1769826773914_0900z",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_add_1769826773914_sw8cd_math_sin_1769826773914_0900z_0.3551990442254057",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_sin_1769826773914_0900z",
+      "sourceHandle": "out",
+      "target": "math_div_1769826773914_vykhn",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_sin_1769826773914_0900z_math_div_1769826773914_vykhn_0.5696421901875132",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826773914_vykhn",
+      "sourceHandle": "out",
+      "target": "math_abs_1769826773914_2ubi5",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_div_1769826773914_vykhn_math_abs_1769826773914_2ubi5_0.37720986253947264",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_abs_1769826773914_2ubi5",
+      "sourceHandle": "out",
+      "target": "math_div_1769826773914_uf0qg",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_abs_1769826773914_2ubi5_math_div_1769826773914_uf0qg_0.08401213808503061",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_fmtdm",
+      "sourceHandle": "out",
+      "target": "math_div_1769826773914_uf0qg",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_param_float_1769826773914_fmtdm_math_div_1769826773914_uf0qg_0.9159026888257896",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826773914_uf0qg",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826773914_421x0",
+      "targetHandle": "base",
+      "animated": false,
+      "id": "e_math_div_1769826773914_uf0qg_math_pow_1769826773914_421x0_0.32505997121568275",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_8gmaj",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826773914_421x0",
+      "targetHandle": "exp",
+      "animated": false,
+      "id": "e_param_float_1769826773914_8gmaj_math_pow_1769826773914_421x0_0.9157678275953915",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826773914_4wbhx",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826773914_q9muz",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826773914_4wbhx_vec_length_1769826773914_q9muz_0.0382755624974751",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826773914_q9muz",
+      "sourceHandle": "out",
+      "target": "math_add_1769826773914_rxvhx",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826773914_q9muz_math_add_1769826773914_rxvhx_0.6111471056210356",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826773914_fl189",
+      "sourceHandle": "t",
+      "target": "math_add_1769826773914_rxvhx",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826773914_fl189_math_add_1769826773914_rxvhx_0.789172574759873",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826773914_ix0yb",
+      "sourceHandle": "out",
+      "target": "math_add_1769826773914_xhc7e",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826773914_ix0yb_math_add_1769826773914_xhc7e_0.47367884925957837",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826773914_rxvhx",
+      "sourceHandle": "out",
+      "target": "math_add_1769826773914_xhc7e",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_add_1769826773914_rxvhx_math_add_1769826773914_xhc7e_0.5657360719351281",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826773914_xhc7e",
+      "sourceHandle": "out",
+      "target": "palette_1769826773914_pipd9",
+      "targetHandle": "t",
+      "animated": false,
+      "id": "e_math_add_1769826773914_xhc7e_palette_1769826773914_pipd9_0.037145599761481685",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_pow_1769826773914_421x0",
+      "sourceHandle": "out",
+      "target": "color_mult_1769826773914_u8dr8",
+      "targetHandle": "fac",
+      "animated": false,
+      "id": "e_math_pow_1769826773914_421x0_color_mult_1769826773914_u8dr8_0.16031285392139905",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "palette_1769826773914_pipd9",
+      "sourceHandle": "color",
+      "target": "color_mult_1769826773914_u8dr8",
+      "targetHandle": "col",
+      "animated": false,
+      "id": "e_palette_1769826773914_pipd9_color_mult_1769826773914_u8dr8_0.028163928418142525",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_mult_1769826773914_u8dr8",
+      "sourceHandle": "out",
+      "target": "color_add_1769826773914_cem0v",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_color_mult_1769826773914_u8dr8_color_add_1769826773914_cem0v_0.4886994749049093",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826779960_jrizs",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826779960_2mxms",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_uv_1769826779960_jrizs_uv_scale_1769826779960_2mxms_0.9143808837041039",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_ejrtl",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826779960_2mxms",
+      "targetHandle": "scale",
+      "animated": false,
+      "id": "e_param_float_1769826779960_ejrtl_uv_scale_1769826779960_2mxms_0.8484181779586475",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_scale_1769826779960_2mxms",
+      "sourceHandle": "out",
+      "target": "vec_fract_1769826779960_ugibj",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_scale_1769826779960_2mxms_vec_fract_1769826779960_ugibj_0.28619366623541787",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "vec_fract_1769826779960_ugibj",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826779960_kt4m2",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_vec_fract_1769826779960_ugibj_uv_shift_1769826779960_kt4m2_0.6882172973661909",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_1fxwr",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826779960_kt4m2",
+      "targetHandle": "shift",
+      "animated": false,
+      "id": "e_param_float_1769826779960_1fxwr_uv_shift_1769826779960_kt4m2_0.13091896145378434",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_shift_1769826779960_kt4m2",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826779960_6kdyv",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_shift_1769826779960_kt4m2_vec_length_1769826779960_6kdyv_0.5819572235187361",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826779960_t6r9i",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826779960_kl927",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826779960_t6r9i_vec_length_1769826779960_kl927_0.3498016507146742",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826779960_kl927",
+      "sourceHandle": "out",
+      "target": "math_negate_1769826779960_lclgm",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_vec_length_1769826779960_kl927_math_negate_1769826779960_lclgm_0.8499696351941944",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_negate_1769826779960_lclgm",
+      "sourceHandle": "out",
+      "target": "math_exp_1769826779960_9gq63",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_negate_1769826779960_lclgm_math_exp_1769826779960_9gq63_0.050541108901646314",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_exp_1769826779960_9gq63",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826779960_ka1v6",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_exp_1769826779960_9gq63_math_mult_1769826779960_ka1v6_0.8027081353635341",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826779960_6kdyv",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826779960_ka1v6",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826779960_6kdyv_math_mult_1769826779960_ka1v6_0.09867010689163458",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826779960_ka1v6",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826779960_xo74y",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826779960_ka1v6_math_mult_1769826779960_xo74y_0.03536830711841665",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_vft1i",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826779960_xo74y",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826779960_vft1i_math_mult_1769826779960_xo74y_0.24244608654304356",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826779960_xo74y",
+      "sourceHandle": "out",
+      "target": "math_add_1769826779960_vyjur",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826779960_xo74y_math_add_1769826779960_vyjur_0.03376558410275332",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826779960_45e3l",
+      "sourceHandle": "t",
+      "target": "math_add_1769826779960_vyjur",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826779960_45e3l_math_add_1769826779960_vyjur_0.029362582224131684",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_vft1i",
+      "sourceHandle": "out",
+      "target": "math_div_1769826779960_ehedd",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826779960_vft1i_math_div_1769826779960_ehedd_0.2219784520330128",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826779960_vyjur",
+      "sourceHandle": "out",
+      "target": "math_sin_1769826779960_bsaai",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_add_1769826779960_vyjur_math_sin_1769826779960_bsaai_0.8553643104076114",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_sin_1769826779960_bsaai",
+      "sourceHandle": "out",
+      "target": "math_div_1769826779960_ehedd",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_sin_1769826779960_bsaai_math_div_1769826779960_ehedd_0.9438040348321026",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826779960_ehedd",
+      "sourceHandle": "out",
+      "target": "math_abs_1769826779960_fmx9p",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_div_1769826779960_ehedd_math_abs_1769826779960_fmx9p_0.4470357117624588",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_abs_1769826779960_fmx9p",
+      "sourceHandle": "out",
+      "target": "math_div_1769826779960_rxmsb",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_abs_1769826779960_fmx9p_math_div_1769826779960_rxmsb_0.04897446156994345",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_uub39",
+      "sourceHandle": "out",
+      "target": "math_div_1769826779960_rxmsb",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_param_float_1769826779960_uub39_math_div_1769826779960_rxmsb_0.3219778745340316",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826779960_rxmsb",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826779960_bwaqb",
+      "targetHandle": "base",
+      "animated": false,
+      "id": "e_math_div_1769826779960_rxmsb_math_pow_1769826779960_bwaqb_0.34606254401127623",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_lr8wp",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826779960_bwaqb",
+      "targetHandle": "exp",
+      "animated": false,
+      "id": "e_param_float_1769826779960_lr8wp_math_pow_1769826779960_bwaqb_0.9422131757279344",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826779960_o2nyi",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826779960_64lf9",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826779960_o2nyi_vec_length_1769826779960_64lf9_0.604362392369278",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826779960_64lf9",
+      "sourceHandle": "out",
+      "target": "math_add_1769826779960_xk5ji",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826779960_64lf9_math_add_1769826779960_xk5ji_0.7022754961144085",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826779960_br3o8",
+      "sourceHandle": "t",
+      "target": "math_add_1769826779960_xk5ji",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826779960_br3o8_math_add_1769826779960_xk5ji_0.3195132579215262",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826779960_xwpkt",
+      "sourceHandle": "out",
+      "target": "math_add_1769826779960_1gxiz",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826779960_xwpkt_math_add_1769826779960_1gxiz_0.5781825138264531",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826779960_xk5ji",
+      "sourceHandle": "out",
+      "target": "math_add_1769826779960_1gxiz",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_add_1769826779960_xk5ji_math_add_1769826779960_1gxiz_0.9292550274032049",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826779960_1gxiz",
+      "sourceHandle": "out",
+      "target": "palette_1769826779960_gn4kv",
+      "targetHandle": "t",
+      "animated": false,
+      "id": "e_math_add_1769826779960_1gxiz_palette_1769826779960_gn4kv_0.2411928495248573",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_pow_1769826779960_bwaqb",
+      "sourceHandle": "out",
+      "target": "color_mult_1769826779960_6g9fd",
+      "targetHandle": "fac",
+      "animated": false,
+      "id": "e_math_pow_1769826779960_bwaqb_color_mult_1769826779960_6g9fd_0.7348807363236185",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "palette_1769826779960_gn4kv",
+      "sourceHandle": "color",
+      "target": "color_mult_1769826779960_6g9fd",
+      "targetHandle": "col",
+      "animated": false,
+      "id": "e_palette_1769826779960_gn4kv_color_mult_1769826779960_6g9fd_0.9124036319790063",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_mult_1769826779960_6g9fd",
+      "sourceHandle": "out",
+      "target": "color_add_1769826779960_kev8c",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_color_mult_1769826779960_6g9fd_color_add_1769826779960_kev8c_0.9730776160319841",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826787990_v5tzr",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826787990_wjfg1",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_uv_1769826787990_v5tzr_uv_scale_1769826787990_wjfg1_0.42533351140990716",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_arkqm",
+      "sourceHandle": "out",
+      "target": "uv_scale_1769826787990_wjfg1",
+      "targetHandle": "scale",
+      "animated": false,
+      "id": "e_param_float_1769826787990_arkqm_uv_scale_1769826787990_wjfg1_0.32344079490628264",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_scale_1769826787990_wjfg1",
+      "sourceHandle": "out",
+      "target": "vec_fract_1769826787990_n8bno",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_scale_1769826787990_wjfg1_vec_fract_1769826787990_n8bno_0.07112385896220619",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "vec_fract_1769826787990_n8bno",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826787990_kqcqv",
+      "targetHandle": "uv",
+      "animated": false,
+      "id": "e_vec_fract_1769826787990_n8bno_uv_shift_1769826787990_kqcqv_0.17795919941004246",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_7v8u8",
+      "sourceHandle": "out",
+      "target": "uv_shift_1769826787990_kqcqv",
+      "targetHandle": "shift",
+      "animated": false,
+      "id": "e_param_float_1769826787990_7v8u8_uv_shift_1769826787990_kqcqv_0.344363564796332",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_shift_1769826787990_kqcqv",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826787990_ufanq",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_shift_1769826787990_kqcqv_vec_length_1769826787990_ufanq_0.9613379853481928",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826787990_lpogp",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826787990_0wj1s",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826787990_lpogp_vec_length_1769826787990_0wj1s_0.7120642776053925",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826787990_0wj1s",
+      "sourceHandle": "out",
+      "target": "math_negate_1769826787990_k5pw7",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_vec_length_1769826787990_0wj1s_math_negate_1769826787990_k5pw7_0.23199838177238352",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_negate_1769826787990_k5pw7",
+      "sourceHandle": "out",
+      "target": "math_exp_1769826787990_01z26",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_negate_1769826787990_k5pw7_math_exp_1769826787990_01z26_0.5009505809647142",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_exp_1769826787990_01z26",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826787990_g3399",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_exp_1769826787990_01z26_math_mult_1769826787990_g3399_0.12796659562494261",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826787990_ufanq",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826787990_g3399",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826787990_ufanq_math_mult_1769826787990_g3399_0.8316462580600308",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826787990_g3399",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826787990_0noxi",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826787990_g3399_math_mult_1769826787990_0noxi_0.746036802812465",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_5u345",
+      "sourceHandle": "out",
+      "target": "math_mult_1769826787990_0noxi",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826787990_5u345_math_mult_1769826787990_0noxi_0.06117682424517723",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1769826787990_0noxi",
+      "sourceHandle": "out",
+      "target": "math_add_1769826787990_n1hsl",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_mult_1769826787990_0noxi_math_add_1769826787990_n1hsl_0.7813518612310305",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826787990_tvpqo",
+      "sourceHandle": "t",
+      "target": "math_add_1769826787990_n1hsl",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826787990_tvpqo_math_add_1769826787990_n1hsl_0.68100934195018",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_5u345",
+      "sourceHandle": "out",
+      "target": "math_div_1769826787990_22u7y",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826787990_5u345_math_div_1769826787990_22u7y_0.14283350238204406",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826787990_n1hsl",
+      "sourceHandle": "out",
+      "target": "math_sin_1769826787990_3lyu2",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_add_1769826787990_n1hsl_math_sin_1769826787990_3lyu2_0.029478377338336803",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_sin_1769826787990_3lyu2",
+      "sourceHandle": "out",
+      "target": "math_div_1769826787990_22u7y",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_sin_1769826787990_3lyu2_math_div_1769826787990_22u7y_0.813755983153953",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826787990_22u7y",
+      "sourceHandle": "out",
+      "target": "math_abs_1769826787990_9piz6",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_math_div_1769826787990_22u7y_math_abs_1769826787990_9piz6_0.8045612695541071",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_abs_1769826787990_9piz6",
+      "sourceHandle": "out",
+      "target": "math_div_1769826787990_gmd93",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_math_abs_1769826787990_9piz6_math_div_1769826787990_gmd93_0.2348821319260952",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_oyjgb",
+      "sourceHandle": "out",
+      "target": "math_div_1769826787990_gmd93",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_param_float_1769826787990_oyjgb_math_div_1769826787990_gmd93_0.1574059546060136",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_div_1769826787990_gmd93",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826787990_igclr",
+      "targetHandle": "base",
+      "animated": false,
+      "id": "e_math_div_1769826787990_gmd93_math_pow_1769826787990_igclr_0.17003276940832057",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_4tsin",
+      "sourceHandle": "out",
+      "target": "math_pow_1769826787990_igclr",
+      "targetHandle": "exp",
+      "animated": false,
+      "id": "e_param_float_1769826787990_4tsin_math_pow_1769826787990_igclr_0.0782418361835372",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "uv_1769826787990_s003i",
+      "sourceHandle": "out",
+      "target": "vec_length_1769826787990_ir8mo",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "e_uv_1769826787990_s003i_vec_length_1769826787990_ir8mo_0.05826547062781595",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "vec_length_1769826787990_ir8mo",
+      "sourceHandle": "out",
+      "target": "math_add_1769826787990_elkzi",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_vec_length_1769826787990_ir8mo_math_add_1769826787990_elkzi_0.7440335324884191",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "time_1769826787990_uaiaq",
+      "sourceHandle": "t",
+      "target": "math_add_1769826787990_elkzi",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_time_1769826787990_uaiaq_math_add_1769826787990_elkzi_0.7507476139037527",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1769826787990_wv54i",
+      "sourceHandle": "out",
+      "target": "math_add_1769826787990_pwhe2",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "e_param_float_1769826787990_wv54i_math_add_1769826787990_pwhe2_0.6844144843015777",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826787990_elkzi",
+      "sourceHandle": "out",
+      "target": "math_add_1769826787990_pwhe2",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_math_add_1769826787990_elkzi_math_add_1769826787990_pwhe2_0.5288172850370161",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_add_1769826787990_pwhe2",
+      "sourceHandle": "out",
+      "target": "palette_1769826787990_gjcc9",
+      "targetHandle": "t",
+      "animated": false,
+      "id": "e_math_add_1769826787990_pwhe2_palette_1769826787990_gjcc9_0.1971989991997013",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_pow_1769826787990_igclr",
+      "sourceHandle": "out",
+      "target": "color_mult_1769826787990_67x6w",
+      "targetHandle": "fac",
+      "animated": false,
+      "id": "e_math_pow_1769826787990_igclr_color_mult_1769826787990_67x6w_0.15822191424799115",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "palette_1769826787990_gjcc9",
+      "sourceHandle": "color",
+      "target": "color_mult_1769826787990_67x6w",
+      "targetHandle": "col",
+      "animated": false,
+      "id": "e_palette_1769826787990_gjcc9_color_mult_1769826787990_67x6w_0.6128626494283186",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_mult_1769826787990_67x6w",
+      "sourceHandle": "out",
+      "target": "color_add_1769826787990_91qe5",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "e_color_mult_1769826787990_67x6w_color_add_1769826787990_91qe5_0.47525391625786795",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_add_1769826422826",
+      "sourceHandle": "out",
+      "target": "color_add_1769826773914_cem0v",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-color_add_1769826422826out-color_add_1769826773914_cem0vb"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_add_1769826773914_cem0v",
+      "sourceHandle": "out",
+      "target": "color_add_1769826779960_kev8c",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-color_add_1769826773914_cem0vout-color_add_1769826779960_kev8cb"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "color_add_1769826779960_kev8c",
+      "sourceHandle": "out",
+      "target": "color_add_1769826787990_91qe5",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-color_add_1769826779960_kev8cout-color_add_1769826787990_91qe5b"
+    }
+  ],
+  "viewport": {
+    "x": -1985.0506336640733,
+    "y": 47.22840076854152,
+    "zoom": 0.5000000000000003
+  }
+}
