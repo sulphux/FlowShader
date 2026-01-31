@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import NodeEditor from './components/NodeEditor';
 import ShaderPreview from './components/ShaderPreview';
-import Sidebar from './components/Sidebar';
 import { compileGraphToGLSL, type GraphNode } from './core/compiler';
 import type { Node, Edge } from 'reactflow';
 
@@ -46,7 +45,6 @@ function App() {
     };
   }, [resize, stopResizing]);
 
-
   return (
     <div 
       ref={containerRef}
@@ -55,15 +53,15 @@ function App() {
         background: '#000', overflow: 'hidden', position: 'relative'
       }}
     >
-      {/* 0. SIDEBAR (NOWY) */}
-      <div style={{ height: '100%', zIndex: 50 }}>
-          <Sidebar />
+      {/* 0. SIDEBAR ROOT (Tu wstrzykniemy Sidebar z NodeEditora) */}
+      <div id="sidebar-root" style={{ height: '100%', zIndex: 50 }}>
+          {/* Pusto - NodeEditor wypełni to przez Portal */}
       </div>
 
       {/* 1. EDYTOR NODÓW */}
       <div style={{ 
-        flex: 1, // Zajmuje resztę miejsca obok Sidebara
-        display: 'flex', // Flex w środku, żeby obsłużyć podział na Edytor/Preview
+        flex: 1, 
+        display: 'flex', 
         height: '100%', 
         position: 'relative'
       }}>

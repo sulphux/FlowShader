@@ -7,7 +7,7 @@ interface Props {
   y: number;
   onClose: () => void;
   onAddNode: (typeId: string) => void;
-  filterType?: string | null; // NOWE: Filtracja po typie kabla
+  filterType?: string | null;
 }
 
 const MENU_STRUCTURE = {
@@ -15,7 +15,7 @@ const MENU_STRUCTURE = {
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_float", "relay_vec3"],
-  "Utils (Split/Join)": ["special_note", "special_group", "split_vec2", "split_vec3", "split_vec4", "combine_vec2", "combine_vec3", "combine_vec4", "preview"],
+  "Utils": ["special_note", "special_group", "split_vec2", "split_vec3", "split_vec4", "combine_vec2", "combine_vec3", "combine_vec4", "preview"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
 
@@ -23,28 +23,36 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
+  const [openLeft, setOpenLeft] = useState(false); // NOWE: Czy otwierać w lewo?
 
   useLayoutEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
       let newX = x;
       let newY = y;
+      
+      // Główne menu - sprawdzenie krawędzi
       if (x + rect.width > window.innerWidth) newX = x - rect.width;
       if (y + rect.height > window.innerHeight) newY = y - rect.height;
+      
       setAdjustedPos({ x: newX, y: newY });
+
+      // Decyzja dla Submenu: jeśli po prawej jest mało miejsca, otwieramy w lewo
+      if (newX + rect.width + 180 > window.innerWidth) {
+          setOpenLeft(true);
+      } else {
+          setOpenLeft(false);
+      }
     }
   }, [x, y]);
 
-  // NOWE: Funkcja sprawdzająca czy node pasuje do filtra
+  // (reszta bez zmian: isNodeCompatible, filteredStructure)
   const isNodeCompatible = (nodeId: string) => {
-      if (!filterType) return true; // Brak filtra = pokazuj wszystko
+      if (!filterType) return true;
       const def = NODE_REGISTRY[nodeId as keyof typeof NODE_REGISTRY];
       if (!def) return false;
-      
-      // Sprawdzamy czy node ma wejście pasujące do typu kabla
-      // Uproszczenie: Float pasuje do wszystkiego (auto-konwersja), Vec3 do Vec3 itp.
       return def.inputs.some(input => {
-          if (filterType === 'float') return true; // Float wejdzie wszędzie
+          if (filterType === 'float') return true; 
           if (input.type === filterType) return true;
           if (input.type === 'vec3' && filterType === 'float') return true; 
           return false;
@@ -54,12 +62,9 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
   const filteredStructure = useMemo(() => {
       if (!filterType) return MENU_STRUCTURE;
       const newStruct: Record<string, string[]> = {};
-      
       Object.entries(MENU_STRUCTURE).forEach(([cat, items]) => {
           const compatibleItems = items.filter(isNodeCompatible);
-          if (compatibleItems.length > 0) {
-              newStruct[cat] = compatibleItems;
-          }
+          if (compatibleItems.length > 0) newStruct[cat] = compatibleItems;
       });
       return newStruct;
   }, [filterType]);
@@ -77,7 +82,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
-    zIndex: 100000, // MAX Z-INDEX
+    zIndex: 100000,
     fontFamily: 'sans-serif',
     userSelect: 'none'
   };
@@ -112,7 +117,12 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
             </div>
             {activeCategory === category && (
               <div style={{
-                position: 'absolute', top: 0, left: '100%', marginLeft: '6px',
+                position: 'absolute', top: 0,
+                // SMART POSITIONING:
+                left: openLeft ? 'auto' : '100%', 
+                right: openLeft ? '100%' : 'auto',
+                marginLeft: openLeft ? 0 : '6px',
+                marginRight: openLeft ? '6px' : 0,
                 background: '#1a1a1a', border: '1px solid #444', borderRadius: '6px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.8)', padding: '4px',
                 minWidth: '180px', maxHeight: '400px', overflowY: 'auto'
