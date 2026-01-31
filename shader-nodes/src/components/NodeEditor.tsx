@@ -12,7 +12,8 @@ import ReactFlow, {
   type OnConnect,
   type NodeTypes,
   applyNodeChanges,
-  getRectOfNodes
+  getRectOfNodes,
+  type OnConnectStartParams
 } from 'reactflow';
 import 'reactflow/dist/style.css'; 
 
@@ -80,7 +81,13 @@ function EditorInner({ onChange }: Props) {
   
   const reactFlowInstance = useReactFlow();
   
+  // NOWE: Stan do trzymania informacji o typie filtru (dla Drag & Drop)
+  const [menuFilter, setMenuFilter] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean } | null>(null);
+  
+  // NOWE: Stan startu połączenia
+  const connectionStartRef = useRef<OnConnectStartParams | null>(null);
+
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -173,6 +180,14 @@ function EditorInner({ onChange }: Props) {
       }
   }, [setNodes, setEdges]);
 
+  // --- DELETE SELECTED FUNCTION ---
+  const deleteSelected = useCallback(() => {
+      // Filtrujemy nody: usuwamy te zaznaczone, ale Output musi zostać
+      setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
+      // Usuwamy zaznaczone krawędzie
+      setEdges((eds) => eds.filter((e) => !e.selected));
+  }, [setNodes, setEdges]);
+
   const onNodesChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -236,6 +251,46 @@ function EditorInner({ onChange }: Props) {
       }
   }, []);
 
+  // --- UE STYLE DRAG & DROP LOGIC ---
+  const onConnectStart = useCallback((_, params: OnConnectStartParams) => {
+      connectionStartRef.current = params;
+  }, []);
+
+  const onConnectEnd = useCallback((event: any) => {
+      // Sprawdzamy czy upuszczono na tło (pane)
+      const targetIsPane = event.target.classList.contains('react-flow__pane');
+      
+      if (targetIsPane && connectionStartRef.current && ref.current) {
+          // Użytkownik upuścił kabel na tło!
+          const { nodeId, handleId, handleType } = connectionStartRef.current;
+          const node = nodes.find(n => n.id === nodeId);
+          
+          if (node) {
+              // Znajdź typ tego pinu
+              let type = 'default';
+              if (handleType === 'source') {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const outDef = node.data.definition.outputs.find((o: any) => o.id === handleId);
+                  if(outDef) type = outDef.type;
+              } else {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const inDef = node.data.definition.inputs.find((i: any) => i.id === handleId);
+                  if(inDef) type = inDef.type;
+              }
+
+              // Oblicz pozycję myszy
+              const clientX = event.clientX;
+              const clientY = event.clientY;
+
+              // Otwórz menu z filtrem!
+              setMenu({ x: clientX, y: clientY, visible: true });
+              setMenuFilter(type); // Przekazujemy typ do filtra
+          }
+      }
+      connectionStartRef.current = null;
+  }, [nodes]);
+
+
   const handleCopy = useCallback(() => {
       const selectedNodes = nodes.filter(n => n.selected);
       if (selectedNodes.length === 0) return;
@@ -275,15 +330,16 @@ function EditorInner({ onChange }: Props) {
       const handleKeyDown = (e: KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy();
           if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste();
+          if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); // Delete też działa
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCopy, handlePaste]);
+  }, [handleCopy, handlePaste, deleteSelected]);
 
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
       event.preventDefault(); 
-      // TU BYŁ BŁĄD: Przekazujemy clientX/Y prosto do stanu, bez kombinowania
       setMenu({ x: event.clientX, y: event.clientY, visible: true });
+      setMenuFilter(null); // Prawy klik na tło = brak filtra (pokaż wszystko)
   }, []);
 
   const onAddNode = useCallback((typeId: string) => {
@@ -320,9 +376,13 @@ function EditorInner({ onChange }: Props) {
         onPaneContextMenu={onPaneContextMenu} // <--- TO MUSI TU BYĆ
         onEdgeContextMenu={onEdgeContextMenu}
         // USUNIĘTE: onNodeContextMenu (żeby prawy klik nie usuwał noda)
+        
+        onConnectStart={onConnectStart} // <--- WAŻNE DLA DRAG & DROP
+        onConnectEnd={onConnectEnd}     // <--- WAŻNE DLA DRAG & DROP
+
         onPaneClick={() => setMenu(null)}
         selectionOnDrag={true}
-        panOnDrag={[1]}
+        panOnDrag={[1]} // Tylko środkowy
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Control"
         defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
@@ -330,9 +390,33 @@ function EditorInner({ onChange }: Props) {
         <Background color="#222" gap={20} />
         <Controls />
         <Legend /> 
+        
+        {/* KOSZ NA EKRANIE (Floating Action Button) */}
+        <div 
+            onClick={deleteSelected}
+            title="Delete Selected (Del)"
+            style={{
+                position: 'absolute', bottom: 20, right: 20, zIndex: 3000,
+                width: 50, height: 50, borderRadius: '50%',
+                background: '#ff007a', color: 'white', fontSize: '24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
+                transition: 'transform 0.1s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}
+        >
+            🗑️
+        </div>
+
         {menu && menu.visible && (
-          // NAPRAWA: Przekazujemy surowe współrzędne, bo ContextMenu jest teraz fixed overlayem
-          <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} onAddNode={onAddNode} />
+          <ContextMenu 
+            x={menu.x} 
+            y={menu.y} 
+            onClose={() => setMenu(null)} 
+            onAddNode={onAddNode}
+            filterType={menuFilter} // Przekazujemy filtr
+          />
         )}
       </ReactFlow>
     </div>
@@ -345,4 +429,4 @@ export default function NodeEditor(props: Props) {
       <EditorInner {...props} />
     </ReactFlowProvider>
   );
-} 
+}
