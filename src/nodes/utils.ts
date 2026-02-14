@@ -108,7 +108,9 @@ export const MonitorNodeDef: ShaderNodeDefinition = {
 };
 
 export const SmartSplitNode: ShaderNodeDefinition = {
-  id: 'smart_split', label: 'Split (Auto)',
+  id: 'smart_split', 
+  label: 'Split (Auto)',
+  compact: true,
   inputs: [{ id: 'in', label: 'Auto', type: 'auto' }],
   outputs: [{ id: 'auto', label: 'Auto', type: 'auto' }], // Placeholder - dynamically replaced
   glslTemplate: ({ in: val }) => `${val || 'vec3(0.0)'}`,

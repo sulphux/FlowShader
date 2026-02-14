@@ -164,6 +164,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                    type="target" 
                    position={Position.Left} 
                    id={input.id} 
+                   title={input.label}
                    className={isAuto ? 'port-auto' : ''}
                    style={{ 
                      background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
@@ -184,8 +185,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             })}
         </div>
         <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
-        <div style={{ position: 'absolute', right: '-6px' }}>
-            {def.outputs.map((output) => {
+        <div style={{ position: 'absolute', right: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {def.outputs.map((output, i) => {
+                let topOffset = 0;
+                if (def.outputs.length > 1) topOffset = (i - (def.outputs.length - 1)/2) * 12;
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 
@@ -194,6 +197,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                   type="source" 
                   position={Position.Right} 
                   id={output.id} 
+                  title={output.label}
                   className={isAuto ? 'port-auto' : ''}
                   style={{ 
                     background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
@@ -201,7 +205,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                     height: '10px', 
                     border: '2px solid #1a1a1a', 
                     right: 0, 
-                    top: 0, 
+                    top: topOffset, 
                     transform: 'translate(0, -50%)',
                     display: 'flex',
                     alignItems: 'center',
