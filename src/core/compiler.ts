@@ -115,13 +115,23 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
     if (def.id.includes('split')) {
         // Dla Split: typ zmiennej = typ wejścia (np. vec3)
         if (node.data.definition.inputs.length > 0) {
-            nodeType = node.data.definition.inputs[0].type;
+            const inputType = node.data.definition.inputs[0].type;
+            // Auto type fallback - jeśli nie podłączone, użyj vec3
+            nodeType = inputType === 'auto' ? 'vec3' : inputType;
         }
     } else {
         // Dla reszty: typ zmiennej = typ pierwszego wyjścia (standard)
         if (node.data.definition.outputs.length > 0) {
-            nodeType = node.data.definition.outputs[0].type;
+            const outputType = node.data.definition.outputs[0].type;
+            // Auto type fallback - jeśli nie podłączone, użyj vec3
+            nodeType = outputType === 'auto' ? 'vec3' : outputType;
         }
+    }
+    
+    // Skip nodes with auto type that have no connections
+    // (they haven't been adapted yet, so we can't compile them)
+    if (nodeType === 'auto') {
+        return; // Skip this node
     }
     
     if (def.id !== 'output' && def.id !== 'preview') {
