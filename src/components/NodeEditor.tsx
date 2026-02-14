@@ -16,6 +16,7 @@ import Sidebar from './Sidebar';
 import { NODE_REGISTRY } from '../nodes'; 
 import { TYPE_COLORS } from '../core/theme';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
+import { validateConnection } from '../core/connectionValidator';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -219,15 +220,24 @@ function EditorInner({ onChange }: Props) {
   const onConnect: OnConnect = useCallback((params) => {
         const sourceNode = nodes.find(n => n.id === params.source);
         const targetNode = nodes.find(n => n.id === params.target);
-        if (!sourceNode || !targetNode) { setEdges((eds) => addEdge(params, eds)); return; }
-        const sourceDef = sourceNode.data.definition; const targetDef = targetNode.data.definition;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const outputDef = sourceDef.outputs.find((o: any) => o.id === params.sourceHandle);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const inputDef = targetDef.inputs.find((i: any) => i.id === params.targetHandle);
-        if (!outputDef) { setEdges((eds) => addEdge(params, eds)); return; }
+        if (!sourceNode || !targetNode) { 
+            setEdges((eds) => addEdge(params, eds)); 
+            return; 
+        }
+
+        const sourceDef = sourceNode.data.definition; 
+        const targetDef = targetNode.data.definition;
+        const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === params.sourceHandle);
+        const inputDef = targetDef.inputs.find((i: { id: string; type: string }) => i.id === params.targetHandle);
+        
+        if (!outputDef) { 
+            setEdges((eds) => addEdge(params, eds)); 
+            return; 
+        }
+
         const sourceType = outputDef.type;
 
+        // Smart Split Node - dynamically adapts to input type
         if (targetDef.id === 'smart_split') {
             const type = outputDef.type;
             let newOutputs = targetDef.outputs;
@@ -244,22 +254,22 @@ function EditorInner({ onChange }: Props) {
             }));
         }
 
+        // Validate connection using our validator
         if (inputDef) {
             const targetType = inputDef.type;
-            if (targetType === 'float' && (sourceType === 'vec2' || sourceType === 'vec3' || sourceType === 'vec4')) {
-                let splitNodeTypeId = '';
-                if (sourceType === 'vec2') splitNodeTypeId = 'split_vec2'; else if (sourceType === 'vec3') splitNodeTypeId = 'split_vec3'; else if (sourceType === 'vec4') splitNodeTypeId = 'split_vec4';
-                if (NODE_REGISTRY[splitNodeTypeId as keyof typeof NODE_REGISTRY]) {
-                    const splitNodeId = `auto_split_${Date.now()}`;
-                    const newX = (sourceNode.position.x + targetNode.position.x) / 2; const newY = (sourceNode.position.y + targetNode.position.y) / 2;
-                    const splitNode: Node = { id: splitNodeId, type: 'shaderNode', position: { x: newX, y: newY }, data: { definition: NODE_REGISTRY[splitNodeTypeId as keyof typeof NODE_REGISTRY] } };
-                    setNodes((nds) => nds.concat(splitNode));
-                    const edge1: Edge = { id: `e_${sourceNode.id}_${splitNodeId}`, source: sourceNode.id, sourceHandle: params.sourceHandle, target: splitNodeId, targetHandle: 'in', style: { stroke: TYPE_COLORS[sourceType], strokeWidth: 3 }, animated: true };
-                    const edge2: Edge = { id: `e_${splitNodeId}_${targetNode.id}`, source: splitNodeId, sourceHandle: 'x', target: targetNode.id, targetHandle: params.targetHandle, style: { stroke: TYPE_COLORS['float'], strokeWidth: 3 }, };
-                    setEdges((eds) => [...eds, edge1, edge2]);
-                    return;
-                }
+            const validation = validateConnection(sourceType as 'float' | 'vec2' | 'vec3' | 'vec4', targetType as 'float' | 'vec2' | 'vec3' | 'vec4');
+            
+            // BLOCK invalid connections
+            if (!validation.valid) {
+                console.warn(`❌ Connection blocked: ${sourceType} → ${targetType}`);
+                console.warn(`Reason: ${validation.reason}`);
+                
+                // Show user-friendly error message
+                alert(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`);
+                return; // Block the connection
             }
+
+            // Connection is valid - create edge
             const edgeColor = TYPE_COLORS[sourceType] || '#fff';
             const newEdge = { ...params, style: { stroke: edgeColor, strokeWidth: 3 }, animated: false };
             setEdges((eds) => addEdge(newEdge, eds));
