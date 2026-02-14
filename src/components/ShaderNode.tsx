@@ -154,6 +154,11 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   if (def.compact) {
+    // For Smart Split, use adaptedOutputs if available
+    const outputsToRender = (def.id === 'smart_split' && data.adaptedOutputs) 
+      ? data.adaptedOutputs 
+      : def.outputs;
+    
     return (
       <div 
         title={def.description}
@@ -196,9 +201,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
         </div>
         <div style={{ position: 'absolute', right: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {def.outputs.map((output, i) => {
+            {outputsToRender.map((output, i) => {
                 let topOffset = 0;
-                if (def.outputs.length > 1) topOffset = (i - (def.outputs.length - 1)/2) * 12;
+                if (outputsToRender.length > 1) topOffset = (i - (outputsToRender.length - 1)/2) * 12;
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 

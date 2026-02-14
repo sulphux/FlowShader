@@ -257,10 +257,10 @@ function EditorInner({ onChange }: Props) {
     // Extract inputs and outputs from Custom Input/Output nodes
     const ports = extractCustomNodePorts({ nodes: selectedNodes });
     
-    if (ports.outputs.length === 0) {
-      alert('Custom node must have at least one "Custom Output" node.\n\nAdd a Custom Output node to define the output port.');
-      return;
-    }
+    // Allow empty custom nodes - add placeholder output if none exist
+    const finalOutputs = ports.outputs.length > 0 
+      ? ports.outputs 
+      : [{ id: 'out', label: 'Out', type: 'vec3' }];
     
     // Create custom node definition
     const customNodeId = `custom_${name.toLowerCase().replace(/\s+/g, '_')}`;
@@ -270,7 +270,7 @@ function EditorInner({ onChange }: Props) {
       description: description || `Custom node: ${name}`,
       compact: false,
       inputs: ports.inputs,
-      outputs: ports.outputs,
+      outputs: finalOutputs,
       isCustom: true,
       subgraph: {
         nodes: selectedNodes,
@@ -556,7 +556,7 @@ function EditorInner({ onChange }: Props) {
                   const inDef = node.data.definition.inputs.find((i: any) => i.id === handleId); if(inDef) type = inDef.type; 
               }
               const clientX = event.clientX; const clientY = event.clientY;
-              setMenu({ x: clientX, y: clientY, visible: true }); setMenuFilter(type); setPendingConnection(connectionStartRef.current);
+              setMenu({ x: clientX, y: clientY, visible: true, type: 'pane' }); setMenuFilter(type); setPendingConnection(connectionStartRef.current);
           }
       }
       connectionStartRef.current = null;
@@ -744,7 +744,7 @@ function EditorInner({ onChange }: Props) {
         <Background color="#222" gap={20} />
         <Controls />
         <Legend /> 
-        {document.getElementById('sidebar-root') && createPortal( <Sidebar nodes={nodes} setNodes={setNodes} />, document.getElementById('sidebar-root')! )}
+        {document.getElementById('sidebar-root') && createPortal( <Sidebar nodes={nodes} setNodes={setNodes} currentContext={currentContext} />, document.getElementById('sidebar-root')! )}
         {createPortal( <div onClick={deleteSelected} title="Delete Selected (Del)" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 99999, width: 50, height: 50, borderRadius: '50%', background: '#ff007a', color: 'white', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)', transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}>🗑️</div>, document.body )}
         {menu && menu.visible && menu.type === 'pane' && createPortal(
           <ContextMenu 

@@ -12,7 +12,6 @@ interface Props {
 
 const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
-  "Custom Nodes": ["custom_input", "custom_output"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
@@ -36,11 +35,24 @@ export default function Sidebar({ nodes, setNodes }: Props) {
   // Build menu structure with custom nodes
   const menuStructure = useMemo(() => {
     const base = { ...MENU_STRUCTURE };
-    if (customNodes.length > 0) {
+    
+    if (currentContext !== 'Main') {
+      // In subgraph - show Custom Input/Output
       base["Custom Nodes"] = ["custom_input", "custom_output", ...customNodes.map(n => n.id)];
+    } else {
+      // In Main - only user custom nodes (hide Custom Input/Output)
+      if (customNodes.length > 0) {
+        base["Custom Nodes"] = customNodes.map(n => n.id);
+      } else {
+        // No custom nodes at all - remove category
+        delete base["Custom Nodes"];
+      }
     }
+    
     return base;
-  }, [customNodes]);
+  // currentContext is a prop, so it's a valid dependency
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customNodes, currentContext]);
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);

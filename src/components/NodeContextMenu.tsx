@@ -99,9 +99,7 @@ export default function NodeContextMenu({
               alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
               return;
             }
-            if (window.confirm(`Delete "${nodeName}"?`)) {
-              handleAction(onDelete);
-            }
+            handleAction(onDelete);
           }}
           style={{ ...itemStyle, color: '#f88' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#411'; e.currentTarget.style.color = '#f88'; }}
