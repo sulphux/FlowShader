@@ -89,3 +89,44 @@ html, body {
 .resizer:hover::after {
   color: #fff;
 }
+
+/* --- 4. RAINBOW GRADIENT for 'auto' type ports --- */
+@keyframes rainbowShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.port-auto {
+  background: linear-gradient(
+    90deg,
+    #ff0080,  /* Magenta */
+    #ff8c00,  /* Orange */
+    #ffd700,  /* Gold */
+    #00ff00,  /* Green */
+    #00bfff,  /* Deep Sky Blue */
+    #8a2be2,  /* Blue Violet */
+    #ff0080   /* Back to Magenta for seamless loop */
+  ) !important;
+  background-size: 200% 200% !important;
+  animation: rainbowShift 3s ease infinite !important;
+}
+
+/* Static rainbow gradient for non-animated contexts (Legend, Sidebar) */
+.port-auto-static {
+  background: linear-gradient(
+    135deg,
+    #ff0080,  /* Magenta */
+    #ff8c00,  /* Orange */
+    #ffd700,  /* Gold */
+    #00ff00,  /* Green */
+    #00bfff,  /* Deep Sky Blue */
+    #8a2be2   /* Blue Violet */
+  ) !important;
+}

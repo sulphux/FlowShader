@@ -136,6 +136,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
                    const def = NODE_REGISTRY[id as keyof typeof NODE_REGISTRY];
                    if (!def) return null;
                    const outType = def.outputs[0]?.type || 'default';
+                   const isAuto = outType === 'auto';
                    return (
                     <div
                       key={id}
@@ -144,7 +145,15 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
                     >
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TYPE_COLORS[outType] || '#fff' }} />
+                      <div 
+                        className={isAuto ? 'port-auto-static' : ''}
+                        style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          background: isAuto ? undefined : (TYPE_COLORS[outType] || '#fff')
+                        }} 
+                      />
                       {def.label}
                     </div>
                    );

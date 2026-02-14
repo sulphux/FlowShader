@@ -127,7 +127,15 @@ export default function Sidebar({ nodes, setNodes }: Props) {
                                         onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
                                         onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}
                                     >
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TYPE_COLORS[outType] || '#fff' }} />
+                                        <div 
+                                          className={outType === 'auto' ? 'port-auto-static' : ''}
+                                          style={{ 
+                                            width: '8px', 
+                                            height: '8px', 
+                                            borderRadius: '50%', 
+                                            background: outType === 'auto' ? undefined : (TYPE_COLORS[outType] || '#fff')
+                                          }} 
+                                        />
                                         {def.label}
                                     </div>
                                 )

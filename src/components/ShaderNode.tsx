@@ -155,14 +155,46 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             {def.inputs.map((input, i) => {
                  let topOffset = 0;
                  if(def.inputs.length > 1) topOffset = (i - (def.inputs.length - 1)/2) * 12;
-                 return <Handle key={input.id} type="target" position={Position.Left} id={input.id} style={{ background: TYPE_COLORS[input.type], width: '10px', height: '10px', border: '2px solid #1a1a1a', left: 0, top: topOffset, transform: 'translate(0, -50%)' }} />
+                 const isAuto = input.type === 'auto';
+                 return <Handle 
+                   key={input.id} 
+                   type="target" 
+                   position={Position.Left} 
+                   id={input.id} 
+                   className={isAuto ? 'port-auto' : ''}
+                   style={{ 
+                     background: isAuto ? undefined : TYPE_COLORS[input.type], 
+                     width: '10px', 
+                     height: '10px', 
+                     border: '2px solid #1a1a1a', 
+                     left: 0, 
+                     top: topOffset, 
+                     transform: 'translate(0, -50%)' 
+                   }} 
+                 />
             })}
         </div>
         <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
         <div style={{ position: 'absolute', right: '-6px' }}>
-            {def.outputs.map((output) => (
-                <Handle key={output.id} type="source" position={Position.Right} id={output.id} style={{ background: TYPE_COLORS[output.type], width: '10px', height: '10px', border: '2px solid #1a1a1a', right: 0, top: 0, transform: 'translate(0, -50%)' }} />
-            ))}
+            {def.outputs.map((output) => {
+                const isAuto = output.type === 'auto';
+                return <Handle 
+                  key={output.id} 
+                  type="source" 
+                  position={Position.Right} 
+                  id={output.id} 
+                  className={isAuto ? 'port-auto' : ''}
+                  style={{ 
+                    background: isAuto ? undefined : TYPE_COLORS[output.type], 
+                    width: '10px', 
+                    height: '10px', 
+                    border: '2px solid #1a1a1a', 
+                    right: 0, 
+                    top: 0, 
+                    transform: 'translate(0, -50%)' 
+                  }} 
+                />
+            })}
         </div>
       </div>
     );
@@ -243,20 +275,50 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {def.inputs.map((input) => (
-                    <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
-                        <Handle type="target" position={Position.Left} id={input.id} style={{ background: TYPE_COLORS[input.type], width: '10px', height: '10px', left: '-13px', border: '2px solid #1a1a1a' }} />
-                        <span style={{ fontSize: '10px', color: '#ccc' }}>{input.label}</span>
-                    </div>
-                ))}
+                {def.inputs.map((input) => {
+                    const isAuto = input.type === 'auto';
+                    return (
+                      <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                          <Handle 
+                            type="target" 
+                            position={Position.Left} 
+                            id={input.id} 
+                            className={isAuto ? 'port-auto' : ''}
+                            style={{ 
+                              background: isAuto ? undefined : TYPE_COLORS[input.type], 
+                              width: '10px', 
+                              height: '10px', 
+                              left: '-13px', 
+                              border: '2px solid #1a1a1a' 
+                            }} 
+                          />
+                          <span style={{ fontSize: '10px', color: '#ccc' }}>{input.label}</span>
+                      </div>
+                    )
+                })}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                {def.outputs.map((output) => (
-                    <div key={output.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
-                        <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>{output.label}</span>
-                        <Handle type="source" position={Position.Right} id={output.id} style={{ background: TYPE_COLORS[output.type], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }} />
-                    </div>
-                ))}
+                {def.outputs.map((output) => {
+                    const isAuto = output.type === 'auto';
+                    return (
+                      <div key={output.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                          <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>{output.label}</span>
+                          <Handle 
+                            type="source" 
+                            position={Position.Right} 
+                            id={output.id} 
+                            className={isAuto ? 'port-auto' : ''}
+                            style={{ 
+                              background: isAuto ? undefined : TYPE_COLORS[output.type], 
+                              width: '10px', 
+                              height: '10px', 
+                              right: '-13px', 
+                              border: '2px solid #1a1a1a' 
+                            }} 
+                          />
+                      </div>
+                    )
+                })}
             </div>
         </div>
         {def.controls && !isFloatParam && (

@@ -35,12 +35,25 @@ export default function Legend() {
         overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         width: '160px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
       }}>
-        {Object.entries(TYPE_NAMES).map(([type, label]) => (
-          <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: TYPE_COLORS[type], marginRight: '10px', border: '1px solid rgba(255,255,255,0.2)' }} />
-            <span>{label}</span>
-          </div>
-        ))}
+        {Object.entries(TYPE_NAMES).map(([type, label]) => {
+          const isAuto = type === 'auto';
+          return (
+            <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+              <div 
+                className={isAuto ? 'port-auto-static' : ''}
+                style={{ 
+                  width: '12px', 
+                  height: '12px', 
+                  borderRadius: '50%', 
+                  background: isAuto ? undefined : TYPE_COLORS[type], 
+                  marginRight: '10px', 
+                  border: '1px solid rgba(255,255,255,0.2)' 
+                }} 
+              />
+              <span>{label}</span>
+            </div>
+          )
+        })}
         <div style={{ height: '1px', background: '#333', margin: '8px 0' }} />
         <div style={{ color: '#888', fontSize: '10px', textAlign: 'center' }}>
           Drag wire to empty space<br/>to Quick Add! 🪄
