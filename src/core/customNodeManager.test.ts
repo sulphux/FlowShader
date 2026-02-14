@@ -98,4 +98,66 @@ describe('customNodeManager', () => {
     expect(loaded).toHaveLength(1);
     expect(loaded[0].label).toBe('Test 2 (Updated)');
   });
+
+  it('should restore glslTemplate function after load', () => {
+    const customNode = {
+      id: 'custom_test',
+      label: 'Test',
+      description: '',
+      compact: false,
+      inputs: [],
+      outputs: [{ id: 'out', label: 'Out', type: 'vec3' as const }],
+      isCustom: true as const,
+      subgraph: { nodes: [], edges: [] },
+      glslTemplate: () => 'original' // Will be lost in JSON
+    };
+
+    addCustomNode(customNode);
+    const loaded = loadCustomNodes();
+
+    // glslTemplate should be restored (not undefined)
+    expect(loaded[0].glslTemplate).toBeDefined();
+    expect(typeof loaded[0].glslTemplate).toBe('function');
+    
+    // Should not throw when called
+    expect(() => {
+      loaded[0].glslTemplate({});
+    }).not.toThrow();
+  });
+
+  it('should restore node definitions in subgraph', () => {
+    const customNode = {
+      id: 'custom_with_subgraph',
+      label: 'Test Subgraph',
+      description: '',
+      compact: false,
+      inputs: [],
+      outputs: [{ id: 'out', label: 'Out', type: 'vec3' as const }],
+      isCustom: true as const,
+      subgraph: {
+        nodes: [{
+          id: 'uv-1',
+          type: 'uv',
+          data: {
+            definition: { id: 'uv' } // Only ID saved, no glslTemplate
+          }
+        }],
+        edges: []
+      },
+      glslTemplate: () => 'test'
+    };
+
+    addCustomNode(customNode);
+    const loaded = loadCustomNodes();
+
+    // Subgraph node should have full definition from NODE_REGISTRY
+    const subNode = loaded[0].subgraph.nodes[0];
+    expect(subNode.data.definition.glslTemplate).toBeDefined();
+    expect(typeof subNode.data.definition.glslTemplate).toBe('function');
+    
+    // Should not throw when compiling
+    expect(() => {
+      subNode.data.definition.glslTemplate({});
+    }).not.toThrow();
+  });
 });

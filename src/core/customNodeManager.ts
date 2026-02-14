@@ -1,5 +1,6 @@
 import type { ShaderNodeDefinition } from './types';
 import type { Node, Edge } from 'reactflow';
+import { NODE_REGISTRY } from '../nodes';
 
 export interface CustomNodeDefinition extends ShaderNodeDefinition {
   isCustom: true;
@@ -18,7 +19,37 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
   try {
     const stored = localStorage.getItem(CUSTOM_NODES_KEY);
     if (!stored) return [];
-    return JSON.parse(stored);
+    
+    const parsed = JSON.parse(stored);
+    
+    // Restore functions and definitions lost during JSON serialization
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return parsed.map((customNode: any) => ({
+      ...customNode,
+      // Restore glslTemplate (functions can't be serialized to JSON)
+      glslTemplate: () => {
+        // Placeholder - actual compilation happens via recursive subgraph in compiler.ts
+        return 'vec3(1.0, 0.0, 1.0)';
+      },
+      subgraph: {
+        ...customNode.subgraph,
+        // Restore full node definitions from NODE_REGISTRY
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        nodes: customNode.subgraph.nodes.map((node: any) => {
+          const defId = node.data?.definition?.id;
+          const freshDef = defId ? NODE_REGISTRY[defId as keyof typeof NODE_REGISTRY] : undefined;
+          
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              // Use fresh definition from registry (has glslTemplate function)
+              definition: freshDef || node.data.definition
+            }
+          };
+        })
+      }
+    }));
   } catch (err) {
     console.error('Error loading custom nodes:', err);
     return [];
