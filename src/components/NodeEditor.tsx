@@ -412,9 +412,53 @@ function EditorInner({ onChange }: Props) {
     const isGroup = typeId === 'special_group'; 
     const isPreview = typeId === 'preview'; 
     const isMonitor = typeId === 'monitor'; 
-    const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; 
+    let def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; 
     const newLabel = getUniqueLabel(def, nodes); 
     const newNodeId = `${typeId}_${Date.now()}`;
+    
+    // === AUTO TYPE PRE-ADAPTATION ===
+    // If adding an auto-type node via drag-to-add, adapt it BEFORE creating the node
+    if (pendingConnection && menuFilter) {
+      const { handleType } = pendingConnection;
+      
+      // Adapt relay_auto
+      if (typeId === 'relay_auto') {
+        def = {
+          ...def,
+          inputs: [{ id: 'in', label: menuFilter, type: menuFilter as DataType }],
+          outputs: [{ id: 'out', label: menuFilter, type: menuFilter as DataType }]
+        };
+      }
+      
+      // Adapt smart_split
+      if (typeId === 'smart_split' && handleType === 'source') {
+        const type = menuFilter;
+        let newOutputs = def.outputs;
+        let newInputLabel = 'Input';
+        const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
+        
+        if (type === 'vec2') { 
+          newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
+          newInputLabel = 'Vec2'; 
+        } else if (type === 'vec3') { 
+          newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
+          newInputLabel = 'Vec3'; 
+        } else if (type === 'vec4') { 
+          newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
+          newInputLabel = 'Vec4'; 
+        } else if (type === 'float') {
+          newOutputs = [createOutput('x', 'Value')];
+          newInputLabel = 'Float';
+        }
+        
+        def = {
+          ...def,
+          inputs: [{ id: 'in', label: newInputLabel, type: type as DataType }],
+          outputs: newOutputs
+        };
+      }
+    }
+    
     const newNode: Node = { 
       id: newNodeId, 
       type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'), 
@@ -445,7 +489,7 @@ function EditorInner({ onChange }: Props) {
       setPendingConnection(null); 
     } 
     setMenu(null);
-  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes]);
+  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes, menuFilter]);
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => { 
     event.preventDefault(); 
     setEdges((eds) => eds.filter((e) => e.id !== edge.id)); 
