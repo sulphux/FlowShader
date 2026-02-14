@@ -2,6 +2,7 @@ import { memo, useCallback, useState } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'reactflow';
 import type { ShaderNodeDefinition } from '../core/types';
 import { TYPE_COLORS } from '../core/theme';
+import { MultiTypeIndicator } from './MultiTypeIndicator';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const def = data.definition as ShaderNodeDefinition;
@@ -156,6 +157,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  let topOffset = 0;
                  if(def.inputs.length > 1) topOffset = (i - (def.inputs.length - 1)/2) * 12;
                  const isAuto = input.type === 'auto';
+                 const isMultiType = input.type.includes('|');
+                 
                  return <Handle 
                    key={input.id} 
                    type="target" 
@@ -163,21 +166,29 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                    id={input.id} 
                    className={isAuto ? 'port-auto' : ''}
                    style={{ 
-                     background: isAuto ? undefined : TYPE_COLORS[input.type], 
+                     background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
                      width: '10px', 
                      height: '10px', 
                      border: '2px solid #1a1a1a', 
                      left: 0, 
                      top: topOffset, 
-                     transform: 'translate(0, -50%)' 
+                     transform: 'translate(0, -50%)',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     overflow: 'hidden'
                    }} 
-                 />
+                 >
+                   {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
+                 </Handle>
             })}
         </div>
         <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
         <div style={{ position: 'absolute', right: '-6px' }}>
             {def.outputs.map((output) => {
                 const isAuto = output.type === 'auto';
+                const isMultiType = output.type.includes('|');
+                
                 return <Handle 
                   key={output.id} 
                   type="source" 
@@ -185,15 +196,21 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                   id={output.id} 
                   className={isAuto ? 'port-auto' : ''}
                   style={{ 
-                    background: isAuto ? undefined : TYPE_COLORS[output.type], 
+                    background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
                     width: '10px', 
                     height: '10px', 
                     border: '2px solid #1a1a1a', 
                     right: 0, 
                     top: 0, 
-                    transform: 'translate(0, -50%)' 
+                    transform: 'translate(0, -50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
                   }} 
-                />
+                >
+                  {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
+                </Handle>
             })}
         </div>
       </div>
@@ -277,6 +294,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {def.inputs.map((input) => {
                     const isAuto = input.type === 'auto';
+                    const isMultiType = input.type.includes('|');
+                    
                     return (
                       <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
                           <Handle 
@@ -285,13 +304,19 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                             id={input.id} 
                             className={isAuto ? 'port-auto' : ''}
                             style={{ 
-                              background: isAuto ? undefined : TYPE_COLORS[input.type], 
+                              background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
                               width: '10px', 
                               height: '10px', 
                               left: '-13px', 
-                              border: '2px solid #1a1a1a' 
+                              border: '2px solid #1a1a1a',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden'
                             }} 
-                          />
+                          >
+                            {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
+                          </Handle>
                           <span style={{ fontSize: '10px', color: '#ccc' }}>{input.label}</span>
                       </div>
                     )
@@ -300,6 +325,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                 {def.outputs.map((output) => {
                     const isAuto = output.type === 'auto';
+                    const isMultiType = output.type.includes('|');
+                    
                     return (
                       <div key={output.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
                           <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>{output.label}</span>
@@ -309,13 +336,19 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                             id={output.id} 
                             className={isAuto ? 'port-auto' : ''}
                             style={{ 
-                              background: isAuto ? undefined : TYPE_COLORS[output.type], 
+                              background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
                               width: '10px', 
                               height: '10px', 
                               right: '-13px', 
-                              border: '2px solid #1a1a1a' 
+                              border: '2px solid #1a1a1a',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden'
                             }} 
-                          />
+                          >
+                            {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
+                          </Handle>
                       </div>
                     )
                 })}

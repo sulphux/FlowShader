@@ -118,6 +118,40 @@ describe('connectionValidator', () => {
       });
     });
 
+    describe('Rule 6: Multi-type ports (e.g., "float|vec3")', () => {
+      it('should allow float → "float|vec3" port', () => {
+        const result = validateConnection('float', 'float|vec3');
+        expect(result.valid).toBe(true);
+      });
+
+      it('should allow vec3 → "float|vec3" port', () => {
+        const result = validateConnection('vec3', 'float|vec3');
+        expect(result.valid).toBe(true);
+      });
+
+      it('should block vec2 → "float|vec3" port', () => {
+        const result = validateConnection('vec2', 'float|vec3');
+        expect(result.valid).toBe(false);
+      });
+
+      it('should block vec4 → "float|vec3" port', () => {
+        const result = validateConnection('vec4', 'float|vec3');
+        expect(result.valid).toBe(false);
+      });
+
+      it('should handle multi-type source ports', () => {
+        const result = validateConnection('float|vec3', 'vec3');
+        expect(result.valid).toBe(true);
+      });
+
+      it('should work with 3+ types', () => {
+        expect(validateConnection('float', 'float|vec2|vec3')).toMatchObject({ valid: true });
+        expect(validateConnection('vec2', 'float|vec2|vec3')).toMatchObject({ valid: true });
+        expect(validateConnection('vec3', 'float|vec2|vec3')).toMatchObject({ valid: true });
+        expect(validateConnection('vec4', 'float|vec2|vec3')).toMatchObject({ valid: false });
+      });
+    });
+
     describe('Complete connection matrix', () => {
       const allTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
       

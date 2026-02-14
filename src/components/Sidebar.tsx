@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import type { Node } from 'reactflow';
+import { MultiTypeIndicator } from './MultiTypeIndicator';
 
 interface Props {
     nodes: Node[];
@@ -135,30 +136,38 @@ export default function Sidebar({ nodes, setNodes }: Props) {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             {/* Input color indicator */}
                                             {inputType && (
-                                              <div 
-                                                className={inputType === 'auto' ? 'port-auto-static' : ''}
-                                                style={{ 
-                                                  width: '8px', 
-                                                  height: '8px', 
-                                                  borderRadius: '50%', 
-                                                  background: inputType === 'auto' ? undefined : (TYPE_COLORS[inputType] || '#666'),
-                                                  opacity: 0.7
-                                                }} 
-                                              />
+                                              inputType.includes('|') ? (
+                                                <MultiTypeIndicator types={inputType} size={8} />
+                                              ) : (
+                                                <div 
+                                                  className={inputType === 'auto' ? 'port-auto-static' : ''}
+                                                  style={{ 
+                                                    width: '8px', 
+                                                    height: '8px', 
+                                                    borderRadius: '50%', 
+                                                    background: inputType === 'auto' ? undefined : (TYPE_COLORS[inputType] || '#666'),
+                                                    opacity: 0.7
+                                                  }} 
+                                                />
+                                              )
                                             )}
                                             <span>{def.label}</span>
                                         </div>
                                         {/* Output color indicator */}
                                         {outputType && (
-                                          <div 
-                                            className={outputType === 'auto' ? 'port-auto-static' : ''}
-                                            style={{ 
-                                              width: '8px', 
-                                              height: '8px', 
-                                              borderRadius: '50%', 
-                                              background: outputType === 'auto' ? undefined : (TYPE_COLORS[outputType] || '#fff')
-                                            }} 
-                                          />
+                                          outputType.includes('|') ? (
+                                            <MultiTypeIndicator types={outputType} size={8} />
+                                          ) : (
+                                            <div 
+                                              className={outputType === 'auto' ? 'port-auto-static' : ''}
+                                              style={{ 
+                                                width: '8px', 
+                                                height: '8px', 
+                                                borderRadius: '50%', 
+                                                background: outputType === 'auto' ? undefined : (TYPE_COLORS[outputType] || '#fff')
+                                              }} 
+                                            />
+                                          )
                                         )}
                                     </div>
                                 )

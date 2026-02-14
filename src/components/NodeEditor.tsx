@@ -212,9 +212,35 @@ function EditorInner({ onChange }: Props) {
   }, [reactFlowInstance, setNodes, nodes]);
 
   const onNodesChange = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [setNodes]
+    (changes: { type: string; id?: string }[]) => {
+      // Check if any deletion would remove the last output node
+      const deletions = changes.filter(c => c.type === 'remove');
+      
+      if (deletions.length > 0) {
+        const remainingNodes = nodes.filter(n => 
+          !deletions.some(d => d.id === n.id)
+        );
+        
+        const outputNodesAfterDeletion = remainingNodes.filter(n => 
+          n.data.definition?.id === 'output'
+        );
+        
+        // Block deletion if it would remove the last output node
+        const deletingOutputs = deletions.filter(d => {
+          const node = nodes.find(n => n.id === d.id);
+          return node?.data.definition?.id === 'output';
+        });
+        
+        if (deletingOutputs.length > 0 && outputNodesAfterDeletion.length === 0) {
+          console.warn('❌ Cannot delete the last Output node');
+          alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
+          return; // Block the deletion
+        }
+      }
+      
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    [setNodes, nodes]
   );
 
   const onConnect: OnConnect = useCallback((params) => {
