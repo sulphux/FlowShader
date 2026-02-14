@@ -533,6 +533,12 @@ function EditorInner({ onChange }: Props) {
             
             setNodes(nds => nds.map(n => {
                 if (n.id === targetNode.id) {
+                    console.log('✅ Smart Split adapted:', {
+                        nodeId: n.id,
+                        from: n.data.definition.outputs.map((o: {id: string}) => o.id),
+                        to: newOutputs.map(o => o.id),
+                        inputType: type
+                    });
                     return { 
                         ...n, 
                         data: { 
@@ -788,6 +794,7 @@ function EditorInner({ onChange }: Props) {
 
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
+    event.stopPropagation();
     setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'node', nodeId: node.id });
   }, []);
   

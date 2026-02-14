@@ -167,7 +167,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  const isMultiType = input.type.includes('|');
                  
                  return <Handle 
-                   key={input.id} 
+                   key={`input-${input.id}-${i}`}
                    type="target" 
                    position={Position.Left} 
                    id={input.id} 
@@ -203,7 +203,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                 const isMultiType = output.type.includes('|');
                 
                 return <Handle 
-                  key={output.id} 
+                  key={`output-${output.id}-${i}`}
                   type="source" 
                   position={Position.Right} 
                   id={output.id} 
