@@ -11,6 +11,9 @@ import { PreviewNode } from './PreviewNode';
 import { MonitorNode } from './MonitorNode';
 import ContextMenu from './ContextMenu';
 import NodeContextMenu from './NodeContextMenu';
+import CreateCustomNodeDialog from './CreateCustomNodeDialog';
+import { addCustomNode, extractCustomNodePorts, type CustomNodeDefinition } from '../core/customNodeManager';
+import type { ShaderNodeDefinition } from '../core/types';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
@@ -82,6 +85,7 @@ function EditorInner({ onChange }: Props) {
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean; type: 'pane' | 'node'; nodeId?: string } | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
+  const [showCustomDialog, setShowCustomDialog] = useState(false);
   
   const [pendingConnection, setPendingConnection] = useState<OnConnectStartParams | null>(null);
   const connectionStartRef = useRef<OnConnectStartParams | null>(null);
@@ -226,6 +230,55 @@ function EditorInner({ onChange }: Props) {
         setCurrentFilePath(null);
       }
   }, [setNodes, setEdges, saveToHistory]);
+  
+  const handleCreateCustomNode = useCallback((name: string, description: string) => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    if (selectedNodes.length === 0) {
+      alert('Please select nodes to create a custom node.');
+      return;
+    }
+    
+    // Extract selected nodes and their edges
+    const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
+    const selectedEdges = edges.filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target));
+    
+    // Extract inputs and outputs from Custom Input/Output nodes
+    const ports = extractCustomNodePorts({ nodes: selectedNodes });
+    
+    if (ports.outputs.length === 0) {
+      alert('Custom node must have at least one "Custom Output" node.\n\nAdd a Custom Output node to define the output port.');
+      return;
+    }
+    
+    // Create custom node definition
+    const customNodeId = `custom_${name.toLowerCase().replace(/\s+/g, '_')}`;
+    const customNode: CustomNodeDefinition = {
+      id: customNodeId,
+      label: name,
+      description: description || `Custom node: ${name}`,
+      compact: false,
+      inputs: ports.inputs,
+      outputs: ports.outputs,
+      isCustom: true,
+      subgraph: {
+        nodes: selectedNodes,
+        edges: selectedEdges
+      },
+      glslTemplate: () => 'vec3(1.0, 0.0, 1.0)', // Placeholder - will be compiled from subgraph
+    };
+    
+    // Save to storage
+    addCustomNode(customNode);
+    
+    // Add to NODE_REGISTRY dynamically
+    (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = customNode;
+    
+    alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom" category.`);
+    
+    // Optionally delete selected nodes after creating custom
+    // setNodes((nds) => nds.filter(n => !selectedNodeIds.has(n.id)));
+    // setEdges((eds) => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
+  }, [nodes, edges]);
 
   const deleteSelected = useCallback(() => {
       setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
@@ -652,6 +705,7 @@ function EditorInner({ onChange }: Props) {
             onAddNode={(id) => onAddNode(id)} 
             filterType={menuFilter}
             onPaste={clipboard ? handlePaste : undefined}
+            onCreateCustom={() => setShowCustomDialog(true)}
             hasClipboard={!!clipboard}
             hasSelection={nodes.some(n => n.selected)}
           />, 
@@ -691,6 +745,13 @@ function EditorInner({ onChange }: Props) {
               setNodes((nds) => nds.filter((n) => n.id !== menu.nodeId));
               setEdges((eds) => eds.filter((e) => e.source !== menu.nodeId && e.target !== menu.nodeId));
             }}
+          />, 
+          document.body 
+        )}
+        {showCustomDialog && createPortal(
+          <CreateCustomNodeDialog 
+            onClose={() => setShowCustomDialog(false)}
+            onCreate={handleCreateCustomNode}
           />, 
           document.body 
         )}
