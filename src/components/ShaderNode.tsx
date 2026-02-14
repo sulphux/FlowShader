@@ -159,10 +159,18 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         title={def.description}
         style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
       >
-        <div style={{ position: 'absolute', left: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Left side - inputs with flexbox */}
+        <div style={{ 
+          position: 'absolute', 
+          left: '-6px', 
+          height: '100%',
+          top: 0,
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'space-evenly',
+          alignItems: 'flex-start'
+        }}>
             {def.inputs.map((input, i) => {
-                 let topOffset = 0;
-                 if(def.inputs.length > 1) topOffset = (i - (def.inputs.length - 1)/2) * 12;
                  const isAuto = input.type === 'auto';
                  const isMultiType = input.type.includes('|');
                  
@@ -178,9 +186,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                      width: '10px', 
                      height: '10px', 
                      border: '2px solid #1a1a1a', 
-                     left: 0, 
-                     top: topOffset, 
-                     transform: 'translate(0, -50%)',
+                     position: 'relative',
+                     left: 0,
                      display: 'flex',
                      alignItems: 'center',
                      justifyContent: 'center',
@@ -195,10 +202,18 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           {isCustomNode && <span style={{ fontSize: '14px' }}>🔲</span>}
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
         </div>
-        <div style={{ position: 'absolute', right: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Right side - outputs with flexbox */}
+        <div style={{ 
+          position: 'absolute', 
+          right: '-6px', 
+          height: '100%',
+          top: 0,
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'space-evenly',
+          alignItems: 'flex-end'
+        }}>
             {def.outputs.map((output, i) => {
-                let topOffset = 0;
-                if (def.outputs.length > 1) topOffset = (i - (def.outputs.length - 1)/2) * 12;
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 
@@ -214,9 +229,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                     width: '10px', 
                     height: '10px', 
                     border: '2px solid #1a1a1a', 
-                    right: 0, 
-                    top: topOffset, 
-                    transform: 'translate(0, -50%)',
+                    position: 'relative',
+                    right: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

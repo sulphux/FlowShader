@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import type { Node } from 'reactflow';
@@ -28,9 +28,32 @@ const MENU_STRUCTURE = {
 export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
+  const [refreshKey, setRefreshKey] = useState(0);
   
-  // Load custom nodes dynamically
-  const customNodes = useMemo(() => loadCustomNodes(), []);
+  // Load custom nodes dynamically - refresh when refreshKey changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const customNodes = useMemo(() => loadCustomNodes(), [refreshKey]);
+  
+  // Listen for custom storage events to refresh
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'customNodes') {
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom event from same window
+    const handleCustomUpdate = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    window.addEventListener('customNodesUpdated', handleCustomUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('customNodesUpdated', handleCustomUpdate);
+    };
+  }, []);
   
   // Build menu structure with custom nodes
   const menuStructure = useMemo(() => {

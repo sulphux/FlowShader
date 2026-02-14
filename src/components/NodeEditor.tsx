@@ -354,7 +354,10 @@ function EditorInner({ onChange }: Props) {
         nodes: selectedNodes,
         edges: selectedEdges
       },
-      glslTemplate: () => 'vec3(1.0, 0.0, 1.0)', // Placeholder - will be compiled from subgraph
+      glslTemplate: () => {
+        // Placeholder - actual compilation happens in compiler.ts via recursive subgraph compilation
+        return 'vec3(1.0, 0.0, 1.0)'; // Magenta error color (should never be used)
+      },
     };
     
     // Save to storage
@@ -362,6 +365,9 @@ function EditorInner({ onChange }: Props) {
     
     // Add to NODE_REGISTRY dynamically
     (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = customNode;
+    
+    // Trigger sidebar refresh
+    window.dispatchEvent(new Event('customNodesUpdated'));
     
     alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom Nodes" category.`);
     
