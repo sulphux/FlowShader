@@ -1,13 +1,18 @@
 import React from 'react';
 
 interface Props {
-  onSave: () => void;
+  onSave: (saveAs?: boolean) => void;
   onLoad: () => void;
   onClear: () => void;
-  onShowCode: () => void; // <--- NOWY PROP
+  onShowCode: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  currentFile?: string | null;
 }
 
-export default function Toolbar({ onSave, onLoad, onClear, onShowCode }: Props) {
+export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
   const btnStyle: React.CSSProperties = {
     background: '#333',
     border: '1px solid #555',
@@ -35,8 +40,32 @@ export default function Toolbar({ onSave, onLoad, onClear, onShowCode }: Props) 
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
     }}>
-      <button onClick={onSave} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>💾 Save JSON</button>
-      <button onClick={onLoad} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>📂 Load JSON</button>
+      {currentFile && (
+        <div style={{ ...btnStyle, background: '#1a1a1a', cursor: 'default', color: '#888', fontSize: '11px', padding: '6px 8px' }}>
+          📄 {currentFile}
+        </div>
+      )}
+      
+      <button onClick={() => onSave(false)} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle} title="Save (Ctrl+S)">
+        💾 Save
+      </button>
+      <button onClick={() => onSave(true)} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle} title="Save As...">
+        💾 Save As...
+      </button>
+      <button onClick={onLoad} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>📂 Load</button>
+      
+      <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
+      
+      {onUndo && (
+        <button onClick={onUndo} disabled={!canUndo} style={{ ...btnStyle, opacity: canUndo ? 1 : 0.3, cursor: canUndo ? 'pointer' : 'not-allowed' }} onMouseEnter={canUndo ? hoverStyle : undefined} onMouseLeave={canUndo ? leaveStyle : undefined} title="Undo (Ctrl+Z)">
+          ↶ Undo
+        </button>
+      )}
+      {onRedo && (
+        <button onClick={onRedo} disabled={!canRedo} style={{ ...btnStyle, opacity: canRedo ? 1 : 0.3, cursor: canRedo ? 'pointer' : 'not-allowed' }} onMouseEnter={canRedo ? hoverStyle : undefined} onMouseLeave={canRedo ? leaveStyle : undefined} title="Redo (Ctrl+Y)">
+          ↷ Redo
+        </button>
+      )}
       
       <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
       

@@ -71,6 +71,10 @@ function EditorInner({ onChange }: Props) {
   const [nodes, setNodes] = useNodesState(initialData.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
   const [clipboard, setClipboard] = useState<{ nodes: Node[], edges: Edge[] } | null>(null);
+  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const maxHistorySize = 50;
   const reactFlowInstance = useReactFlow();
   
   const [menuFilter, setMenuFilter] = useState<string | null>(null);
@@ -112,7 +116,7 @@ function EditorInner({ onChange }: Props) {
     }
   }, [nodes, edges, onChange, reactFlowInstance]);
 
-  const restoreGraph = useCallback((jsonString: string) => {
+  const restoreGraph = useCallback((jsonString: string, filePath?: string) => {
       try {
         const parsed = JSON.parse(jsonString);
         const restoredNodes = parsed.nodes.map((n: { data: { definition: { id: string } } }) => {
@@ -129,20 +133,35 @@ function EditorInner({ onChange }: Props) {
         setNodes(restoredNodes);
         setEdges(parsed.edges);
         if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
+        if (filePath) setCurrentFilePath(filePath);
       } catch (err) { 
           console.error("Error loading graph:", err);
       }
   }, [setNodes, setEdges, reactFlowInstance]);
 
-  const handleSaveFile = useCallback(() => {
+  const handleSaveFile = useCallback((saveAs = false) => {
       const dataToSave = {
         nodes: nodes.map(n => ({ ...n, data: { definition: { id: n.data.definition.id }, value: n.data.value, label: n.data.label, min: n.data.min, max: n.data.max } })),
         edges, viewport: reactFlowInstance.getViewport()
       };
       const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `shader_graph_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
-  }, [nodes, edges, reactFlowInstance]);
+      
+      let filename = currentFilePath || `shader_graph_${Date.now()}.json`;
+      if (saveAs || !currentFilePath) {
+        const baseName = currentFilePath ? currentFilePath.split(/[/\\]/).pop()?.replace('.json', '') : 'shader_graph';
+        filename = prompt('Save as:', baseName || 'shader_graph')?.trim() || filename;
+        if (!filename.endsWith('.json')) filename += '.json';
+      }
+      
+      const a = document.createElement('a'); 
+      a.href = url; 
+      a.download = filename; 
+      a.click(); 
+      URL.revokeObjectURL(url);
+      
+      setCurrentFilePath(filename);
+  }, [nodes, edges, reactFlowInstance, currentFilePath]);
 
   const handleLoadFileClick = useCallback(() => { fileInputRef.current?.click(); }, []);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,16 +169,62 @@ function EditorInner({ onChange }: Props) {
       const reader = new FileReader(); 
       reader.onload = (event) => { 
           if (event.target?.result) {
-              restoreGraph(event.target.result as string); 
+              restoreGraph(event.target.result as string, file.name); 
           }
       }; 
       reader.readAsText(file); 
       e.target.value = ''; 
   }, [restoreGraph]);
   
+  // Undo/Redo history management
+  const saveToHistory = useCallback(() => {
+    const snapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(snapshot);
+      return newHistory.slice(-maxHistorySize);
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, maxHistorySize - 1));
+  }, [nodes, edges, historyIndex, maxHistorySize]);
+  
+  // Auto-save to history on changes (debounced)
+  useEffect(() => {
+    const currentHash = getLogicHash(nodes, edges);
+    if (currentHash !== lastLogicHash.current && nodes.length > 0) {
+      const timeoutId = setTimeout(() => {
+        saveToHistory();
+      }, 2000); // 2 second debounce
+      return () => clearTimeout(timeoutId);
+    }
+  }, [nodes, edges, saveToHistory]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setNodes(prevState.nodes);
+      setEdges(prevState.edges);
+      setHistoryIndex(prev => prev - 1);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setNodes(nextState.nodes);
+      setEdges(nextState.edges);
+      setHistoryIndex(prev => prev + 1);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+  
   const handleClear = useCallback(() => {
-      if(window.confirm("Clear all nodes?")) { setNodes(initialNodesDefault); setEdges([]); localStorage.removeItem(STORAGE_KEY); }
-  }, [setNodes, setEdges]);
+      if(window.confirm("Clear all nodes?")) { 
+        saveToHistory();
+        setNodes(initialNodesDefault); 
+        setEdges([]); 
+        localStorage.removeItem(STORAGE_KEY); 
+        setCurrentFilePath(null);
+      }
+  }, [setNodes, setEdges, saveToHistory]);
 
   const deleteSelected = useCallback(() => {
       setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
@@ -404,7 +469,18 @@ function EditorInner({ onChange }: Props) {
   }, [nodes]);
   const handleCopy = useCallback(() => { const selectedNodes = nodes.filter(n => n.selected); if (selectedNodes.length === 0) return; const selectedNodeIds = new Set(selectedNodes.map(n => n.id)); const selectedEdges = edges.filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)); setClipboard({ nodes: selectedNodes, edges: selectedEdges }); }, [nodes, edges]);
   const handlePaste = useCallback(() => { if (!clipboard) return; const bounds = getRectOfNodes(clipboard.nodes); const centerX = bounds.x + bounds.width / 2; const centerY = bounds.y + bounds.height / 2; const flowMousePos = reactFlowInstance.project(mousePos.current); const idMap: Record<string, string> = {}; const newNodes = clipboard.nodes.map((node) => { const newId = `${node.data.definition.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; idMap[node.id] = newId; const offsetX = node.position.x - centerX; const offsetY = node.position.y - centerY; return { ...node, id: newId, position: { x: flowMousePos.x + offsetX, y: flowMousePos.y + offsetY }, selected: true, data: { ...node.data } }; }); const newEdges = clipboard.edges.map((edge) => ({ ...edge, id: `e_${idMap[edge.source]}_${idMap[edge.target]}_${Math.random()}`, source: idMap[edge.source], target: idMap[edge.target], selected: false })); setNodes((nds) => nds.map(n => ({...n, selected: false})).concat(newNodes)); setEdges((eds) => eds.concat(newEdges)); }, [clipboard, reactFlowInstance, setNodes, setEdges]);
-  useEffect(() => { const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste(); if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleCopy, handlePaste, deleteSelected]);
+  useEffect(() => { 
+    const handleKeyDown = (e: KeyboardEvent) => { 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste(); 
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSaveFile(false); }
+      if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); 
+    }; 
+    window.addEventListener('keydown', handleKeyDown); 
+    return () => window.removeEventListener('keydown', handleKeyDown); 
+  }, [handleCopy, handlePaste, deleteSelected, undo, redo, handleSaveFile]);
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, visible: true }); setMenuFilter(null); setPendingConnection(null); }, []);
   const onAddNode = useCallback((typeId: string) => { 
     if (!menu) return; 
@@ -516,7 +592,17 @@ function EditorInner({ onChange }: Props) {
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', background: '#111', position: 'relative' }} onMouseMove={onMouseMove}>
-      <Toolbar onSave={handleSaveFile} onLoad={handleLoadFileClick} onClear={handleClear} onShowCode={handleShowCode} />
+      <Toolbar 
+        onSave={handleSaveFile} 
+        onLoad={handleLoadFileClick} 
+        onClear={handleClear} 
+        onShowCode={handleShowCode}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        currentFile={currentFilePath}
+      />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
         nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} minZoom={0.1} maxZoom={4} fitView
