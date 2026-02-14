@@ -7,5 +7,12 @@ afterEach(() => {
   cleanup();
 });
 
+// Mock ResizeObserver for ReactFlow
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // Custom matchers are available via @testing-library/jest-dom
 // Examples: toBeInTheDocument, toHaveClass, toHaveStyle, etc.

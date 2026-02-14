@@ -190,7 +190,7 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
 
   // 3. FINAL LINE GENERATION (Monitor / Output)
   let finalLine = 'gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);';
-  const targetId = targetNodeId || nodes.find(n => n.data.definition.id === 'output')?.id;
+  const targetId = targetNodeId || nodes.find(n => n.data?.definition?.id === 'output')?.id;
 
   if (targetId) {
     const lastEdge = safeEdges.find(e => e.target === targetId);

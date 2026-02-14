@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
   addEdge, Background, Controls, useNodesState, useEdgesState, useReactFlow, ReactFlowProvider,
@@ -40,13 +40,14 @@ const getLogicHash = (nodes: Node[], edges: Edge[]) => {
   return JSON.stringify(logicData);
 };
 
+// Define nodeTypes OUTSIDE component to prevent ReactFlow warning
+const NODE_TYPES: NodeTypes = {
+  shaderNode: ShaderNode,
+  previewNode: PreviewNode,
+  monitorNode: MonitorNode,
+};
+
 function EditorInner({ onChange }: Props) {
-  // FIX: Memoizacja nodeTypes - WAŻNE!
-  const nodeTypes = useMemo<NodeTypes>(() => ({
-    shaderNode: ShaderNode,
-    previewNode: PreviewNode,
-    monitorNode: MonitorNode,
-  }), []);
 
   const getInitialData = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -828,7 +829,7 @@ function EditorInner({ onChange }: Props) {
       />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
-        nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} minZoom={0.1} maxZoom={4} fitView
+        nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={NODE_TYPES} minZoom={0.1} maxZoom={4} fitView
         onPaneContextMenu={onPaneContextMenu} onNodeContextMenu={onNodeContextMenu} onNodeDoubleClick={onNodeDoubleClick} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
         onDragOver={onDragOver} onDrop={onDrop}
       >
