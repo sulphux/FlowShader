@@ -237,6 +237,14 @@ function EditorInner({ onChange }: Props) {
 
         const sourceType = outputDef.type;
 
+        // === SINGLE CONNECTION PER INPUT ===
+        // Remove any existing connection to the target input port
+        if (params.target && params.targetHandle) {
+            setEdges((eds) => eds.filter(edge => 
+                !(edge.target === params.target && edge.targetHandle === params.targetHandle)
+            ));
+        }
+
         // === AUTO TYPE ADAPTATION ===
         
         // Smart Split Node - adapts outputs based on input type
