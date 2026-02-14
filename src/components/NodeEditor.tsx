@@ -390,7 +390,29 @@ function EditorInner({ onChange }: Props) {
   useEffect(() => { const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste(); if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleCopy, handlePaste, deleteSelected]);
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, visible: true }); setMenuFilter(null); setPendingConnection(null); }, []);
   const onAddNode = useCallback((typeId: string) => { if (!menu) return; const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y }); const isGroup = typeId === 'special_group'; const isPreview = typeId === 'preview'; const isMonitor = typeId === 'monitor'; const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; const newLabel = getUniqueLabel(def, nodes); const newNode: Node = { id: `${typeId}_${Date.now()}`, type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'), position, data: { definition: def, label: newLabel, value: def.controls?.defaultValue }, zIndex: isGroup ? -10 : 0, style: isGroup ? { width: 400, height: 300 } : undefined, }; setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode)); if (pendingConnection) { const { nodeId, handleId, handleType } = pendingConnection; let newEdge: Edge | null = null; if (handleType === 'source') { const input = def.inputs[0]; if (input) { newEdge = { id: `e_${nodeId}_${newNodeId}`, source: nodeId, sourceHandle: handleId, target: newNodeId, targetHandle: input.id, style: { stroke: '#fff', strokeWidth: 3 } }; } } else { const output = def.outputs[0]; if (output) { newEdge = { id: `e_${newNodeId}_${nodeId}`, source: newNodeId, sourceHandle: output.id, target: nodeId, targetHandle: handleId, style: { stroke: '#fff', strokeWidth: 3 } }; } } if (newEdge) { setEdges((eds) => addEdge(newEdge!, eds)); } setPendingConnection(null); } }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes]);
-  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => { event.preventDefault(); setEdges((eds) => eds.filter((e) => e.id !== edge.id)); }, [setEdges]);
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => { 
+    event.preventDefault(); 
+    setEdges((eds) => eds.filter((e) => e.id !== edge.id)); 
+  }, [setEdges]);
+
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    
+    // Check if this is the last output node
+    if (node.data.definition?.id === 'output') {
+      const outputNodes = nodes.filter(n => n.data.definition?.id === 'output');
+      if (outputNodes.length === 1) {
+        alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
+        return;
+      }
+    }
+
+    // Show confirmation dialog
+    if (window.confirm(`Delete "${node.data.label || node.data.definition?.label || 'node'}"?`)) {
+      setNodes((nds) => nds.filter((n) => n.id !== node.id));
+      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+    }
+  }, [nodes, setNodes, setEdges]);
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', background: '#111', position: 'relative' }} onMouseMove={onMouseMove}>
@@ -398,7 +420,7 @@ function EditorInner({ onChange }: Props) {
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
         nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} minZoom={0.1} maxZoom={4} fitView
-        onPaneContextMenu={onPaneContextMenu} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
+        onPaneContextMenu={onPaneContextMenu} onNodeContextMenu={onNodeContextMenu} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
         onDragOver={onDragOver} onDrop={onDrop}
       >
         <Background color="#222" gap={20} />

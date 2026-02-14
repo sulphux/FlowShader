@@ -139,7 +139,7 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       { id: 'z', label: 'Z', type: 'float' },
       { id: 'w', label: 'W', type: 'float' }
   ],
-  outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
+  outputs: [{ id: 'out', label: 'Vec3', type: 'vec3' }], // Default: vec3
   glslTemplate: (inputs, data) => {
       const outputType = data?.definition?.outputs?.[0]?.type || 'vec3';
       
