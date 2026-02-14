@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
+import { isValidConnection } from '../core/connectionValidator';
 
 interface Props {
   x: number;
@@ -53,31 +54,17 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
       if (!def) return false;
       
       // Check if node has compatible OUTPUT (for source nodes like params)
+      // This is used when dragging FROM an input (target handle)
       const hasMatchingOutput = def.outputs.some(output => {
-          if (filterType === 'auto') return true;
-          if (output.type === filterType) return true;
-          if (output.type === 'auto') return true;
-          // Handle multi-type outputs
-          if (output.type.includes('|')) {
-              return output.type.split('|').includes(filterType);
-          }
-          // float can go anywhere
-          if (output.type === 'float') return true;
-          return false;
+          // Use the same validation logic as connections
+          return isValidConnection(output.type, filterType);
       });
       
       // Check if node has compatible INPUT (for processing nodes)
+      // This is used when dragging FROM an output (source handle)
       const hasMatchingInput = def.inputs.some(input => {
-          if (filterType === 'auto') return true;
-          if (input.type === filterType) return true;
-          if (input.type === 'auto') return true;
-          // Handle multi-type inputs
-          if (input.type.includes('|')) {
-              return input.type.split('|').includes(filterType);
-          }
-          // float can come from anywhere
-          if (input.type === 'vec3' && filterType === 'float') return true;
-          return false;
+          // Use the same validation logic as connections
+          return isValidConnection(filterType, input.type);
       });
       
       return hasMatchingOutput || hasMatchingInput;
