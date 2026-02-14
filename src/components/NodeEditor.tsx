@@ -313,28 +313,45 @@ function EditorInner({ onChange }: Props) {
         }
 
         // Auto Relay Node - adapts to passthrough type
-        if ((targetDef.id === 'relay_auto' && inputDef?.type === 'auto') || 
-            (sourceDef.id === 'relay_auto' && outputDef.type === 'auto')) {
-            
-            // Update target relay to match source type
-            if (targetDef.id === 'relay_auto') {
-                setNodes(nds => nds.map(n => {
-                    if (n.id === targetNode.id) {
-                        return {
-                            ...n,
-                            data: {
-                                ...n.data,
-                                definition: {
-                                    ...n.data.definition,
-                                    inputs: [{ id: 'in', label: sourceType, type: sourceType }],
-                                    outputs: [{ id: 'out', label: sourceType, type: sourceType }]
-                                }
+        if (targetDef.id === 'relay_auto' && inputDef?.type === 'auto') {
+            // Target is relay_auto, adapt it to source type
+            setNodes(nds => nds.map(n => {
+                if (n.id === targetNode.id) {
+                    return {
+                        ...n,
+                        data: {
+                            ...n.data,
+                            definition: {
+                                ...n.data.definition,
+                                inputs: [{ id: 'in', label: sourceType, type: sourceType }],
+                                outputs: [{ id: 'out', label: sourceType, type: sourceType }]
                             }
                         }
                     }
-                    return n;
-                }));
-            }
+                }
+                return n;
+            }));
+        }
+        
+        if (sourceDef.id === 'relay_auto' && outputDef.type === 'auto' && inputDef) {
+            // Source is relay_auto with auto output, adapt it to target input type
+            const targetType = inputDef.type;
+            setNodes(nds => nds.map(n => {
+                if (n.id === sourceNode.id) {
+                    return {
+                        ...n,
+                        data: {
+                            ...n.data,
+                            definition: {
+                                ...n.data.definition,
+                                inputs: [{ id: 'in', label: targetType, type: targetType }],
+                                outputs: [{ id: 'out', label: targetType, type: targetType }]
+                            }
+                        }
+                    }
+                }
+                return n;
+            }));
         }
 
         // Validate connection using our validator
