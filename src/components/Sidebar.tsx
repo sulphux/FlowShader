@@ -3,6 +3,7 @@ import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import type { Node } from 'reactflow';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
+import { loadCustomNodes } from '../core/customNodeManager';
 
 interface Props {
     nodes: Node[];
@@ -11,6 +12,7 @@ interface Props {
 
 const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
+  "Custom Nodes": ["custom_input", "custom_output"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
@@ -27,6 +29,18 @@ const MENU_STRUCTURE = {
 export default function Sidebar({ nodes, setNodes }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
+  
+  // Load custom nodes dynamically
+  const customNodes = useMemo(() => loadCustomNodes(), []);
+  
+  // Build menu structure with custom nodes
+  const menuStructure = useMemo(() => {
+    const base = { ...MENU_STRUCTURE };
+    if (customNodes.length > 0) {
+      base["Custom Nodes"] = ["custom_input", "custom_output", ...customNodes.map(n => n.id)];
+    }
+    return base;
+  }, [customNodes]);
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -106,7 +120,7 @@ export default function Sidebar({ nodes, setNodes }: Props) {
         {/* ZAKŁADKA BIBLIOTEKI (Stara) */}
         {activeTab === 'lib' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {Object.entries(MENU_STRUCTURE).map(([category, items]) => (
+                {Object.entries(menuStructure).map(([category, items]) => (
                     <div key={category}>
                         <div style={{ color: '#666', fontSize: '10px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>{category}</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

@@ -12,7 +12,7 @@ import { MonitorNode } from './MonitorNode';
 import ContextMenu from './ContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import CreateCustomNodeDialog from './CreateCustomNodeDialog';
-import { addCustomNode, extractCustomNodePorts, type CustomNodeDefinition } from '../core/customNodeManager';
+import { addCustomNode, extractCustomNodePorts, loadCustomNodes, type CustomNodeDefinition } from '../core/customNodeManager';
 import type { ShaderNodeDefinition } from '../core/types';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
@@ -95,6 +95,14 @@ function EditorInner({ onChange }: Props) {
   const lastLogicHash = useRef<string>("");
   const mousePos = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
   const isLoadedRef = useRef(false);
+  
+  // Load custom nodes into registry on mount
+  useEffect(() => {
+    const customNodes = loadCustomNodes();
+    customNodes.forEach(customNode => {
+      (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNode.id] = customNode;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isLoadedRef.current && initialData.viewport) {

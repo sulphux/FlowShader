@@ -63,6 +63,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isUV = def.id === 'uv';
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
   const isSmartCompose = def.id === 'smart_compose';
+  const isCustomNode = 'isCustom' in def && def.isCustom;
 
   let headerType = def.outputs[0]?.type || 'default';
   if (headerType === 'float' && def.inputs.length > 0) {
@@ -79,6 +80,11 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           ? `0 0 15px rgba(255, 0, 122, 0.4), inset 0 4px 0 0 ${TYPE_COLORS['vec2']}` 
           : `0 4px 8px rgba(0,0,0,0.5), inset 0 4px 0 0 ${TYPE_COLORS['vec2']}` 
   } : {};
+  
+  const customStyle = isCustomNode ? {
+    border: selected ? '2px solid #ff007a' : '2px solid #9c27b0',
+    boxShadow: selected ? '0 0 15px rgba(255, 0, 122, 0.4)' : '0 4px 12px rgba(156, 39, 176, 0.4)',
+  } : {};
 
   const baseStyle: React.CSSProperties = {
     background: '#1a1a1a',
@@ -88,7 +94,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     boxShadow: selected ? '0 0 15px rgba(255, 0, 122, 0.4)' : '0 4px 8px rgba(0,0,0,0.5)',
     transition: 'all 0.1s',
     borderRadius: '6px',
-    ...uvStyle
+    ...uvStyle,
+    ...customStyle
   };
 
   const handleTitleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -184,7 +191,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  </Handle>
             })}
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {isCustomNode && <span style={{ fontSize: '14px' }}>🔲</span>}
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
+        </div>
         <div style={{ position: 'absolute', right: '-6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {def.outputs.map((output, i) => {
                 let topOffset = 0;
@@ -263,8 +273,28 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   return (
-    <div style={{ ...baseStyle, minWidth: '100px' }}>
+    <div style={{ ...baseStyle, minWidth: '100px', position: 'relative' }}>
       {renderInfoIcon()}
+      {isCustomNode && (
+        <div style={{ 
+          position: 'absolute', 
+          top: '-10px', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          background: '#9c27b0',
+          color: '#fff',
+          fontSize: '9px',
+          padding: '2px 6px',
+          borderRadius: '8px',
+          fontWeight: 'bold',
+          boxShadow: '0 2px 8px rgba(156, 39, 176, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px'
+        }}>
+          🔲 CUSTOM
+        </div>
+      )}
       <div style={{ height: '4px', background: headerColorBase, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
       <div style={{ padding: '4px 8px', background: '#222', borderBottom: '1px solid #333' }}>
         <input 
