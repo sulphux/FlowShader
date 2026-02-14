@@ -50,8 +50,6 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
     }
     
     return base;
-  // currentContext is a prop, so it's a valid dependency
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customNodes, currentContext]);
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
