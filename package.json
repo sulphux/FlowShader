@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "clean": "rimraf dist node_modules/.vite",
+    "fresh": "npm run clean && npm run dev"
   },
   "dependencies": {
     "@types/three": "^0.182.0",
