@@ -8,12 +8,18 @@ import * as Utils from './utils';
 import * as Params from './params';
 import { PreviewNodeDef } from './utils';
 import { MonitorNodeDef, SmartSplitNode, SmartComposeNode, RelayAutoNode } from './utils';
+import { CustomInputNode } from './CustomInput';
+import { CustomOutputNode } from './CustomOutput';
 
 export const NODE_REGISTRY = {
   output: OutputNode,
   time: TimeNode,
   sdf_circle: SDFCircle,
   palette: PaletteNode,
+  
+  // Custom Node System
+  custom_input: CustomInputNode,
+  custom_output: CustomOutputNode,
   
   // Utils - Auto-adapting nodes
   monitor: MonitorNodeDef,

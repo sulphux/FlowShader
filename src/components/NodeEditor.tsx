@@ -10,6 +10,7 @@ import { ShaderNode } from './ShaderNode';
 import { PreviewNode } from './PreviewNode';
 import { MonitorNode } from './MonitorNode';
 import ContextMenu from './ContextMenu';
+import NodeContextMenu from './NodeContextMenu';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
@@ -78,7 +79,7 @@ function EditorInner({ onChange }: Props) {
   const reactFlowInstance = useReactFlow();
   
   const [menuFilter, setMenuFilter] = useState<string | null>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean; type: 'pane' | 'node'; nodeId?: string } | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
   
@@ -467,21 +468,64 @@ function EditorInner({ onChange }: Props) {
       }
       connectionStartRef.current = null;
   }, [nodes]);
-  const handleCopy = useCallback(() => { const selectedNodes = nodes.filter(n => n.selected); if (selectedNodes.length === 0) return; const selectedNodeIds = new Set(selectedNodes.map(n => n.id)); const selectedEdges = edges.filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)); setClipboard({ nodes: selectedNodes, edges: selectedEdges }); }, [nodes, edges]);
-  const handlePaste = useCallback(() => { if (!clipboard) return; const bounds = getRectOfNodes(clipboard.nodes); const centerX = bounds.x + bounds.width / 2; const centerY = bounds.y + bounds.height / 2; const flowMousePos = reactFlowInstance.project(mousePos.current); const idMap: Record<string, string> = {}; const newNodes = clipboard.nodes.map((node) => { const newId = `${node.data.definition.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; idMap[node.id] = newId; const offsetX = node.position.x - centerX; const offsetY = node.position.y - centerY; return { ...node, id: newId, position: { x: flowMousePos.x + offsetX, y: flowMousePos.y + offsetY }, selected: true, data: { ...node.data } }; }); const newEdges = clipboard.edges.map((edge) => ({ ...edge, id: `e_${idMap[edge.source]}_${idMap[edge.target]}_${Math.random()}`, source: idMap[edge.source], target: idMap[edge.target], selected: false })); setNodes((nds) => nds.map(n => ({...n, selected: false})).concat(newNodes)); setEdges((eds) => eds.concat(newEdges)); }, [clipboard, reactFlowInstance, setNodes, setEdges]);
+  const handleCopy = useCallback(() => { 
+    const selectedNodes = nodes.filter(n => n.selected); 
+    if (selectedNodes.length === 0) return; 
+    const selectedNodeIds = new Set(selectedNodes.map(n => n.id)); 
+    const selectedEdges = edges.filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)); 
+    setClipboard({ nodes: selectedNodes, edges: selectedEdges }); 
+  }, [nodes, edges]);
+  
+  const handleCut = useCallback(() => {
+    handleCopy();
+    deleteSelected();
+  }, [handleCopy, deleteSelected]);
+  
+  const handlePaste = useCallback(() => { 
+    if (!clipboard) return; 
+    const bounds = getRectOfNodes(clipboard.nodes); 
+    const centerX = bounds.x + bounds.width / 2; 
+    const centerY = bounds.y + bounds.height / 2; 
+    const flowMousePos = reactFlowInstance.project(mousePos.current); 
+    const idMap: Record<string, string> = {}; 
+    const newNodes = clipboard.nodes.map((node) => { 
+      const newId = `${node.data.definition.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; 
+      idMap[node.id] = newId; 
+      const offsetX = node.position.x - centerX; 
+      const offsetY = node.position.y - centerY; 
+      return { ...node, id: newId, position: { x: flowMousePos.x + offsetX, y: flowMousePos.y + offsetY }, selected: true, data: { ...node.data } }; 
+    }); 
+    const newEdges = clipboard.edges.map((edge) => ({ 
+      ...edge, 
+      id: `e_${idMap[edge.source]}_${idMap[edge.target]}_${Math.random()}`, 
+      source: idMap[edge.source], 
+      target: idMap[edge.target], 
+      selected: false 
+    })); 
+    setNodes((nds) => nds.map(n => ({...n, selected: false})).concat(newNodes)); 
+    setEdges((eds) => eds.concat(newEdges)); 
+  }, [clipboard, reactFlowInstance, setNodes, setEdges]);
   useEffect(() => { 
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') handleCut();
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste(); 
       if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSaveFile(false); }
       if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); 
     }; 
     window.addEventListener('keydown', handleKeyDown); 
     return () => window.removeEventListener('keydown', handleKeyDown); 
-  }, [handleCopy, handlePaste, deleteSelected, undo, redo, handleSaveFile]);
-  const onPaneContextMenu = useCallback((event: React.MouseEvent) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, visible: true }); setMenuFilter(null); setPendingConnection(null); }, []);
+  }, [handleCopy, handleCut, handlePaste, deleteSelected, undo, redo, handleSaveFile]);
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => { 
+    event.preventDefault(); 
+    // Store mouse position for paste
+    mousePos.current = { x: event.clientX, y: event.clientY };
+    setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'pane' }); 
+    setMenuFilter(null); 
+    setPendingConnection(null); 
+  }, []);
   const onAddNode = useCallback((typeId: string) => { 
     if (!menu) return; 
     const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y }); 
@@ -573,22 +617,8 @@ function EditorInner({ onChange }: Props) {
 
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
-    
-    // Check if this is the last output node
-    if (node.data.definition?.id === 'output') {
-      const outputNodes = nodes.filter(n => n.data.definition?.id === 'output');
-      if (outputNodes.length === 1) {
-        alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
-        return;
-      }
-    }
-
-    // Show confirmation dialog
-    if (window.confirm(`Delete "${node.data.label || node.data.definition?.label || 'node'}"?`)) {
-      setNodes((nds) => nds.filter((n) => n.id !== node.id));
-      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
-    }
-  }, [nodes, setNodes, setEdges]);
+    setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'node', nodeId: node.id });
+  }, []);
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', background: '#111', position: 'relative' }} onMouseMove={onMouseMove}>
@@ -614,7 +644,56 @@ function EditorInner({ onChange }: Props) {
         <Legend /> 
         {document.getElementById('sidebar-root') && createPortal( <Sidebar nodes={nodes} setNodes={setNodes} />, document.getElementById('sidebar-root')! )}
         {createPortal( <div onClick={deleteSelected} title="Delete Selected (Del)" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 99999, width: 50, height: 50, borderRadius: '50%', background: '#ff007a', color: 'white', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)', transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}>🗑️</div>, document.body )}
-        {menu && menu.visible && createPortal( <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} onAddNode={(id) => onAddNode(id)} filterType={menuFilter} />, document.body )}
+        {menu && menu.visible && menu.type === 'pane' && createPortal(
+          <ContextMenu 
+            x={menu.x} 
+            y={menu.y} 
+            onClose={() => setMenu(null)} 
+            onAddNode={(id) => onAddNode(id)} 
+            filterType={menuFilter}
+            onPaste={clipboard ? handlePaste : undefined}
+            hasClipboard={!!clipboard}
+            hasSelection={nodes.some(n => n.selected)}
+          />, 
+          document.body 
+        )}
+        {menu && menu.visible && menu.type === 'node' && menu.nodeId && createPortal(
+          <NodeContextMenu 
+            x={menu.x} 
+            y={menu.y}
+            nodeId={menu.nodeId}
+            nodeName={(() => {
+              const node = nodes.find(n => n.id === menu.nodeId);
+              return node?.data.label || node?.data.definition?.label || 'Node';
+            })()}
+            isCustomNode={false}
+            isLastOutput={(() => {
+              const node = nodes.find(n => n.id === menu.nodeId);
+              if (node?.data.definition?.id !== 'output') return false;
+              return nodes.filter(n => n.data.definition?.id === 'output').length === 1;
+            })()}
+            onClose={() => setMenu(null)}
+            onCopy={() => {
+              const node = nodes.find(n => n.id === menu.nodeId);
+              if (node) {
+                setNodes(nds => nds.map(n => ({ ...n, selected: n.id === menu.nodeId })));
+                setTimeout(handleCopy, 10);
+              }
+            }}
+            onCut={() => {
+              const node = nodes.find(n => n.id === menu.nodeId);
+              if (node) {
+                setNodes(nds => nds.map(n => ({ ...n, selected: n.id === menu.nodeId })));
+                setTimeout(handleCut, 10);
+              }
+            }}
+            onDelete={() => {
+              setNodes((nds) => nds.filter((n) => n.id !== menu.nodeId));
+              setEdges((eds) => eds.filter((e) => e.source !== menu.nodeId && e.target !== menu.nodeId));
+            }}
+          />, 
+          document.body 
+        )}
         {showCode && createPortal( <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCode(false)}> <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px', border: '1px solid #444', width: '80%', height: '80%', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}> <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#fff', fontWeight: 'bold' }}> <span>GENERATED GLSL</span> <button onClick={() => setShowCode(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✕</button> </div> <textarea readOnly value={currentCode} style={{ flex: 1, background: '#111', color: '#81c784', border: 'none', fontFamily: 'monospace', padding: '10px', resize: 'none' }} /> </div> </div>, document.body )}
       </ReactFlow>
     </div>

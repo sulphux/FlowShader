@@ -10,6 +10,10 @@ interface Props {
   onClose: () => void;
   onAddNode: (typeId: string) => void;
   filterType?: string | null;
+  onPaste?: () => void;
+  onCreateCustom?: () => void;
+  hasClipboard?: boolean;
+  hasSelection?: boolean;
 }
 
 const MENU_STRUCTURE = {
@@ -21,7 +25,7 @@ const MENU_STRUCTURE = {
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
 
-export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Props) {
+export default function ContextMenu({ x, y, onClose, onAddNode, filterType, onPaste, onCreateCustom, hasClipboard, hasSelection }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
   const [openLeft, setOpenLeft] = useState(false);
@@ -114,6 +118,33 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
       onContextMenu={(e) => { e.preventDefault(); onClose(); }}
     >
       <div ref={menuRef} style={menuStyle} onClick={(e) => e.stopPropagation()}>
+        {/* Actions Section (for pane context menu) */}
+        {!filterType && (onPaste || onCreateCustom) && (
+          <>
+            {onPaste && (
+              <div 
+                onClick={() => { onPaste(); onClose(); }} 
+                style={{ ...itemStyle(false), opacity: hasClipboard ? 1 : 0.3, cursor: hasClipboard ? 'pointer' : 'not-allowed' }}
+                onMouseEnter={(e) => { if (hasClipboard) { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+              >
+                📋 Paste (Ctrl+V)
+              </div>
+            )}
+            {onCreateCustom && (
+              <div 
+                onClick={() => { if (hasSelection) { onCreateCustom(); onClose(); }}} 
+                style={{ ...itemStyle(false), opacity: hasSelection ? 1 : 0.3, cursor: hasSelection ? 'pointer' : 'not-allowed' }}
+                onMouseEnter={(e) => { if (hasSelection) { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+              >
+                📦 Create Custom Node
+              </div>
+            )}
+            <div style={{ height: '1px', background: '#333', margin: '4px 0' }}></div>
+          </>
+        )}
+        
         {filterType && (
             <div style={{ padding: '4px 8px', fontSize: '10px', color: '#888', borderBottom: '1px solid #333', marginBottom: '4px' }}>
                 Compatible with: <strong style={{color: TYPE_COLORS[filterType] || '#fff'}}>{filterType}</strong>
