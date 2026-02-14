@@ -17,6 +17,7 @@ import type { ShaderNodeDefinition } from '../core/types';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
+import NavigationPanel from './NavigationPanel';
 import { NODE_REGISTRY } from '../nodes'; 
 import { TYPE_COLORS } from '../core/theme';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
@@ -341,6 +342,32 @@ function EditorInner({ onChange }: Props) {
       ? ports.outputs 
       : [{ id: 'out', label: 'Out', type: 'vec3' }];
     
+    // Create default nodes for empty custom nodes
+    const defaultSubgraphNodes: Node[] = selectedNodes.length > 0 
+      ? selectedNodes 
+      : [
+        // Default Custom Input node
+        {
+          id: `custom_input_default`,
+          type: 'shaderNode',
+          position: { x: 100, y: 200 },
+          data: {
+            definition: NODE_REGISTRY['custom_input'],
+            value: undefined,
+          }
+        },
+        // Default Output node
+        {
+          id: `output_default`,
+          type: 'shaderNode',
+          position: { x: 400, y: 200 },
+          data: {
+            definition: NODE_REGISTRY['output'],
+            value: undefined,
+          }
+        }
+      ];
+    
     // Create custom node definition
     const customNodeId = `custom_${name.toLowerCase().replace(/\s+/g, '_')}`;
     const customNode: CustomNodeDefinition = {
@@ -352,7 +379,7 @@ function EditorInner({ onChange }: Props) {
       outputs: finalOutputs,
       isCustom: true,
       subgraph: {
-        nodes: selectedNodes,
+        nodes: defaultSubgraphNodes,
         edges: selectedEdges
       },
       glslTemplate: () => {
@@ -389,10 +416,38 @@ function EditorInner({ onChange }: Props) {
     // Save current state to navigation stack
     setNavigationStack(prev => [...prev, { name: currentContext, nodes, edges }]);
     
-    // Load subgraph
+    // If subgraph is empty, add default nodes
+    if (customDef.subgraph.nodes.length === 0) {
+      const defaultNodes: Node[] = [
+        {
+          id: `custom_input_default`,
+          type: 'shaderNode',
+          position: { x: 100, y: 200 },
+          data: {
+            definition: NODE_REGISTRY['custom_input'],
+            value: undefined,
+          }
+        },
+        {
+          id: `output_default`,
+          type: 'shaderNode',
+          position: { x: 400, y: 200 },
+          data: {
+            definition: NODE_REGISTRY['output'],
+            value: undefined,
+          }
+        }
+      ];
+      
+      setNodes(defaultNodes);
+      setEdges([]);
+    } else {
+      // Load subgraph
+      setNodes(customDef.subgraph.nodes);
+      setEdges(customDef.subgraph.edges);
+    }
+    
     setCurrentContext(def.label);
-    setNodes(customDef.subgraph.nodes);
-    setEdges(customDef.subgraph.edges);
   }, [nodes, edges, currentContext, setNodes, setEdges]);
   
   const navigateBack = useCallback(() => {
@@ -404,6 +459,27 @@ function EditorInner({ onChange }: Props) {
     setNodes(previous.nodes);
     setEdges(previous.edges);
   }, [navigationStack, setNodes, setEdges]);
+
+  const navigateToLevel = useCallback((levelIndex: number) => {
+    if (levelIndex === 0) {
+      // Jump to Main
+      setNavigationStack([]);
+      setCurrentContext('Main');
+      setNodes(initialNodesDefault);
+      setEdges([]);
+    } else {
+      // Jump to intermediate level
+      const targetLevel = navigationStack[levelIndex - 1];
+      setNavigationStack(prev => prev.slice(0, levelIndex));
+      setCurrentContext(targetLevel.name);
+      setNodes(targetLevel.nodes);
+      setEdges(targetLevel.edges);
+    }
+  }, [navigationStack, setNodes, setEdges]);
+
+  const navigateToMain = useCallback(() => {
+    navigateToLevel(0);
+  }, [navigateToLevel]);
 
   const deleteSelected = useCallback(() => {
       setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
@@ -824,8 +900,6 @@ function EditorInner({ onChange }: Props) {
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
         currentFile={currentFilePath}
-        breadcrumbs={['Main', ...navigationStack.map(s => s.name), currentContext].filter((v, i, a) => a.indexOf(v) === i)}
-        onNavigateBack={navigateBack}
       />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
@@ -835,7 +909,17 @@ function EditorInner({ onChange }: Props) {
       >
         <Background color="#222" gap={20} />
         <Controls />
-        <Legend /> 
+        <Legend />
+        
+        {/* Navigation panel for custom node editing */}
+        <NavigationPanel
+          breadcrumbs={['Main', ...navigationStack.map(s => s.name), currentContext].filter((v, i, a) => a.indexOf(v) === i)}
+          currentContext={currentContext}
+          onNavigateToLevel={navigateToLevel}
+          onNavigateBack={navigateBack}
+          onNavigateToMain={navigateToMain}
+        />
+        
         {document.getElementById('sidebar-root') && createPortal( <Sidebar nodes={nodes} setNodes={setNodes} currentContext={currentContext} />, document.getElementById('sidebar-root')! )}
         {createPortal( <div onClick={deleteSelected} title="Delete Selected (Del)" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 99999, width: 50, height: 50, borderRadius: '50%', background: '#ff007a', color: 'white', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)', transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}>🗑️</div>, document.body )}
         {menu && menu.visible && menu.type === 'pane' && createPortal(
