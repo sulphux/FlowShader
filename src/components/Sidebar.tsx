@@ -25,7 +25,7 @@ const MENU_STRUCTURE = {
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
 
-export default function Sidebar({ nodes, setNodes }: Props) {
+export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
   
