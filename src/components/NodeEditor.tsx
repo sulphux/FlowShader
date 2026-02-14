@@ -87,6 +87,10 @@ function EditorInner({ onChange }: Props) {
   const [currentCode, setCurrentCode] = useState('');
   const [showCustomDialog, setShowCustomDialog] = useState(false);
   
+  // Navigation stack for custom nodes
+  const [navigationStack, setNavigationStack] = useState<Array<{ name: string; nodes: Node[]; edges: Edge[] }>>([]);
+  const [currentContext, setCurrentContext] = useState<string>('Main'); // 'Main' or custom node name
+  
   const [pendingConnection, setPendingConnection] = useState<OnConnectStartParams | null>(null);
   const connectionStartRef = useRef<OnConnectStartParams | null>(null);
 
@@ -281,12 +285,40 @@ function EditorInner({ onChange }: Props) {
     // Add to NODE_REGISTRY dynamically
     (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = customNode;
     
-    alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom" category.`);
+    alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom Nodes" category.`);
     
     // Optionally delete selected nodes after creating custom
     // setNodes((nds) => nds.filter(n => !selectedNodeIds.has(n.id)));
     // setEdges((eds) => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
   }, [nodes, edges]);
+  
+  const enterCustomNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    
+    const def = node.data.definition;
+    if (!('isCustom' in def) || !def.isCustom) return;
+    
+    const customDef = def as CustomNodeDefinition;
+    
+    // Save current state to navigation stack
+    setNavigationStack(prev => [...prev, { name: currentContext, nodes, edges }]);
+    
+    // Load subgraph
+    setCurrentContext(def.label);
+    setNodes(customDef.subgraph.nodes);
+    setEdges(customDef.subgraph.edges);
+  }, [nodes, edges, currentContext, setNodes, setEdges]);
+  
+  const navigateBack = useCallback(() => {
+    if (navigationStack.length === 0) return;
+    
+    const previous = navigationStack[navigationStack.length - 1];
+    setNavigationStack(prev => prev.slice(0, -1));
+    setCurrentContext(previous.name);
+    setNodes(previous.nodes);
+    setEdges(previous.edges);
+  }, [navigationStack, setNodes, setEdges]);
 
   const deleteSelected = useCallback(() => {
       setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
@@ -680,6 +712,13 @@ function EditorInner({ onChange }: Props) {
     event.preventDefault();
     setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'node', nodeId: node.id });
   }, []);
+  
+  const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    // Double-click custom node to enter its subgraph
+    if ('isCustom' in node.data.definition && node.data.definition.isCustom) {
+      enterCustomNode(node.id);
+    }
+  }, [enterCustomNode]);
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', background: '#111', position: 'relative' }} onMouseMove={onMouseMove}>
@@ -693,11 +732,13 @@ function EditorInner({ onChange }: Props) {
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
         currentFile={currentFilePath}
+        breadcrumbs={['Main', ...navigationStack.map(s => s.name), currentContext].filter((v, i, a) => a.indexOf(v) === i)}
+        onNavigateBack={navigateBack}
       />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
         nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} minZoom={0.1} maxZoom={4} fitView
-        onPaneContextMenu={onPaneContextMenu} onNodeContextMenu={onNodeContextMenu} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
+        onPaneContextMenu={onPaneContextMenu} onNodeContextMenu={onNodeContextMenu} onNodeDoubleClick={onNodeDoubleClick} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
         onDragOver={onDragOver} onDrop={onDrop}
       >
         <Background color="#222" gap={20} />
@@ -728,7 +769,10 @@ function EditorInner({ onChange }: Props) {
               const node = nodes.find(n => n.id === menu.nodeId);
               return node?.data.label || node?.data.definition?.label || 'Node';
             })()}
-            isCustomNode={false}
+            isCustomNode={(() => {
+              const node = nodes.find(n => n.id === menu.nodeId);
+              return !!(node && 'isCustom' in node.data.definition && node.data.definition.isCustom);
+            })()}
             isLastOutput={(() => {
               const node = nodes.find(n => n.id === menu.nodeId);
               if (node?.data.definition?.id !== 'output') return false;
@@ -752,6 +796,9 @@ function EditorInner({ onChange }: Props) {
             onDelete={() => {
               setNodes((nds) => nds.filter((n) => n.id !== menu.nodeId));
               setEdges((eds) => eds.filter((e) => e.source !== menu.nodeId && e.target !== menu.nodeId));
+            }}
+            onEditCustom={() => {
+              enterCustomNode(menu.nodeId!);
             }}
           />, 
           document.body 

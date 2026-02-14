@@ -10,9 +10,11 @@ interface Props {
   canUndo?: boolean;
   canRedo?: boolean;
   currentFile?: string | null;
+  breadcrumbs?: string[];
+  onNavigateBack?: () => void;
 }
 
-export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
+export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile, breadcrumbs, onNavigateBack }: Props) {
   const btnStyle: React.CSSProperties = {
     background: '#333',
     border: '1px solid #555',
@@ -40,6 +42,32 @@ export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, o
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
     }}>
+      {/* Breadcrumbs navigation */}
+      {breadcrumbs && breadcrumbs.length > 1 && (
+        <>
+          <button 
+            onClick={onNavigateBack} 
+            style={{ ...btnStyle, background: '#222', color: '#ff007a', fontWeight: 'bold' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#222'; }}
+            title="Go back to previous level"
+          >
+            ← Back
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', color: '#888', fontSize: '11px' }}>
+            {breadcrumbs.map((crumb, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span>›</span>}
+                <span style={{ color: i === breadcrumbs.length - 1 ? '#fff' : '#666', fontWeight: i === breadcrumbs.length - 1 ? 'bold' : 'normal' }}>
+                  {crumb}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
+        </>
+      )}
+      
       {currentFile && (
         <div style={{ ...btnStyle, background: '#1a1a1a', cursor: 'default', color: '#888', fontSize: '11px', padding: '6px 8px' }}>
           📄 {currentFile}
