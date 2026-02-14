@@ -147,7 +147,85 @@ function EditorInner({ onChange }: Props) {
                 data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
             };
         });
-        setNodes(restoredNodes);
+        
+        // Auto-adapt Smart Split and Relay nodes based on existing connections
+        const adaptedNodes = restoredNodes.map((node: Node) => {
+          const def = node.data.definition;
+          
+          // Smart Split - adapt based on input edge
+          if (def.id === 'smart_split') {
+            const inputEdge = parsed.edges.find((e: Edge) => e.target === node.id && e.targetHandle === 'in');
+            if (inputEdge) {
+              const sourceNode = restoredNodes.find((n: Node) => n.id === inputEdge.source);
+              if (sourceNode) {
+                const sourceDef = sourceNode.data.definition;
+                const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === inputEdge.sourceHandle);
+                if (outputDef) {
+                  const type = outputDef.type;
+                  let newOutputs = def.outputs;
+                  let newInputLabel = 'Input';
+                  const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
+                  
+                  if (type === 'vec2') { 
+                    newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
+                    newInputLabel = 'Vec2'; 
+                  } else if (type === 'vec3') { 
+                    newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
+                    newInputLabel = 'Vec3'; 
+                  } else if (type === 'vec4') { 
+                    newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
+                    newInputLabel = 'Vec4'; 
+                  } else if (type === 'float') {
+                    newOutputs = [createOutput('x', 'Value')];
+                    newInputLabel = 'Float';
+                  }
+                  
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      definition: {
+                        ...def,
+                        inputs: [{ id: 'in', label: newInputLabel, type: type }],
+                        outputs: newOutputs
+                      }
+                    }
+                  };
+                }
+              }
+            }
+          }
+          
+          // Relay Auto - adapt based on input edge
+          if (def.id === 'relay_auto') {
+            const inputEdge = parsed.edges.find((e: Edge) => e.target === node.id && e.targetHandle === 'in');
+            if (inputEdge) {
+              const sourceNode = restoredNodes.find((n: Node) => n.id === inputEdge.source);
+              if (sourceNode) {
+                const sourceDef = sourceNode.data.definition;
+                const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === inputEdge.sourceHandle);
+                if (outputDef) {
+                  const sourceType = outputDef.type;
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      definition: {
+                        ...def,
+                        inputs: [{ id: 'in', label: sourceType, type: sourceType }],
+                        outputs: [{ id: 'out', label: sourceType, type: sourceType }]
+                      }
+                    }
+                  };
+                }
+              }
+            }
+          }
+          
+          return node;
+        });
+        
+        setNodes(adaptedNodes);
         setEdges(parsed.edges);
         if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
         if (filePath) setCurrentFilePath(filePath);
