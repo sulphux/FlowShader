@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { compileGraphToGLSL } from './compiler';
 import type { GraphNode } from './compiler';
 import { NODE_REGISTRY } from '../nodes';
+import type { CustomNodeDefinition } from './customNodeManager';
 
 describe('compiler', () => {
   describe('sortNodesTopologically', () => {
@@ -337,6 +338,172 @@ describe('compiler', () => {
       
       // Monitor nodes ARE included in compilation (they have inputs and special handling)
       expect(glsl).toContain('var_monitor_1');
+    });
+  });
+
+  describe('Custom Nodes Compilation', () => {
+    it('should compile custom node without glslTemplate error', () => {
+      // Create simple custom node: UV → Custom Output
+      const customNodeDef: CustomNodeDefinition = {
+        id: 'custom_test',
+        label: 'Test Custom',
+        description: 'Test',
+        compact: false,
+        inputs: [],
+        outputs: [{ id: 'out', label: 'Out', type: 'vec2' }],
+        isCustom: true,
+        subgraph: {
+          nodes: [
+            {
+              id: 'uv-1',
+              type: 'uv',
+              data: { definition: NODE_REGISTRY.uv }
+            },
+            {
+              id: 'custom-output-1',
+              type: 'custom_output',
+              data: { 
+                definition: NODE_REGISTRY.custom_output
+              }
+            }
+          ],
+          edges: [
+            {
+              source: 'uv-1',
+              target: 'custom-output-1',
+              sourceHandle: 'uv',
+              targetHandle: 'in'
+            }
+          ]
+        },
+        glslTemplate: () => 'vec3(1.0, 0.0, 1.0)' // Placeholder - should not be called
+      };
+
+      const nodes: GraphNode[] = [
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        },
+        {
+          id: 'custom-1',
+          type: 'shaderNode',
+          data: { definition: customNodeDef }
+        }
+      ];
+
+      const edges = [
+        {
+          source: 'custom-1',
+          target: 'output-1',
+          sourceHandle: 'out',
+          targetHandle: 'color'
+        }
+      ];
+
+      // Should NOT throw "glslTemplate is not a function"
+      expect(() => {
+        compileGraphToGLSL(nodes, edges);
+      }).not.toThrow();
+      
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      // Should contain UV code from subgraph
+      expect(glsl).toContain('gl_FragCoord');
+      expect(glsl).toContain('iResolution');
+    });
+
+    it('should handle custom node with inputs via Custom Input injection', () => {
+      // Custom node that processes input
+      const customNodeDef: CustomNodeDefinition = {
+        id: 'custom_double',
+        label: 'Double',
+        description: 'Doubles input',
+        compact: false,
+        inputs: [{ id: 'in', label: 'In', type: 'float' }],
+        outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+        isCustom: true,
+        subgraph: {
+          nodes: [
+            {
+              id: 'custom-input-1',
+              type: 'custom_input',
+              data: { definition: NODE_REGISTRY.custom_input }
+            },
+            {
+              id: 'mult-1',
+              type: 'math_mult',
+              data: { 
+                definition: NODE_REGISTRY.math_mult,
+                value: 2.0
+              }
+            },
+            {
+              id: 'custom-output-1',
+              type: 'custom_output',
+              data: { definition: NODE_REGISTRY.custom_output }
+            }
+          ],
+          edges: [
+            {
+              source: 'custom-input-1',
+              target: 'mult-1',
+              sourceHandle: 'out',
+              targetHandle: 'a'
+            },
+            {
+              source: 'mult-1',
+              target: 'custom-output-1',
+              sourceHandle: 'result',
+              targetHandle: 'in'
+            }
+          ]
+        },
+        glslTemplate: () => 'vec3(1.0)'
+      };
+
+      const nodes: GraphNode[] = [
+        {
+          id: 'time-1',
+          type: 'time',
+          data: { definition: NODE_REGISTRY.time }
+        },
+        {
+          id: 'custom-1',
+          type: 'shaderNode',
+          data: { definition: customNodeDef }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        {
+          source: 'time-1',
+          target: 'custom-1',
+          sourceHandle: 'time',
+          targetHandle: 'in'
+        },
+        {
+          source: 'custom-1',
+          target: 'output-1',
+          sourceHandle: 'out',
+          targetHandle: 'color'
+        }
+      ];
+
+      expect(() => {
+        compileGraphToGLSL(nodes, edges);
+      }).not.toThrow();
+      
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      // Should contain multiplication from subgraph
+      expect(glsl).toContain('*');
+      expect(glsl).toContain('2.0');
     });
   });
 });
