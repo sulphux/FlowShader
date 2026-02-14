@@ -53,25 +53,11 @@ export const CombineVec4Node: ShaderNodeDefinition = {
 
 // --- RELAY (Auto-adapting) ---
 export const RelayAutoNode: ShaderNodeDefinition = {
-  id: 'relay_auto', label: 'Relay (Auto)', compact: true,
+  id: 'relay_auto', label: 'Relay', compact: true,
   inputs: [{ id: 'in', label: 'Auto', type: 'auto' }],
   outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
-  glslTemplate: ({ in: val }) => `${val || '0.0'}`,
+  glslTemplate: ({ in: val }) => `${val || 'vec3(0.5)'}`, // Default to vec3 when disconnected
   description: 'Passthrough relay that adapts to any input type'
-};
-
-export const RelayFloatNode: ShaderNodeDefinition = {
-  id: 'relay_float', label: 'Relay (Float)', compact: true,
-  inputs: [{ id: 'in', label: 'In', type: 'float' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
-  glslTemplate: ({ in: val }) => `${val || '0.0'}`
-};
-
-export const RelayVec3Node: ShaderNodeDefinition = {
-  id: 'relay_vec3', label: 'Relay (Vec3)', compact: true,
-  inputs: [{ id: 'in', label: 'In', type: 'vec3' }],
-  outputs: [{ id: 'out', label: 'Out', type: 'vec3' }],
-  glslTemplate: ({ in: val }) => `${val || 'vec3(0.0)'}`
 };
 
 // --- MATH UTILS ---

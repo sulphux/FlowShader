@@ -56,10 +56,6 @@ export const NODE_REGISTRY = {
   vec_fract: VecNodes.FractNode,
   uv_scale: VecNodes.UVScaleNode,
   uv_shift: VecNodes.UVShiftNode,
-
-  // Utils - Fixed type Relay
-  relay_float: Utils.RelayFloatNode,
-  relay_vec3: Utils.RelayVec3Node,
   
   // Math Utils
   math_mix: Utils.MixNode,
