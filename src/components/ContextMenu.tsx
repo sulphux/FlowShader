@@ -15,7 +15,7 @@ const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
-  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_float", "relay_vec3"],
+  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_float", "relay_vec3", "relay_auto"],
   "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
 };
@@ -51,12 +51,36 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
       if (!filterType) return true;
       const def = NODE_REGISTRY[nodeId as keyof typeof NODE_REGISTRY];
       if (!def) return false;
-      return def.inputs.some(input => {
-          if (filterType === 'float') return true; 
-          if (input.type === filterType) return true;
-          if (input.type === 'vec3' && filterType === 'float') return true; 
+      
+      // Check if node has compatible OUTPUT (for source nodes like params)
+      const hasMatchingOutput = def.outputs.some(output => {
+          if (filterType === 'auto') return true;
+          if (output.type === filterType) return true;
+          if (output.type === 'auto') return true;
+          // Handle multi-type outputs
+          if (output.type.includes('|')) {
+              return output.type.split('|').includes(filterType);
+          }
+          // float can go anywhere
+          if (output.type === 'float') return true;
           return false;
       });
+      
+      // Check if node has compatible INPUT (for processing nodes)
+      const hasMatchingInput = def.inputs.some(input => {
+          if (filterType === 'auto') return true;
+          if (input.type === filterType) return true;
+          if (input.type === 'auto') return true;
+          // Handle multi-type inputs
+          if (input.type.includes('|')) {
+              return input.type.split('|').includes(filterType);
+          }
+          // float can come from anywhere
+          if (input.type === 'vec3' && filterType === 'float') return true;
+          return false;
+      });
+      
+      return hasMatchingOutput || hasMatchingInput;
   }, [filterType]);
 
   const filteredStructure = useMemo(() => {
