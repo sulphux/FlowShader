@@ -12,14 +12,13 @@ export interface ShaderNodeDefinition {
   inputs: { id: string; label: string; type: string }[];
   outputs: { id: string; label: string; type: string }[];
   description?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  glslTemplate: (inputs: Record<string, string>, data?: any) => string;
+  glslTemplate: (inputs: Record<string, string>, data?: Record<string, unknown>) => string;
   
   compact?: boolean;
   
   controls?: {
     type: 'float' | 'color' | 'text';
-    defaultValue: any;
+    defaultValue: string | number;
     min?: number;
     max?: number;
     step?: number;

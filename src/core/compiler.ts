@@ -1,4 +1,3 @@
-import { NODE_REGISTRY } from '../nodes';
 import type { ShaderNodeDefinition } from './types';
 
 export interface GraphNode {
@@ -36,7 +35,7 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
   return sorted;
 };
 
-export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeId?: string): string => {
+export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targetNodeId?: string): string => {
   const safeEdges = edges as GraphEdge[];
   const sortedNodes = sortNodesTopologically(nodes, safeEdges, targetNodeId);
   
@@ -55,7 +54,7 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: any[], targetNodeI
       const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
       
       if (edge && nodeVarMap[edge.source]) {
-        let sourceVarName = nodeVarMap[edge.source];
+        const sourceVarName = nodeVarMap[edge.source];
         const sourceNode = nodes.find(n => n.id === edge.source);
         
         // 1. USTALANIE TYPU ŹRÓDŁA

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 
@@ -10,7 +11,6 @@ interface Props {
   filterType?: string | null;
 }
 
-// Struktura menu
 const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
@@ -22,45 +22,32 @@ const MENU_STRUCTURE = {
 
 export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [adjustedPos, setAdjustedPos] = useState({ x, y });
+  const [openLeft, setOpenLeft] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  // Stan pozycji i kierunku otwierania
-  const [adjustedPos, setAdjustedPos] = useState({ x, y });
-  const [openLeft, setOpenLeft] = useState(false); 
-
-  // useLayoutEffect pozwala obliczyć pozycję PRZED narysowaniem klatki (brak mrugania)
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
-      const submenuWidth = 200; // Zakładana szerokość sub-menu
+      const submenuWidth = 200;
       
       let newX = x;
       let newY = y;
       
-      // 1. Utrzymaj główne menu w pionie
       if (y + rect.height > window.innerHeight) {
-          newY = y - rect.height;
+        newY = Math.max(0, y - rect.height);
       }
       
-      // 2. Utrzymaj główne menu w poziomie
       if (x + rect.width > window.innerWidth) {
-          newX = x - rect.width;
+        newX = Math.max(0, x - rect.width);
       }
       
       setAdjustedPos({ x: newX, y: newY });
-
-      // 3. LOGIKA SUBSZUFLADY:
-      // Jeśli prawa krawędź menu + szerokość sub-menu wychodzi poza ekran...
-      if (newX + rect.width + submenuWidth > window.innerWidth) {
-          setOpenLeft(true); // ...otwieramy w lewo
-      } else {
-          setOpenLeft(false); // ...standardowo w prawo
-      }
+      setOpenLeft(newX + rect.width + submenuWidth > window.innerWidth);
     }
   }, [x, y]);
 
-  // Filtrowanie (bez zmian)
-  const isNodeCompatible = (nodeId: string) => {
+  const isNodeCompatible = useCallback((nodeId: string) => {
       if (!filterType) return true;
       const def = NODE_REGISTRY[nodeId as keyof typeof NODE_REGISTRY];
       if (!def) return false;
@@ -70,7 +57,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
           if (input.type === 'vec3' && filterType === 'float') return true; 
           return false;
       });
-  };
+  }, [filterType]);
 
   const filteredStructure = useMemo(() => {
       if (!filterType) return MENU_STRUCTURE;
@@ -80,7 +67,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType }: Pr
           if (compatibleItems.length > 0) newStruct[cat] = compatibleItems;
       });
       return newStruct;
-  }, [filterType]);
+  }, [filterType, isNodeCompatible]);
 
   const menuStyle: React.CSSProperties = {
     position: 'absolute',

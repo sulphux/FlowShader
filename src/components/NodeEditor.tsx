@@ -111,11 +111,10 @@ function EditorInner({ onChange }: Props) {
     }
   }, [nodes, edges, onChange, reactFlowInstance]);
 
-  const restoreGraph = (jsonString: string) => {
+  const restoreGraph = useCallback((jsonString: string) => {
       try {
         const parsed = JSON.parse(jsonString);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const restoredNodes = parsed.nodes.map((n: any) => {
+        const restoredNodes = parsed.nodes.map((n: { data: { definition: { id: string } } }) => {
             const defId = n.data.definition.id;
             const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
             let type = 'shaderNode';
@@ -129,8 +128,10 @@ function EditorInner({ onChange }: Props) {
         setNodes(restoredNodes);
         setEdges(parsed.edges);
         if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
-      } catch (e) { console.error(e); alert("Error loading file."); }
-  };
+      } catch (err) { 
+          console.error("Error loading graph:", err);
+      }
+  }, [setNodes, setEdges, reactFlowInstance]);
 
   const handleSaveFile = useCallback(() => {
       const dataToSave = {
@@ -145,8 +146,15 @@ function EditorInner({ onChange }: Props) {
   const handleLoadFileClick = useCallback(() => { fileInputRef.current?.click(); }, []);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]; if (!file) return;
-      const reader = new FileReader(); reader.onload = (event) => { restoreGraph(event.target?.result as string); }; reader.readAsText(file); e.target.value = ''; 
-  }, [setNodes, setEdges, reactFlowInstance]);
+      const reader = new FileReader(); 
+      reader.onload = (event) => { 
+          if (event.target?.result) {
+              restoreGraph(event.target.result as string); 
+          }
+      }; 
+      reader.readAsText(file); 
+      e.target.value = ''; 
+  }, [restoreGraph]);
   
   const handleClear = useCallback(() => {
       if(window.confirm("Clear all nodes?")) { setNodes(initialNodesDefault); setEdges([]); localStorage.removeItem(STORAGE_KEY); }
@@ -166,14 +174,13 @@ function EditorInner({ onChange }: Props) {
       setShowCode(true);
   }, [nodes, edges]);
 
-  const getUniqueLabel = (def: any, existingNodes: Node[]) => {
+  const getUniqueLabel = (def: { id: string; label: string }, existingNodes: Node[]) => {
       let newLabel = def.label;
       if (def.id === 'param_float' || def.id === 'param_color') {
           let counter = 1;
           let uniqueNameFound = false;
           while (!uniqueNameFound) {
               const potentialName = counter === 1 ? def.label : `${def.label} ${counter}`;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const exists = existingNodes.some(n => (n.data.label || n.data.definition.label) === potentialName);
               if (!exists) { newLabel = potentialName; uniqueNameFound = true; } else { counter++; }
           }
@@ -225,8 +232,7 @@ function EditorInner({ onChange }: Props) {
             const type = outputDef.type;
             let newOutputs = targetDef.outputs;
             let newInputLabel = 'Input';
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const createOutput = (id: string, label: string) => ({ id, label, type: 'float' });
+            const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
             if (type === 'vec2') { newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; newInputLabel = 'Vec2'; } 
             else if (type === 'vec3') { newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; newInputLabel = 'Vec3'; } 
             else if (type === 'vec4') { newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; newInputLabel = 'Vec4'; }
@@ -262,16 +268,17 @@ function EditorInner({ onChange }: Props) {
 
   const onMouseMove = useCallback((e: React.MouseEvent) => { if(ref.current) { const bounds = ref.current.getBoundingClientRect(); mousePos.current = { x: e.clientX - bounds.left, y: e.clientY - bounds.top }; } }, []);
   const onConnectStart = useCallback((_, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
-  const onConnectEnd = useCallback((event: any) => {
-      const targetIsPane = event.target.classList.contains('react-flow__pane');
+  const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
+      const target = event.target as HTMLElement;
+      const targetIsPane = target.classList.contains('react-flow__pane');
       if (targetIsPane && connectionStartRef.current && ref.current) {
           const { nodeId, handleId, handleType } = connectionStartRef.current;
           const node = nodes.find(n => n.id === nodeId);
           if (node) {
               let type = 'default';
               if (handleType === 'source') { 
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const outDef = node.data.definition.outputs.find((o: any) => o.id === handleId); if(outDef) type = outDef.type; 
+                  const outDef = node.data.definition.outputs.find((o: { id: string; type: string }) => o.id === handleId); 
+                  if(outDef) type = outDef.type; 
               } else { 
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const inDef = node.data.definition.inputs.find((i: any) => i.id === handleId); if(inDef) type = inDef.type; 

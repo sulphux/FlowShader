@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, useRef } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'reactflow';
 import ShaderPreview from './ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
@@ -7,23 +7,21 @@ export const PreviewNode = memo(({ id, selected }: NodeProps) => {
   const { getNodes, getEdges } = useReactFlow();
   const [shaderCode, setShaderCode] = useState<string>('');
   
-  const updatePreview = () => {
-      const nodes = getNodes();
-      const edges = getEdges();
-      
-      const safeNodes: GraphNode[] = nodes.map(node => ({
-        id: node.id,
-        type: node.type || 'shaderNode', // Czysty kod bez śmieci
-        data: node.data
-      }));
-
-      // Kompilujemy graf celując w ten konkretny node (id)
-      const code = compileGraphToGLSL(safeNodes, edges, id);
-      setShaderCode(code);
-  };
-
   useEffect(() => {
-      // Odświeżanie co 500ms, żeby nie zajechać przeglądarki
+      const updatePreview = () => {
+          const nodes = getNodes();
+          const edges = getEdges();
+          
+          const safeNodes: GraphNode[] = nodes.map(node => ({
+            id: node.id,
+            type: node.type || 'shaderNode',
+            data: node.data
+          }));
+
+          const code = compileGraphToGLSL(safeNodes, edges, id);
+          setShaderCode(code);
+      };
+
       const interval = setInterval(updatePreview, 500);
       updatePreview(); 
       return () => clearInterval(interval);

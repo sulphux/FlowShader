@@ -1,0 +1,342 @@
+import { describe, it, expect } from 'vitest';
+import { compileGraphToGLSL } from './compiler';
+import type { GraphNode } from './compiler';
+import { NODE_REGISTRY } from '../nodes';
+
+describe('compiler', () => {
+  describe('sortNodesTopologically', () => {
+    it('should compile a simple float output', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        },
+        {
+          id: 'float-1',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 0.5 }
+        }
+      ];
+
+      const edges = [
+        {
+          source: 'float-1',
+          target: 'output-1',
+          sourceHandle: 'value',
+          targetHandle: 'color'
+        }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('precision mediump float');
+      expect(glsl).toContain('uniform float iTime');
+      expect(glsl).toContain('uniform vec2 iResolution');
+      expect(glsl).toContain('void main()');
+      expect(glsl).toContain('gl_FragColor');
+    });
+
+    it('should handle disconnected output node', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, []);
+      
+      expect(glsl).toContain('gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0)');
+    });
+
+    it('should compile math operations chain', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'float-1',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 2.0 }
+        },
+        {
+          id: 'float-2',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 3.0 }
+        },
+        {
+          id: 'add-1',
+          type: 'math_add',
+          data: { definition: NODE_REGISTRY.math_add }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'float-1', target: 'add-1', sourceHandle: 'value', targetHandle: 'a' },
+        { source: 'float-2', target: 'add-1', sourceHandle: 'value', targetHandle: 'b' },
+        { source: 'add-1', target: 'output-1', sourceHandle: 'result', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('var_float_1');
+      expect(glsl).toContain('var_float_2');
+      expect(glsl).toContain('var_add_1');
+    });
+
+    it('should handle type casting from vec2 to vec4', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'uv-1',
+          type: 'uv',
+          data: { definition: NODE_REGISTRY.uv }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'uv-1', target: 'output-1', sourceHandle: 'out', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      // UV is vec2, so it should be cast to vec4 as vec4(uv, 0.0, 1.0)
+      expect(glsl).toContain('gl_FragColor = vec4(var_uv_1, 0.0, 1.0)');
+    });
+
+    it('should handle swizzling operations', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'uv-1',
+          type: 'uv',
+          data: { definition: NODE_REGISTRY.uv }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'uv-1', target: 'output-1', sourceHandle: 'x', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('.x');
+    });
+
+    it('should handle float to vec3 casting', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'time-1',
+          type: 'time',
+          data: { definition: NODE_REGISTRY.time }
+        },
+        {
+          id: 'color-add-1',
+          type: 'color_add',
+          data: { definition: NODE_REGISTRY.color_add }
+        },
+        {
+          id: 'uv-1',
+          type: 'uv',
+          data: { definition: NODE_REGISTRY.uv }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'time-1', target: 'color-add-1', sourceHandle: 'time', targetHandle: 'a' },
+        { source: 'uv-1', target: 'color-add-1', sourceHandle: 'uv', targetHandle: 'b' },
+        { source: 'color-add-1', target: 'output-1', sourceHandle: 'result', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('vec3(');
+    });
+
+    it('should handle split node correctly', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'uv-1',
+          type: 'uv',
+          data: { definition: NODE_REGISTRY.uv }
+        },
+        {
+          id: 'split-1',
+          type: 'split_vec3',
+          data: { definition: NODE_REGISTRY.split_vec3 }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'uv-1', target: 'split-1', sourceHandle: 'uv', targetHandle: 'vector' },
+        { source: 'split-1', target: 'output-1', sourceHandle: 'x', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('vec3 var_split_1');
+    });
+
+    it('should compile to specific target node (monitor)', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'float-1',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 0.5 }
+        },
+        {
+          id: 'monitor-1',
+          type: 'monitor',
+          data: { definition: NODE_REGISTRY.monitor }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'float-1', target: 'monitor-1', sourceHandle: 'value', targetHandle: 'value' },
+        { source: 'float-1', target: 'output-1', sourceHandle: 'value', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges, 'monitor-1');
+      
+      expect(glsl).toContain('var_float_1');
+      expect(glsl).not.toContain('var_output_1');
+    });
+
+    it('should handle complex graph with multiple paths', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'time-1',
+          type: 'time',
+          data: { definition: NODE_REGISTRY.time }
+        },
+        {
+          id: 'sin-1',
+          type: 'math_sin',
+          data: { definition: NODE_REGISTRY.math_sin }
+        },
+        {
+          id: 'cos-1',
+          type: 'math_cos',
+          data: { definition: NODE_REGISTRY.math_cos }
+        },
+        {
+          id: 'add-1',
+          type: 'math_add',
+          data: { definition: NODE_REGISTRY.math_add }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'time-1', target: 'sin-1', sourceHandle: 'time', targetHandle: 'value' },
+        { source: 'time-1', target: 'cos-1', sourceHandle: 'time', targetHandle: 'value' },
+        { source: 'sin-1', target: 'add-1', sourceHandle: 'result', targetHandle: 'a' },
+        { source: 'cos-1', target: 'add-1', sourceHandle: 'result', targetHandle: 'b' },
+        { source: 'add-1', target: 'output-1', sourceHandle: 'result', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('var_time_1');
+      expect(glsl).toContain('var_sin_1');
+      expect(glsl).toContain('var_cos_1');
+      expect(glsl).toContain('var_add_1');
+    });
+
+    it('should handle combine node operations', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'float-1',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 1.0 }
+        },
+        {
+          id: 'float-2',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 0.5 }
+        },
+        {
+          id: 'combine-1',
+          type: 'combine_vec2',
+          data: { definition: NODE_REGISTRY.combine_vec2 }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'float-1', target: 'combine-1', sourceHandle: 'value', targetHandle: 'x' },
+        { source: 'float-2', target: 'combine-1', sourceHandle: 'value', targetHandle: 'y' },
+        { source: 'combine-1', target: 'output-1', sourceHandle: 'vector', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      expect(glsl).toContain('vec2(');
+    });
+
+    it('should include monitor node in compilation', () => {
+      const nodes: GraphNode[] = [
+        {
+          id: 'float-1',
+          type: 'param_float',
+          data: { definition: NODE_REGISTRY.param_float, value: 1.0 }
+        },
+        {
+          id: 'monitor-1',
+          type: 'monitor',
+          data: { definition: NODE_REGISTRY.monitor }
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output }
+        }
+      ];
+
+      const edges = [
+        { source: 'float-1', target: 'monitor-1', sourceHandle: 'out', targetHandle: 'value' },
+        { source: 'float-1', target: 'output-1', sourceHandle: 'out', targetHandle: 'color' }
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+      
+      // Monitor nodes ARE included in compilation (they have inputs and special handling)
+      expect(glsl).toContain('var_monitor_1');
+    });
+  });
+});

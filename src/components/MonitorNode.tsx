@@ -4,6 +4,13 @@ import * as THREE from 'three';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { TYPE_COLORS } from '../core/theme';
 
+const Row = ({ label, value, color }: { label: string, value: number, color: string }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontWeight: 'bold', color: color, fontSize: '14px', marginRight: '10px' }}>{label}:</span> 
+        <span style={{ color: color, fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace' }}>{value.toFixed(3)}</span>
+    </div>
+);
+
 export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   const { getNodes, getEdges } = useReactFlow();
   const edges = useEdges();
@@ -25,11 +32,10 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
       if (!connection) return 'vec4';
       const sourceNode = nodes.find(n => n.id === connection.source);
       if (!sourceNode) return 'vec4';
-      // Dla splita bierzemy typ wejścia jako źródło, dla reszty wyjście
       if (sourceNode.data.definition.id.includes('split')) {
           return sourceNode.data.definition.inputs[0].type;
       }
-      return sourceNode.data.definition.outputs.find((o: any) => o.id === connection.sourceHandle)?.type || 'vec4';
+      return sourceNode.data.definition.outputs.find((o: { id: string; type: string }) => o.id === connection.sourceHandle)?.type || 'vec4';
   }, [edges, nodes, id]);
 
   useEffect(() => {
@@ -45,7 +51,6 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
       });
 
       const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       const geometry = new THREE.PlaneGeometry(2, 2);
       const material = new THREE.ShaderMaterial({
           uniforms: { iTime: { value: 0 }, iResolution: { value: new THREE.Vector2(1, 1) } },
@@ -87,7 +92,9 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
               });
               meshRef.current.material = newMat;
               oldMat.dispose();
-          } catch (e) {}
+          } catch {
+              // Silent error handling
+          }
       };
       const interval = setInterval(updateShader, 500); 
       updateShader();
@@ -95,13 +102,14 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   }, [getNodes, getEdges, id]);
 
   useEffect(() => {
+      let mounted = true;
       const startTime = Date.now();
       const loop = () => {
-          if (!isMountedRef.current) return;
+          if (!mounted) return;
           requestRef.current = requestAnimationFrame(loop);
           
           const now = Date.now();
-          if (now - lastUpdateRef.current < 100) return; // 10 FPS Limit
+          if (now - lastUpdateRef.current < 100) return; 
           lastUpdateRef.current = now;
 
           if(rendererRef.current && sceneRef.current && meshRef.current && targetRef.current) {
@@ -112,20 +120,18 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
                   rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
                   rendererRef.current.readRenderTargetPixels(targetRef.current, 0, 0, 1, 1, bufferRef.current);
                   rendererRef.current.setRenderTarget(null);
-                  if (isMountedRef.current) setValues([bufferRef.current[0], bufferRef.current[1], bufferRef.current[2], bufferRef.current[3]]);
-              } catch (e) {}
+                  if (mounted) setValues([bufferRef.current[0], bufferRef.current[1], bufferRef.current[2], bufferRef.current[3]]);
+              } catch {
+                  // Silent error handling
+              }
           }
       };
       loop();
-      return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
+      return () => { 
+          mounted = false;
+          if (requestRef.current) cancelAnimationFrame(requestRef.current); 
+      };
   }, []);
-
-  const Row = ({ label, value, color }: { label: string, value: number, color: string }) => (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontWeight: 'bold', color: color, fontSize: '14px', marginRight: '10px' }}>{label}:</span> 
-          <span style={{ color: color, fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace' }}>{value.toFixed(3)}</span>
-      </div>
-  );
 
   return (
     <>

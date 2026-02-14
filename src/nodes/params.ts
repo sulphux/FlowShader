@@ -1,8 +1,7 @@
 import type { ShaderNodeDefinition } from '../core/types';
 
-// Formatowanie floatów, żeby zawsze miały kropkę (np. "1.0" zamiast "1")
-const formatFloat = (n: any) => {
-  const num = parseFloat(n);
+const formatFloat = (n: unknown) => {
+  const num = parseFloat(String(n));
   if (isNaN(num)) return '0.0';
   return Number.isInteger(num) ? `${num}.0` : `${num}`;
 };

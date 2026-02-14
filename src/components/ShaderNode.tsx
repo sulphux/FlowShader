@@ -9,7 +9,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   
   const [showSettings, setShowSettings] = useState(false);
 
-  const updateNodeData = useCallback((changes: Record<string, any>) => {
+  const updateNodeData = useCallback((changes: Record<string, unknown>) => {
     setNodes((nds) => nds.map((node) => {
         if (node.id === id) {
             return { ...node, data: { ...node.data, ...changes } };

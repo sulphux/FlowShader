@@ -37,16 +37,17 @@ export default function ShaderPreview({ shaderCode }: Props) {
 
   // 1. INIT (Standardowy)
   useEffect(() => {
-    if (!containerRef.current || sceneRef.current) return;
+    const container = containerRef.current;
+    if (!container || sceneRef.current) return;
 
-    containerRef.current.innerHTML = '';
-    let width = Math.max(containerRef.current.clientWidth, 1);
-    let height = Math.max(containerRef.current.clientHeight, 1);
+    container.innerHTML = '';
+    const width = Math.max(container.clientWidth, 1);
+    const height = Math.max(container.clientHeight, 1);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -65,7 +66,8 @@ export default function ShaderPreview({ shaderCode }: Props) {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    sceneRef.current = { renderer, scene, camera, mesh, animationId: 0 };
+    let animationId = 0;
+    sceneRef.current = { renderer, scene, camera, mesh, animationId };
     const startTime = Date.now();
     const animate = () => {
       if (!sceneRef.current) return;
@@ -73,74 +75,69 @@ export default function ShaderPreview({ shaderCode }: Props) {
       const mat = sceneRef.current.mesh.material as THREE.ShaderMaterial;
       if (mat.uniforms) mat.uniforms.iTime.value = time;
       sceneRef.current.renderer.render(scene, camera);
-      sceneRef.current.animationId = requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
+      sceneRef.current.animationId = animationId;
     };
     animate();
 
     const resizeObserver = new ResizeObserver(() => {
-        if(containerRef.current && sceneRef.current) {
-            const w = containerRef.current.clientWidth;
-            const h = containerRef.current.clientHeight;
+        if(container && sceneRef.current) {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
             
-            // 1. Aktualizujemy Renderera (to było dobrze)
             sceneRef.current.renderer.setSize(w, h);
             
-            // 2. Aktualizujemy Shader (TU BYŁ BŁĄD)
             const mat = sceneRef.current.mesh.material as THREE.ShaderMaterial;
             if (mat.uniforms) {
-                // Musimy uwzględnić zagęszczenie pikseli (pixel ratio)
                 const dpr = window.devicePixelRatio;
                 mat.uniforms.iResolution.value.set(w * dpr, h * dpr);
             }
         }
     }); 
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(container);
 
     return () => {
       resizeObserver.disconnect();
-      if (sceneRef.current) {
-        cancelAnimationFrame(sceneRef.current.animationId);
-        sceneRef.current.renderer.dispose();
-        if (containerRef.current) containerRef.current.innerHTML = '';
-        sceneRef.current = null;
-      }
+      cancelAnimationFrame(animationId);
+      renderer.dispose();
+      if (container) container.innerHTML = '';
+      sceneRef.current = null;
     };
   }, []);
 
-  // 2. UPDATE Z WALIDATOREM
   useEffect(() => {
     if (!sceneRef.current || !shaderCode) return;
 
-    // --- KROK 1: Sprawdź poprawność ---
-    const validation = validateGLSL(shaderCode);
+    const updateShader = () => {
+        const validation = validateGLSL(shaderCode);
 
-    if (!validation.valid) {
-        // Jeśli błąd -> Logujemy i wyświetlamy, ale NIE aktualizujemy sceny.
-        console.warn("🛑 [Validator] Blokada:", validation.error);
-        setErrorMessage(validation.error || "Unknown Error");
-        return; 
-    }
+        if (!validation.valid) {
+            console.warn("🛑 [Validator] Blokada:", validation.error);
+            setErrorMessage(validation.error || "Unknown Error");
+            return; 
+        }
 
-    // --- KROK 2: Jeśli OK -> Aktualizuj ---
-    setErrorMessage(null); // Czyścimy błędy
-    try {
-        const oldMat = sceneRef.current.mesh.material as THREE.ShaderMaterial;
-        const newMat = new THREE.ShaderMaterial({
-            vertexShader: VERTEX_SHADER,
-            fragmentShader: shaderCode,
-            uniforms: {
-                iTime: { value: oldMat.uniforms?.iTime?.value || 0 },
-                iResolution: { value: oldMat.uniforms?.iResolution?.value || new THREE.Vector2(1,1) }
-            }
-        });
+        setErrorMessage(null);
+        try {
+            const oldMat = sceneRef.current!.mesh.material as THREE.ShaderMaterial;
+            const newMat = new THREE.ShaderMaterial({
+                vertexShader: VERTEX_SHADER,
+                fragmentShader: shaderCode,
+                uniforms: {
+                    iTime: { value: oldMat.uniforms?.iTime?.value || 0 },
+                    iResolution: { value: oldMat.uniforms?.iResolution?.value || new THREE.Vector2(1,1) }
+                }
+            });
 
-        sceneRef.current.mesh.material = newMat;
-        oldMat.dispose();
-        console.log("✅ [Preview] Shader zaktualizowany.");
-    } catch (e) {
-        console.error("🔥 [Preview] Błąd Three.js:", e);
-    }
-    
+            sceneRef.current!.mesh.material = newMat;
+            oldMat.dispose();
+            console.log("✅ [Preview] Shader zaktualizowany.");
+        } catch (e) {
+            console.error("🔥 [Preview] Błąd Three.js:", e);
+        }
+    };
+
+    updateShader();
   }, [shaderCode]);
 
   return (

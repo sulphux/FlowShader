@@ -59,7 +59,7 @@ export default function Sidebar({ nodes, setNodes }: Props) {
   }, [nodes]);
 
   // Funkcja aktualizująca WSZYSTKIE nody o tej samej nazwie
-  const updateGlobalParam = (label: string, value: any) => {
+  const updateGlobalParam = (label: string, value: unknown) => {
       setNodes(nds => nds.map(n => {
           // Jeśli nazwa się zgadza i typ noda to param -> aktualizuj
           const nLabel = n.data.label || n.data.definition.label;
