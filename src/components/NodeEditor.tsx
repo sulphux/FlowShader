@@ -389,7 +389,46 @@ function EditorInner({ onChange }: Props) {
   const handlePaste = useCallback(() => { if (!clipboard) return; const bounds = getRectOfNodes(clipboard.nodes); const centerX = bounds.x + bounds.width / 2; const centerY = bounds.y + bounds.height / 2; const flowMousePos = reactFlowInstance.project(mousePos.current); const idMap: Record<string, string> = {}; const newNodes = clipboard.nodes.map((node) => { const newId = `${node.data.definition.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; idMap[node.id] = newId; const offsetX = node.position.x - centerX; const offsetY = node.position.y - centerY; return { ...node, id: newId, position: { x: flowMousePos.x + offsetX, y: flowMousePos.y + offsetY }, selected: true, data: { ...node.data } }; }); const newEdges = clipboard.edges.map((edge) => ({ ...edge, id: `e_${idMap[edge.source]}_${idMap[edge.target]}_${Math.random()}`, source: idMap[edge.source], target: idMap[edge.target], selected: false })); setNodes((nds) => nds.map(n => ({...n, selected: false})).concat(newNodes)); setEdges((eds) => eds.concat(newEdges)); }, [clipboard, reactFlowInstance, setNodes, setEdges]);
   useEffect(() => { const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste(); if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleCopy, handlePaste, deleteSelected]);
   const onPaneContextMenu = useCallback((event: React.MouseEvent) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, visible: true }); setMenuFilter(null); setPendingConnection(null); }, []);
-  const onAddNode = useCallback((typeId: string) => { if (!menu) return; const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y }); const isGroup = typeId === 'special_group'; const isPreview = typeId === 'preview'; const isMonitor = typeId === 'monitor'; const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; const newLabel = getUniqueLabel(def, nodes); const newNode: Node = { id: `${typeId}_${Date.now()}`, type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'), position, data: { definition: def, label: newLabel, value: def.controls?.defaultValue }, zIndex: isGroup ? -10 : 0, style: isGroup ? { width: 400, height: 300 } : undefined, }; setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode)); if (pendingConnection) { const { nodeId, handleId, handleType } = pendingConnection; let newEdge: Edge | null = null; if (handleType === 'source') { const input = def.inputs[0]; if (input) { newEdge = { id: `e_${nodeId}_${newNodeId}`, source: nodeId, sourceHandle: handleId, target: newNodeId, targetHandle: input.id, style: { stroke: '#fff', strokeWidth: 3 } }; } } else { const output = def.outputs[0]; if (output) { newEdge = { id: `e_${newNodeId}_${nodeId}`, source: newNodeId, sourceHandle: output.id, target: nodeId, targetHandle: handleId, style: { stroke: '#fff', strokeWidth: 3 } }; } } if (newEdge) { setEdges((eds) => addEdge(newEdge!, eds)); } setPendingConnection(null); } }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes]);
+  const onAddNode = useCallback((typeId: string) => { 
+    if (!menu) return; 
+    const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y }); 
+    const isGroup = typeId === 'special_group'; 
+    const isPreview = typeId === 'preview'; 
+    const isMonitor = typeId === 'monitor'; 
+    const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; 
+    const newLabel = getUniqueLabel(def, nodes); 
+    const newNodeId = `${typeId}_${Date.now()}`;
+    const newNode: Node = { 
+      id: newNodeId, 
+      type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'), 
+      position, 
+      data: { definition: def, label: newLabel, value: def.controls?.defaultValue }, 
+      zIndex: isGroup ? -10 : 0, 
+      style: isGroup ? { width: 400, height: 300 } : undefined, 
+    }; 
+    setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode)); 
+    
+    if (pendingConnection) { 
+      const { nodeId, handleId, handleType } = pendingConnection; 
+      let newEdge: Edge | null = null; 
+      if (handleType === 'source') { 
+        const input = def.inputs[0]; 
+        if (input) { 
+          newEdge = { id: `e_${nodeId}_${newNodeId}`, source: nodeId, sourceHandle: handleId, target: newNodeId, targetHandle: input.id, style: { stroke: '#fff', strokeWidth: 3 } }; 
+        } 
+      } else { 
+        const output = def.outputs[0]; 
+        if (output) { 
+          newEdge = { id: `e_${newNodeId}_${nodeId}`, source: newNodeId, sourceHandle: output.id, target: nodeId, targetHandle: handleId, style: { stroke: '#fff', strokeWidth: 3 } }; 
+        } 
+      } 
+      if (newEdge) { 
+        setEdges((eds) => addEdge(newEdge!, eds)); 
+      } 
+      setPendingConnection(null); 
+    } 
+    setMenu(null);
+  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes]);
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => { 
     event.preventDefault(); 
     setEdges((eds) => eds.filter((e) => e.id !== edge.id)); 
