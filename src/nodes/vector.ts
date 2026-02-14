@@ -32,5 +32,5 @@ export const UVShiftNode: ShaderNodeDefinition = {
   id: 'uv_shift', label: 'UV Shift (+/-)', compact: true,
   inputs: [{ id: 'uv', type: 'vec2', label: 'UV' }, { id: 'shift', type: 'float', label: 'Off' }],
   outputs: [{ id: 'out', type: 'vec2', label: 'Out' }],
-  glslTemplate: ({ uv, shift }) => `(${uv || 'vec2(0.0)'} - ${shift || '0.0'})`
+  glslTemplate: ({ uv, shift }) => `(${uv || 'vec2(0.0)'} - vec2(${shift || '0.0'}))`
 };

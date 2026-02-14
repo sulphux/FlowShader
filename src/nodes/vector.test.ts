@@ -82,17 +82,17 @@ describe('vector nodes', () => {
   });
 
   describe('UVShiftNode', () => {
-    it('should generate UV shift code', () => {
+    it('should generate UV shift code with vec2 expansion', () => {
       const code = VectorNodes.UVShiftNode.glslTemplate({ 
         uv: 'uv', 
         shift: '0.5' 
       });
-      expect(code).toBe('(uv - 0.5)');
+      expect(code).toBe('(uv - vec2(0.5))');
     });
 
     it('should handle missing inputs', () => {
       const code = VectorNodes.UVShiftNode.glslTemplate({});
-      expect(code).toBe('(vec2(0.0) - 0.0)');
+      expect(code).toBe('(vec2(0.0) - vec2(0.0))');
     });
 
     it('should have vec2 and float inputs', () => {
