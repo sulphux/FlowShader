@@ -29,6 +29,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   
   // Load custom nodes dynamically - refresh when refreshKey changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,6 +79,29 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleDeleteCustomNode = (nodeId: string) => {
+    // Check if custom node is used on canvas
+    const usedOnCanvas = nodes.some(n => n.data?.definition?.id === nodeId);
+    
+    if (usedOnCanvas) {
+      const confirmed = window.confirm(
+        `⚠️ This custom node is currently used on the canvas.\n\nDelete anyway? (Used instances will become invalid)`
+      );
+      if (!confirmed) return;
+    }
+    
+    // Delete from library
+    deleteCustomNode(nodeId);
+    
+    // Remove from NODE_REGISTRY
+    delete (NODE_REGISTRY as Record<string, unknown>)[nodeId];
+    
+    // Refresh sidebar
+    window.dispatchEvent(new Event('customNodesUpdated'));
+    
+    setContextMenu(null);
   };
 
   // --- LOGIKA PARAMETRÓW ---
@@ -170,6 +194,14 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
                                     <div 
                                         key={id}
                                         onDragStart={(event) => onDragStart(event, id)}
+                                        onContextMenu={(event) => {
+                                          // Only allow context menu for custom nodes
+                                          if (id.startsWith('custom_') && id !== 'custom_input' && id !== 'custom_output') {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            setContextMenu({ x: event.clientX, y: event.clientY, nodeId: id });
+                                          }
+                                        }}
                                         draggable
                                         style={{ 
                                             background: '#222', border: '1px solid #333', borderRadius: '4px', padding: '6px 8px', 
@@ -270,6 +302,56 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
         )}
 
       </div>
+      
+      {/* Context menu for custom nodes */}
+      {contextMenu && (
+        <>
+          <div 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              zIndex: 9998 
+            }} 
+            onClick={() => setContextMenu(null)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 9999,
+              background: '#1a1a1a',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              padding: '4px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              minWidth: '150px',
+            }}
+          >
+            <button
+              onClick={() => handleDeleteCustomNode(contextMenu.nodeId)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                background: 'transparent',
+                border: 'none',
+                color: '#ff4444',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '12px',
+                borderRadius: '2px',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2a2a'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              🗑️ Delete Custom Node
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

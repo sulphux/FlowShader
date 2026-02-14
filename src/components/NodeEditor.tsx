@@ -462,11 +462,18 @@ function EditorInner({ onChange }: Props) {
 
   const navigateToLevel = useCallback((levelIndex: number) => {
     if (levelIndex === 0) {
-      // Jump to Main
+      // Jump to Main - restore from first stack entry (bottom of stack)
+      if (navigationStack.length > 0) {
+        const mainState = navigationStack[0];
+        setNodes(mainState.nodes);
+        setEdges(mainState.edges);
+      } else {
+        // No stack - use default (shouldn't happen in normal flow)
+        setNodes(initialNodesDefault);
+        setEdges([]);
+      }
       setNavigationStack([]);
       setCurrentContext('Main');
-      setNodes(initialNodesDefault);
-      setEdges([]);
     } else {
       // Jump to intermediate level
       const targetLevel = navigationStack[levelIndex - 1];
