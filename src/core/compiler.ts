@@ -1,4 +1,5 @@
 import type { ShaderNodeDefinition } from './types';
+import type { CustomNodeDefinition } from './customNodeManager';
 
 export interface GraphNode {
   id: string;
@@ -103,7 +104,55 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
       }
     });
 
-    const glslCode = def.glslTemplate(inputs, node.data);
+    // === CUSTOM NODE COMPILATION ===
+    // If this is a custom node, compile its subgraph instead of using glslTemplate
+    let glslCode: string;
+    
+    // Special handling for Custom Input nodes - use external input value
+    if (def.id === 'custom_input' && 'externalInput' in node.data && node.data.externalInput) {
+      glslCode = node.data.externalInput;
+    }
+    else if ('isCustom' in def && def.isCustom) {
+      const customDef = def as CustomNodeDefinition;
+      
+      // Map external inputs to Custom Input nodes in subgraph
+      const subgraphNodes = customDef.subgraph.nodes.map(subNode => ({
+        ...subNode,
+        data: {
+          ...subNode.data,
+          // If this is a Custom Input node, inject the external input value
+          externalInput: subNode.data.definition.id === 'custom_input' ? inputs[subNode.id] : undefined
+        }
+      }));
+      
+      // Find Custom Output nodes in subgraph
+      const outputNodes = customDef.subgraph.nodes.filter(n => n.data.definition.id === 'custom_output');
+      
+      if (outputNodes.length > 0) {
+        // Compile subgraph targeting the first Custom Output node
+        const subgraphCode = compileGraphToGLSL(
+          subgraphNodes as GraphNode[],
+          customDef.subgraph.edges as GraphEdge[],
+          outputNodes[0].id
+        );
+        
+        // Extract the final value from the compiled subgraph
+        // The Custom Output node's compiled variable will be our result
+        const outputVarName = `var_${outputNodes[0].id.replace(/-/g, '_')}`;
+        glslCode = outputVarName;
+        
+        // Inline the subgraph compilation
+        mainBody += `    // === Custom Node: ${def.label} ===\n`;
+        mainBody += subgraphCode.split('\n').filter(line => line.trim() && !line.includes('gl_FragColor')).join('\n') + '\n';
+      } else {
+        // Fallback if no Custom Output nodes
+        glslCode = 'vec3(1.0, 0.0, 1.0)'; // Magenta error color
+      }
+    } else {
+      // Standard node - use glslTemplate
+      glslCode = def.glslTemplate(inputs, node.data);
+    }
+    
     const outputVar = `var_${node.id.replace(/-/g, '_')}`;
     nodeVarMap[node.id] = outputVar;
     
