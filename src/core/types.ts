@@ -1,4 +1,4 @@
-export type DataType = 'float' | 'vec2' | 'vec3' | 'vec4';
+export type DataType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto';
 
 export interface PortDefinition {
   id: string;

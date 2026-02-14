@@ -51,7 +51,15 @@ export const CombineVec4Node: ShaderNodeDefinition = {
   glslTemplate: ({ x, y, z, w }) => `vec4(${x || '0.0'}, ${y || '0.0'}, ${z || '0.0'}, ${w || '1.0'})`
 };  
 
-// --- RELAY ---
+// --- RELAY (Auto-adapting) ---
+export const RelayAutoNode: ShaderNodeDefinition = {
+  id: 'relay_auto', label: 'Relay (Auto)', compact: true,
+  inputs: [{ id: 'in', label: 'Auto', type: 'auto' }],
+  outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
+  glslTemplate: ({ in: val }) => `${val || '0.0'}`,
+  description: 'Passthrough relay that adapts to any input type'
+};
+
 export const RelayFloatNode: ShaderNodeDefinition = {
   id: 'relay_float', label: 'Relay (Float)', compact: true,
   inputs: [{ id: 'in', label: 'In', type: 'float' }],
@@ -115,26 +123,17 @@ export const MonitorNodeDef: ShaderNodeDefinition = {
 
 export const SmartSplitNode: ShaderNodeDefinition = {
   id: 'smart_split', label: 'Split (Auto)',
-  inputs: [{ id: 'in', label: 'Input', type: 'vec3' }],
-  outputs: [
-      { id: 'x', label: 'X', type: 'float' },
-      { id: 'y', label: 'Y', type: 'float' },
-      { id: 'z', label: 'Z', type: 'float' }
-  ], 
+  inputs: [{ id: 'in', label: 'Auto', type: 'auto' }],
+  outputs: [{ id: 'auto', label: 'Auto', type: 'auto' }], // Placeholder - dynamically replaced
   glslTemplate: ({ in: val }) => `${val || 'vec3(0.0)'}`,
-  description: 'Automatically adapts outputs based on input connection.'
+  description: 'Automatically adapts outputs based on input type (vec2→XY, vec3→RGB, vec4→RGBA)'
 };
 
 export const SmartComposeNode: ShaderNodeDefinition = {
-  id: 'smart_compose', label: 'Compose',
-  inputs: [
-      { id: 'x', label: 'X', type: 'float' },
-      { id: 'y', label: 'Y', type: 'float' },
-      { id: 'z', label: 'Z', type: 'float' }
-  ],
-  outputs: [{ id: 'out', label: 'Vec3', type: 'vec3' }],
+  id: 'smart_compose', label: 'Compose (Auto)',
+  inputs: [{ id: 'auto', label: 'Auto', type: 'auto' }], // Placeholder - dynamically replaced  
+  outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
   glslTemplate: (inputs, data) => {
-      // FIX: Zawsze patrzymy na typ z definicji noda!
       const outputType = data?.definition?.outputs?.[0]?.type || 'vec3';
       
       const x = inputs.x || '0.0';
@@ -146,5 +145,5 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       if (outputType === 'vec4') return `vec4(${x}, ${y}, ${z}, ${w})`;
       return `vec3(${x}, ${y}, ${z})`;
   },
-  description: 'Combines floats into a Vector. Change mode on the node.'
+  description: 'Combines floats into a vector. Adapts to target connection type.'
 };

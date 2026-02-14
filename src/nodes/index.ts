@@ -7,7 +7,7 @@ import * as VecNodes from './vector';
 import * as Utils from './utils';
 import * as Params from './params';
 import { PreviewNodeDef } from './utils';
-import { MonitorNodeDef, SmartSplitNode, SmartComposeNode } from './utils';
+import { MonitorNodeDef, SmartSplitNode, SmartComposeNode, RelayAutoNode } from './utils';
 
 export const NODE_REGISTRY = {
   output: OutputNode,
@@ -15,10 +15,13 @@ export const NODE_REGISTRY = {
   sdf_circle: SDFCircle,
   palette: PaletteNode,
   
-  // Utils - Split
+  // Utils - Auto-adapting nodes
   monitor: MonitorNodeDef,
   smart_split: SmartSplitNode,
   smart_compose: SmartComposeNode,
+  relay_auto: RelayAutoNode,
+  
+  // Utils - Fixed type Split
   split_vec2: Utils.SplitVec2Node,
   split_vec3: Utils.SplitVec3Node,
   split_vec4: Utils.SplitVec4Node,
@@ -27,9 +30,11 @@ export const NODE_REGISTRY = {
   combine_vec2: Utils.CombineVec2Node,
   combine_vec3: Utils.CombineVec3Node,
   combine_vec4: Utils.CombineVec4Node,
+  
   // Params
   param_float: Params.FloatNode,
   param_color: Params.ColorNode,
+  
   // Math
   math_add: MathNodes.AddNode,
   math_sub: MathNodes.SubNode,
@@ -52,7 +57,7 @@ export const NODE_REGISTRY = {
   uv_scale: VecNodes.UVScaleNode,
   uv_shift: VecNodes.UVShiftNode,
 
-  // Utils - Relay
+  // Utils - Fixed type Relay
   relay_float: Utils.RelayFloatNode,
   relay_vec3: Utils.RelayVec3Node,
   

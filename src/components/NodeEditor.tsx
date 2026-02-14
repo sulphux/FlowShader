@@ -237,27 +237,79 @@ function EditorInner({ onChange }: Props) {
 
         const sourceType = outputDef.type;
 
-        // Smart Split Node - dynamically adapts to input type
-        if (targetDef.id === 'smart_split') {
-            const type = outputDef.type;
+        // === AUTO TYPE ADAPTATION ===
+        
+        // Smart Split Node - adapts outputs based on input type
+        if (targetDef.id === 'smart_split' && inputDef?.type === 'auto') {
+            const type = sourceType;
             let newOutputs = targetDef.outputs;
             let newInputLabel = 'Input';
             const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
-            if (type === 'vec2') { newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; newInputLabel = 'Vec2'; } 
-            else if (type === 'vec3') { newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; newInputLabel = 'Vec3'; } 
-            else if (type === 'vec4') { newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; newInputLabel = 'Vec4'; }
+            
+            if (type === 'vec2') { 
+                newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
+                newInputLabel = 'Vec2'; 
+            } else if (type === 'vec3') { 
+                newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
+                newInputLabel = 'Vec3'; 
+            } else if (type === 'vec4') { 
+                newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
+                newInputLabel = 'Vec4'; 
+            } else if (type === 'float') {
+                newOutputs = [createOutput('x', 'Value')];
+                newInputLabel = 'Float';
+            }
+            
             setNodes(nds => nds.map(n => {
                 if (n.id === targetNode.id) {
-                    return { ...n, data: { ...n.data, definition: { ...n.data.definition, inputs: [{ id: 'in', label: newInputLabel, type: type }], outputs: newOutputs } } }
+                    return { 
+                        ...n, 
+                        data: { 
+                            ...n.data, 
+                            definition: { 
+                                ...n.data.definition, 
+                                inputs: [{ id: 'in', label: newInputLabel, type: type }], 
+                                outputs: newOutputs 
+                            } 
+                        } 
+                    }
                 }
                 return n;
             }));
         }
 
+        // Auto Relay Node - adapts to passthrough type
+        if ((targetDef.id === 'relay_auto' && inputDef?.type === 'auto') || 
+            (sourceDef.id === 'relay_auto' && outputDef.type === 'auto')) {
+            
+            // Update target relay to match source type
+            if (targetDef.id === 'relay_auto') {
+                setNodes(nds => nds.map(n => {
+                    if (n.id === targetNode.id) {
+                        return {
+                            ...n,
+                            data: {
+                                ...n.data,
+                                definition: {
+                                    ...n.data.definition,
+                                    inputs: [{ id: 'in', label: sourceType, type: sourceType }],
+                                    outputs: [{ id: 'out', label: sourceType, type: sourceType }]
+                                }
+                            }
+                        }
+                    }
+                    return n;
+                }));
+            }
+        }
+
         // Validate connection using our validator
         if (inputDef) {
             const targetType = inputDef.type;
-            const validation = validateConnection(sourceType as 'float' | 'vec2' | 'vec3' | 'vec4', targetType as 'float' | 'vec2' | 'vec3' | 'vec4');
+            const validation = validateConnection(
+                sourceType as 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto', 
+                targetType as 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto'
+            );
             
             // BLOCK invalid connections
             if (!validation.valid) {

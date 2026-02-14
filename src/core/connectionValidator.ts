@@ -14,6 +14,7 @@ export interface ConnectionValidationResult {
  * 2. float can connect to any vector type (will be expanded)
  * 3. Vectors CANNOT directly connect to float (requires explicit Split node)
  * 4. Vectors CANNOT connect to different vector types (no implicit casting)
+ * 5. 'auto' type accepts ANY connection and adapts dynamically
  * 
  * This enforces explicit conversions like in Unreal Engine.
  */
@@ -21,6 +22,11 @@ export function validateConnection(
   sourceType: DataType,
   targetType: DataType
 ): ConnectionValidationResult {
+  // Rule 5: 'auto' type accepts everything
+  if (sourceType === 'auto' || targetType === 'auto') {
+    return { valid: true };
+  }
+
   // Rule 1: Same types always work
   if (sourceType === targetType) {
     return { valid: true };
@@ -67,7 +73,12 @@ export function isValidConnection(sourceType: DataType, targetType: DataType): b
  * Get all valid target types for a given source type
  */
 export function getValidTargetTypes(sourceType: DataType): DataType[] {
-  const allTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
+  // 'auto' can connect to anything
+  if (sourceType === 'auto') {
+    return ['float', 'vec2', 'vec3', 'vec4', 'auto'];
+  }
+
+  const allTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4', 'auto'];
   return allTypes.filter(targetType => isValidConnection(sourceType, targetType));
 }
 

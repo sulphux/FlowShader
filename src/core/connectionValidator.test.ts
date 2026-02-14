@@ -95,6 +95,29 @@ describe('connectionValidator', () => {
       });
     });
 
+    describe('Rule 5: auto type (universal adapter)', () => {
+      const concreteTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
+
+      it('should allow auto → any type', () => {
+        concreteTypes.forEach(type => {
+          const result = validateConnection('auto', type);
+          expect(result.valid).toBe(true);
+        });
+      });
+
+      it('should allow any type → auto', () => {
+        concreteTypes.forEach(type => {
+          const result = validateConnection(type, 'auto');
+          expect(result.valid).toBe(true);
+        });
+      });
+
+      it('should allow auto → auto', () => {
+        const result = validateConnection('auto', 'auto');
+        expect(result.valid).toBe(true);
+      });
+    });
+
     describe('Complete connection matrix', () => {
       const allTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
       
@@ -153,24 +176,39 @@ describe('connectionValidator', () => {
   });
 
   describe('getValidTargetTypes', () => {
-    it('should return all vector types for float source', () => {
+    it('should return all types for auto source', () => {
+      const validTargets = getValidTargetTypes('auto');
+      expect(validTargets).toEqual(['float', 'vec2', 'vec3', 'vec4', 'auto']);
+    });
+
+    it('should return all vector types + auto for float source', () => {
       const validTargets = getValidTargetTypes('float');
-      expect(validTargets).toEqual(['float', 'vec2', 'vec3', 'vec4']);
+      expect(validTargets).toContain('float');
+      expect(validTargets).toContain('vec2');
+      expect(validTargets).toContain('vec3');
+      expect(validTargets).toContain('vec4');
+      expect(validTargets).toContain('auto');
     });
 
-    it('should return only same type for vec2 source', () => {
+    it('should return only same type + auto for vec2 source', () => {
       const validTargets = getValidTargetTypes('vec2');
-      expect(validTargets).toEqual(['vec2']);
+      expect(validTargets).toContain('vec2');
+      expect(validTargets).toContain('auto');
+      expect(validTargets.length).toBe(2);
     });
 
-    it('should return only same type for vec3 source', () => {
+    it('should return only same type + auto for vec3 source', () => {
       const validTargets = getValidTargetTypes('vec3');
-      expect(validTargets).toEqual(['vec3']);
+      expect(validTargets).toContain('vec3');
+      expect(validTargets).toContain('auto');
+      expect(validTargets.length).toBe(2);
     });
 
-    it('should return only same type for vec4 source', () => {
+    it('should return only same type + auto for vec4 source', () => {
       const validTargets = getValidTargetTypes('vec4');
-      expect(validTargets).toEqual(['vec4']);
+      expect(validTargets).toContain('vec4');
+      expect(validTargets).toContain('auto');
+      expect(validTargets.length).toBe(2);
     });
   });
 
@@ -280,6 +318,25 @@ describe('connectionValidator', () => {
       expect(isValidConnection('float', 'float')).toBe(true);
       expect(isValidConnection('float', 'float')).toBe(true);
       expect(isValidConnection('float', 'float')).toBe(true);
+    });
+
+    it('Scenario: Any type → Auto Relay - should work', () => {
+      expect(isValidConnection('float', 'auto')).toBe(true);
+      expect(isValidConnection('vec2', 'auto')).toBe(true);
+      expect(isValidConnection('vec3', 'auto')).toBe(true);
+      expect(isValidConnection('vec4', 'auto')).toBe(true);
+    });
+
+    it('Scenario: Auto Relay → Any type - should work', () => {
+      expect(isValidConnection('auto', 'float')).toBe(true);
+      expect(isValidConnection('auto', 'vec2')).toBe(true);
+      expect(isValidConnection('auto', 'vec3')).toBe(true);
+      expect(isValidConnection('auto', 'vec4')).toBe(true);
+    });
+
+    it('Scenario: vec3 → Smart Split (auto) - should work', () => {
+      const result = validateConnection('vec3', 'auto');
+      expect(result.valid).toBe(true);
     });
   });
 
