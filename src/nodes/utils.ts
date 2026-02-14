@@ -130,8 +130,15 @@ export const SmartSplitNode: ShaderNodeDefinition = {
 };
 
 export const SmartComposeNode: ShaderNodeDefinition = {
-  id: 'smart_compose', label: 'Compose (Auto)',
-  inputs: [{ id: 'auto', label: 'Auto', type: 'auto' }], // Placeholder - dynamically replaced  
+  id: 'smart_compose', 
+  label: 'Compose (Auto)',
+  compact: false,
+  inputs: [
+      { id: 'x', label: 'X', type: 'float' },
+      { id: 'y', label: 'Y', type: 'float' },
+      { id: 'z', label: 'Z', type: 'float' },
+      { id: 'w', label: 'W', type: 'float' }
+  ],
   outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
   glslTemplate: (inputs, data) => {
       const outputType = data?.definition?.outputs?.[0]?.type || 'vec3';
@@ -145,5 +152,5 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       if (outputType === 'vec4') return `vec4(${x}, ${y}, ${z}, ${w})`;
       return `vec3(${x}, ${y}, ${z})`;
   },
-  description: 'Combines floats into a vector. Adapts to target connection type.'
+  description: 'Combines floats into a vector. Click buttons on node to change output type.'
 };

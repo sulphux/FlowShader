@@ -112,7 +112,11 @@ export default function Sidebar({ nodes, setNodes }: Props) {
                             {items.map(id => {
                                 const def = NODE_REGISTRY[id as keyof typeof NODE_REGISTRY];
                                 if(!def) return null;
-                                const outType = def.outputs[0]?.type || 'default';
+                                
+                                const firstInput = def.inputs[0];
+                                const firstOutput = def.outputs[0];
+                                const inputType = firstInput?.type || null;
+                                const outputType = firstOutput?.type || null;
                                 
                                 return (
                                     <div 
@@ -121,22 +125,41 @@ export default function Sidebar({ nodes, setNodes }: Props) {
                                         draggable
                                         style={{ 
                                             background: '#222', border: '1px solid #333', borderRadius: '4px', padding: '6px 8px', 
-                                            color: '#ccc', fontSize: '12px', cursor: 'grab', display: 'flex', alignItems: 'center', gap: '8px',
+                                            color: '#ccc', fontSize: '12px', cursor: 'grab', display: 'flex', alignItems: 'center', 
+                                            justifyContent: 'space-between',
                                             transition: 'border-color 0.2s'
                                         }}
                                         onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
                                         onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}
                                     >
-                                        <div 
-                                          className={outType === 'auto' ? 'port-auto-static' : ''}
-                                          style={{ 
-                                            width: '8px', 
-                                            height: '8px', 
-                                            borderRadius: '50%', 
-                                            background: outType === 'auto' ? undefined : (TYPE_COLORS[outType] || '#fff')
-                                          }} 
-                                        />
-                                        {def.label}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            {/* Input color indicator */}
+                                            {inputType && (
+                                              <div 
+                                                className={inputType === 'auto' ? 'port-auto-static' : ''}
+                                                style={{ 
+                                                  width: '8px', 
+                                                  height: '8px', 
+                                                  borderRadius: '50%', 
+                                                  background: inputType === 'auto' ? undefined : (TYPE_COLORS[inputType] || '#666'),
+                                                  opacity: 0.7
+                                                }} 
+                                              />
+                                            )}
+                                            <span>{def.label}</span>
+                                        </div>
+                                        {/* Output color indicator */}
+                                        {outputType && (
+                                          <div 
+                                            className={outputType === 'auto' ? 'port-auto-static' : ''}
+                                            style={{ 
+                                              width: '8px', 
+                                              height: '8px', 
+                                              borderRadius: '50%', 
+                                              background: outputType === 'auto' ? undefined : (TYPE_COLORS[outputType] || '#fff')
+                                            }} 
+                                          />
+                                        )}
                                     </div>
                                 )
                             })}
