@@ -323,6 +323,22 @@ function EditorInner({ onChange }: Props) {
       }
   }, [setNodes, setEdges, saveToHistory]);
   
+  const handleNew = useCallback(() => {
+    // New project without confirmation (like "File > New")
+    saveToHistory();
+    setNodes(initialNodesDefault);
+    setEdges([]);
+    setCurrentFilePath(null);
+    setNavigationStack([]);
+    setCurrentContext('Main');
+    localStorage.removeItem(STORAGE_KEY);
+  }, [setNodes, setEdges, saveToHistory]);
+  
+  const handleFitView = useCallback(() => {
+    // Fit all nodes in view
+    reactFlowInstance.fitView({ padding: 0.2, duration: 300 });
+  }, [reactFlowInstance]);
+  
   const handleCreateCustomNode = useCallback((name: string, description: string) => {
     const selectedNodes = nodes.filter(n => n.selected);
     if (selectedNodes.length === 0) {
@@ -900,7 +916,9 @@ function EditorInner({ onChange }: Props) {
       <Toolbar 
         onSave={handleSaveFile} 
         onLoad={handleLoadFileClick} 
-        onClear={handleClear} 
+        onClear={handleClear}
+        onNew={handleNew}
+        onFitView={handleFitView}
         onShowCode={handleShowCode}
         onUndo={undo}
         onRedo={redo}

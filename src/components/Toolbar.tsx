@@ -4,6 +4,8 @@ interface Props {
   onSave: (saveAs?: boolean) => void;
   onLoad: () => void;
   onClear: () => void;
+  onNew: () => void;
+  onFitView: () => void;
   onShowCode: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -12,7 +14,7 @@ interface Props {
   currentFile?: string | null;
 }
 
-export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
+export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
   const btnStyle: React.CSSProperties = {
     background: '#333',
     border: '1px solid #555',
@@ -46,6 +48,9 @@ export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, o
         </div>
       )}
       
+      <button onClick={onNew} style={{ ...btnStyle, color: '#81c784', borderColor: '#2e7d32' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1b5e20'} onMouseLeave={leaveStyle} title="New Project">
+        📄 New
+      </button>
       <button onClick={() => onSave(false)} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle} title="Save (Ctrl+S)">
         💾 Save
       </button>
@@ -53,6 +58,12 @@ export default function Toolbar({ onSave, onLoad, onClear, onShowCode, onUndo, o
         💾 Save As...
       </button>
       <button onClick={onLoad} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>📂 Load</button>
+      
+      <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
+      
+      <button onClick={onFitView} style={{ ...btnStyle, color: '#64b5f6', borderColor: '#1976d2' }} onMouseEnter={(e) => e.currentTarget.style.background = '#0d47a1'} onMouseLeave={leaveStyle} title="Fit all nodes in view">
+        🔍 Fit View
+      </button>
       
       <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
       
