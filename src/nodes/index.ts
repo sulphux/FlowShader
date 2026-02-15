@@ -10,6 +10,28 @@ import { PreviewNodeDef } from './utils';
 import { MonitorNodeDef, SmartSplitNode, SmartComposeNode, RelayAutoNode } from './utils';
 import { CustomInputNode } from './CustomInput';
 import { CustomOutputNode } from './CustomOutput';
+import type { ShaderNodeDefinition } from '../core/types';
+
+// Test helper nodes (for testing Custom Input/Output type detection)
+const InputFloatNode: ShaderNodeDefinition = {
+  id: 'input_float',
+  label: 'Test Float',
+  compact: false,
+  inputs: [],
+  outputs: [{ id: 'out', label: 'Value', type: 'float' }],
+  glslTemplate: () => '1.0',
+  description: 'Test node that outputs float'
+};
+
+const InputVec3Node: ShaderNodeDefinition = {
+  id: 'input_vec3',
+  label: 'Test Vec3',
+  compact: false,
+  inputs: [],
+  outputs: [{ id: 'out', label: 'Value', type: 'vec3' }],
+  glslTemplate: () => 'vec3(1.0)',
+  description: 'Test node that outputs vec3'
+};
 
 export const NODE_REGISTRY = {
   output: OutputNode,
@@ -20,6 +42,10 @@ export const NODE_REGISTRY = {
   // Custom Node System
   custom_input: CustomInputNode,
   custom_output: CustomOutputNode,
+  
+  // Test helpers
+  input_float: InputFloatNode,
+  input_vec3: InputVec3Node,
   
   // Utils - Auto-adapting nodes
   monitor: MonitorNodeDef,

@@ -254,7 +254,12 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
         type: 'shaderNode',
         position: { x: 0, y: 0 },
         data: {
-          definition: NODE_REGISTRY['custom_input'],
+          definition: {
+            id: 'custom_input',
+            label: 'Custom Input',
+            inputs: [],
+            outputs: [{ id: 'out', label: 'Out', type: 'auto' }],
+          },
           value: 'NewInput'
         }
       };
@@ -262,7 +267,6 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
       customNodeDef.subgraph.nodes.push(customInputNode);
 
       // Navigate up - should extract ports
-      // (In real code: extractCustomNodePorts is called in navigateBack)
       const extractedInputs = customNodeDef.subgraph.nodes
         .filter(n => n.data?.definition?.id === 'custom_input')
         .map(n => ({
@@ -275,14 +279,18 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
       addCustomNode(customNodeDef);
       (NODE_REGISTRY as Record<string, any>)['custom_port_test'] = customNodeDef;
 
-      // Assert: Parent custom node should have new input port
+      // Assert: Subgraph has Custom Input node
       const reloadedDef = NODE_REGISTRY['custom_port_test'] as CustomNodeDefinition;
+      const customInputInSubgraph = reloadedDef.subgraph.nodes.find(
+        n => n.data?.definition?.id === 'custom_input'
+      );
 
-      // EXPECTED: 1 input port extracted
-      // ACTUAL (BUG): Ports not extracted until manual refresh
+      // EXPECTED: 1 input port extracted (after manual extraction)
+      // ACTUAL (BUG): Ports not extracted automatically until manual refresh
 
-      expect(reloadedDef.inputs.length).toBe(1); // ❌ MIGHT FAIL - is 0
-      expect(reloadedDef.inputs[0].label).toBe('NewInput'); // ❌ FAILS
+      expect(customInputInSubgraph).toBeDefined(); // ✅ Custom Input exists in subgraph
+      expect(reloadedDef.inputs.length).toBe(1); // ✅ Port extracted (we did it manually)
+      expect(reloadedDef.inputs[0].label).toBe('NewInput'); // ✅ Correct label
     });
 
     it('should update instance ports after navigation', () => {
@@ -301,7 +309,15 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
               id: 'custom_input_1',
               type: 'shaderNode',
               position: { x: 0, y: 0 },
-              data: { definition: NODE_REGISTRY['custom_input'], value: 'OldInput' }
+              data: {
+                definition: {
+                  id: 'custom_input',
+                  label: 'Custom Input',
+                  inputs: [],
+                  outputs: [{ id: 'out', label: 'Out', type: 'auto' }],
+                },
+                value: 'OldInput'
+              }
             }
           ],
           edges: []
@@ -327,7 +343,15 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
         id: 'custom_input_2',
         type: 'shaderNode',
         position: { x: 0, y: 100 },
-        data: { definition: NODE_REGISTRY['custom_input'], value: 'NewInput' }
+        data: {
+          definition: {
+            id: 'custom_input',
+            label: 'Custom Input',
+            inputs: [],
+            outputs: [{ id: 'out', label: 'Out', type: 'auto' }],
+          },
+          value: 'NewInput'
+        }
       });
 
       // Extract ports
@@ -346,12 +370,17 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
       // Refresh instance definition
       instanceNode.data.definition = NODE_REGISTRY['custom_instance_test'] as CustomNodeDefinition;
 
-      // EXPECTED: Instance now has 2 input ports
-      // ACTUAL (BUG): Instance still has 1 port (not refreshed)
+      // EXPECTED: Instance now has 2 input ports (after manual extraction)
+      // ACTUAL (BUG): Instance not refreshed automatically (needs manual update)
 
-      // Assert: WILL FAIL
+      // Assert: Subgraph has 2 Custom Input nodes
       const freshDef = instanceNode.data.definition as CustomNodeDefinition;
-      expect(freshDef.inputs.length).toBe(2); // ❌ MIGHT FAIL - is 1
+      const customInputsInSubgraph = freshDef.subgraph.nodes.filter(
+        n => n.data?.definition?.id === 'custom_input'
+      );
+      
+      expect(customInputsInSubgraph.length).toBe(2); // ✅ Subgraph has 2 Custom Inputs
+      expect(freshDef.inputs.length).toBe(2); // ✅ Ports extracted (we did it manually)
     });
 
     it('should extract Custom Output ports when navigating up', () => {
@@ -379,7 +408,15 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
         id: 'custom_output_1',
         type: 'shaderNode',
         position: { x: 400, y: 0 },
-        data: { definition: NODE_REGISTRY['custom_output'], value: 'Result' }
+        data: {
+          definition: {
+            id: 'custom_output',
+            label: 'Custom Output',
+            inputs: [{ id: 'in', label: 'In', type: 'auto' }],
+            outputs: [],
+          },
+          value: 'Result'
+        }
       });
 
       // Navigate up - extract ports
@@ -395,14 +432,18 @@ describe('Custom Node Subgraph Persistence (TDD - FAILING)', () => {
       addCustomNode(customNodeDef);
       (NODE_REGISTRY as Record<string, any>)['custom_output_test'] = customNodeDef;
 
-      // Assert: Parent has 1 output port
+      // Assert: Subgraph has Custom Output node
       const reloadedDef = NODE_REGISTRY['custom_output_test'] as CustomNodeDefinition;
+      const customOutputInSubgraph = reloadedDef.subgraph.nodes.find(
+        n => n.data?.definition?.id === 'custom_output'
+      );
 
-      // EXPECTED: 1 output port
-      // ACTUAL (BUG): No outputs
+      // EXPECTED: 1 output port (after manual extraction)
+      // ACTUAL (BUG): Ports not extracted automatically
 
-      expect(reloadedDef.outputs.length).toBe(1); // ❌ MIGHT FAIL - is 0
-      expect(reloadedDef.outputs[0].label).toBe('Result'); // ❌ FAILS
+      expect(customOutputInSubgraph).toBeDefined(); // ✅ Custom Output exists in subgraph
+      expect(reloadedDef.outputs.length).toBe(1); // ✅ Port extracted (we did it manually)
+      expect(reloadedDef.outputs[0].label).toBe('Result'); // ✅ Correct label
     });
   });
 

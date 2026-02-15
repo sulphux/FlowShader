@@ -547,6 +547,35 @@ function EditorInner({ onChange }: Props) {
   }, [navigationStack, setNodes, setEdges, currentContext, nodes, edges]);
 
   const navigateToLevel = useCallback((levelIndex: number) => {
+    // Save current context before navigating away (if in a custom node)
+    if (currentContext !== 'Main') {
+      const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
+        const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
+        return def.label === currentContext && 'isCustom' in def;
+      });
+      
+      if (customNodeId) {
+        const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
+        const ports = extractCustomNodePorts({ nodes });
+        const updatedCustomNode: CustomNodeDefinition = {
+          ...customDef,
+          inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
+          outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
+          subgraph: { nodes, edges }
+        };
+        addCustomNode(updatedCustomNode);
+        (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
+        
+        console.log('✅ Subgraph saved on navigateToLevel:', {
+          customNodeId,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+          inputs: ports.inputs.length,
+          outputs: ports.outputs.length
+        });
+      }
+    }
+    
     if (levelIndex === 0) {
       // Jump to Main - restore from first stack entry (bottom of stack)
       if (navigationStack.length > 0) {
@@ -606,7 +635,7 @@ function EditorInner({ onChange }: Props) {
       setNodes(refreshedNodes);
       setEdges(targetLevel.edges);
     }
-  }, [navigationStack, setNodes, setEdges]);
+  }, [navigationStack, setNodes, setEdges, currentContext, nodes, edges]);
 
   const navigateToMain = useCallback(() => {
     navigateToLevel(0);
@@ -805,6 +834,60 @@ function EditorInner({ onChange }: Props) {
                                 ...n.data.definition,
                                 inputs: [{ id: 'in', label: targetTypeActual, type: targetTypeActual }],
                                 outputs: [{ id: 'out', label: targetTypeActual, type: targetTypeActual }]
+                            }
+                        }
+                    }
+                }
+                return n;
+            }));
+        }
+
+        // === CUSTOM INPUT/OUTPUT AUTO-TYPE DETECTION ===
+        
+        // Custom Input - detect type from incoming connection (source)
+        if (targetDef.id === 'custom_input' && outputDef) {
+            const detectedType = sourceType;
+            setNodes(nds => nds.map(n => {
+                if (n.id === targetNode.id) {
+                    console.log('✅ Custom Input type detected:', {
+                        nodeId: n.id,
+                        detectedType,
+                        label: n.data.value || 'Input'
+                    });
+                    return {
+                        ...n,
+                        data: {
+                            ...n.data,
+                            detectedType, // Store detected type in node data
+                            definition: {
+                                ...n.data.definition,
+                                outputs: [{ id: 'out', type: detectedType, label: 'Value' }]
+                            }
+                        }
+                    }
+                }
+                return n;
+            }));
+        }
+        
+        // Custom Output - detect type from outgoing connection (target)
+        if (sourceDef.id === 'custom_output' && inputDef) {
+            const detectedType = targetType;
+            setNodes(nds => nds.map(n => {
+                if (n.id === sourceNode.id) {
+                    console.log('✅ Custom Output type detected:', {
+                        nodeId: n.id,
+                        detectedType,
+                        label: n.data.value || 'Output'
+                    });
+                    return {
+                        ...n,
+                        data: {
+                            ...n.data,
+                            detectedType, // Store detected type in node data
+                            definition: {
+                                ...n.data.definition,
+                                inputs: [{ id: 'in', type: detectedType, label: 'Value' }]
                             }
                         }
                     }

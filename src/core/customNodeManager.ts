@@ -107,18 +107,22 @@ export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
   subgraph.nodes.forEach(node => {
     if (node.data.definition.id === 'custom_input') {
       const portName = node.data.value || node.data.definition.controls?.defaultValue || 'Input';
+      // Use detected type from node data, or fall back to definition output type, or 'auto'
+      const detectedType = node.data.detectedType || node.data.definition.outputs?.[0]?.type || 'auto';
       inputs.push({
         id: node.id,
         label: portName,
-        type: 'auto'
+        type: detectedType
       });
     }
     if (node.data.definition.id === 'custom_output') {
       const portName = node.data.value || node.data.definition.controls?.defaultValue || 'Output';
+      // Use detected type from node data, or fall back to definition input type, or 'auto'
+      const detectedType = node.data.detectedType || node.data.definition.inputs?.[0]?.type || 'auto';
       outputs.push({
         id: node.id,
         label: portName,
-        type: 'auto'
+        type: detectedType
       });
     }
   });
