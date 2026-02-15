@@ -20,7 +20,7 @@ describe('Error Messages Quality', () => {
   });
 
   it('should not provide reason for valid connections', () => {
-    const result = validateConnection('float', 'vec3');
+    const result = validateConnection('vec3', 'vec3');
     
     expect(result.valid).toBe(true);
     expect(result.reason).toBeUndefined();
