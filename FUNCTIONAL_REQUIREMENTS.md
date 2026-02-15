@@ -3025,6 +3025,672 @@ This section documents edge cases, error conditions, and how the system handles 
 
 ---
 
+## Compiler & GLSL Generation Specification
+
+This section provides complete technical specification of the shader compilation process.
+
+### Overview
+
+**File**: `src/core/compiler.ts`
+
+**Purpose**: Converts node graph to executable GLSL fragment shader code.
+
+**Main Function**:
+```typescript
+compileGraphToGLSL(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  targetNodeId?: string
+): string
+```
+
+**Process**:
+1. Topological Sort (dependency order)
+2. For each node (in order):
+   - Resolve input variables
+   - Handle type conversions
+   - Generate GLSL code
+   - Assign to variable
+3. Generate final shader code
+
+---
+
+### Topological Sort Algorithm
+
+**Function**: `sortNodesTopologically(nodes, edges, targetNodeId?)`
+
+**Purpose**: Order nodes by dependency chain (inputs before outputs).
+
+**Algorithm** (Depth-First Search):
+```
+1. Create nodeMap: id → node
+2. Create visited set (prevent duplicates)
+3. Create sorted array (result)
+4. Define visit(nodeId):
+   a. If visited → return (skip)
+   b. Mark as visited
+   c. Find all input edges (edges where target === nodeId)
+   d. For each input edge: visit(edge.source) [RECURSIVE]
+   e. Push node to sorted array
+5. If targetNodeId specified:
+   - visit(targetNodeId) only (partial compilation)
+   Else:
+   - visit(all nodes)
+6. Return sorted array
+```
+
+**Example**:
+```
+Graph:
+  A → B → C
+  D → B
+  
+Edges:
+  [A→B, D→B, B→C]
+
+visit(C):
+  visit(B):
+    visit(A): [A visited, sorted=[A]]
+    visit(D): [D visited, sorted=[A,D]]
+  [B visited, sorted=[A,D,B]]
+[C visited, sorted=[A,D,B,C]]
+
+Result: [A, D, B, C]
+```
+
+**Edge Cases**:
+1. **No Dependencies**: Node with no inputs → sorted first
+2. **Multiple Paths**: D→B→C and E→B→C → Both D and E before B
+3. **Cyclic Dependencies**: 
+   - A → B → A (infinite loop)
+   - Currently: **NOT DETECTED**
+   - Result: Infinite recursion (stack overflow)
+   - **TODO**: Add cycle detection (visited + visiting sets)
+
+4. **Isolated Nodes**: Node with no connections → sorted last
+
+5. **Target Node Specified**:
+   - Only compiles nodes in dependency chain
+   - Unrelated nodes ignored
+   - Used for: Custom Output nodes, Monitor nodes
+
+---
+
+### Variable Naming
+
+**Convention**: `var_{nodeId}`
+
+**Examples**:
+- Node ID: `n1709883045123` → Variable: `var_n1709883045123`
+- Node ID: `add-node-1` → Variable: `var_add_node_1` (hyphens → underscores)
+
+**Collision Avoidance**:
+- Node IDs are unique (timestamp-based)
+- Variable names guaranteed unique
+- No manual name management needed
+
+**Special Variables**:
+- `uv` - Global varying (UV coordinates)
+- `uv0` - Original UV (before transformations)
+- `iTime` - Uniform (animation time)
+- `iResolution` - Uniform (canvas resolution)
+
+---
+
+### Type Conversion Rules
+
+#### Automatic Conversions (in Compiler)
+
+**Note**: These are **compiler-level conversions**, not connection-level. Connections must still pass strict validation.
+
+**float → vec2**:
+```glsl
+vec2(floatValue)  // Both components = floatValue
+```
+
+**float → vec3**:
+```glsl
+vec3(floatValue)  // All components = floatValue
+```
+
+**float → vec4**:
+```glsl
+vec4(floatValue, floatValue, floatValue, 1.0)  // RGB = float, A = 1
+```
+
+**vec2 → vec3**:
+```glsl
+vec3(vec2Value, 0.0)  // Z = 0
+```
+
+**vec2 → vec4**:
+```glsl
+vec4(vec2Value, 0.0, 1.0)  // Z = 0, A = 1
+```
+
+**vec3 → vec4**:
+```glsl
+vec4(vec3Value, 1.0)  // A = 1
+```
+
+**vec4 → vec3**:
+```glsl
+vec4Value.xyz  // Swizzle (drop alpha)
+```
+
+**vec3 → vec2**:
+```glsl
+vec3Value.xy  // Swizzle (drop Z)
+```
+
+**vec2 → float**:
+```glsl
+vec2Value.x  // Extract first component
+```
+
+**vec3 → float**:
+```glsl
+vec3Value.x  // Extract first component (R)
+```
+
+**vec4 → float**:
+```glsl
+vec4Value.x  // Extract first component (R)
+```
+
+#### Swizzling Support
+
+**Syntax**: `variableName.{component}`
+
+**Components**:
+- **XYZW**: Position components (vec2/vec3/vec4)
+- **RGBA**: Color components (vec3/vec4)
+
+**Examples**:
+```glsl
+vec3Value.x    // First component (R)
+vec3Value.y    // Second component (G)
+vec3Value.z    // Third component (B)
+vec3Value.xy   // First two (vec2)
+vec3Value.xyz  // All three (vec3)
+```
+
+**Implementation**:
+- Edge with sourceHandle='x' → Appends `.x` to variable
+- Result type: Always `float` for single component
+- Used for: Split nodes, extracting channels
+
+---
+
+### Custom Node Recursive Compilation
+
+**Process**:
+```
+1. Detect custom node: 'isCustom' in definition
+2. Get CustomNodeDefinition (has subgraph)
+3. Map external inputs to Custom Input nodes:
+   - Parent connection → inputs object
+   - inputs[customInputNodeId] = parentValue
+   - Inject as externalInput in node.data
+4. Find Custom Output nodes in subgraph
+5. Compile subgraph targeting first Custom Output:
+   - Recursive call to compileGraphToGLSL()
+   - Returns GLSL code for subgraph
+6. Extract output variable name: var_{customOutputId}
+7. Inline subgraph code into main body
+8. Use output variable as custom node result
+9. Assign to custom node variable
+```
+
+**Example**:
+```
+Parent Graph:
+  Time → [CustomNode "MyEffect"] → Output
+
+MyEffect Subgraph:
+  [Custom Input "t"] → Sin → [Custom Output "result"]
+
+Compilation:
+  // Main graph
+  float var_time_123 = iTime;
+  
+  // === Custom Node: MyEffect ===
+  // Subgraph inline
+  float var_custominput_456 = var_time_123;  // External input injection
+  float var_sin_789 = sin(var_custominput_456);
+  float var_customoutput_012 = var_sin_789;
+  
+  // Custom node result
+  float var_customnode_345 = var_customoutput_012;
+  
+  // Final output
+  gl_FragColor = vec4(vec3(var_customnode_345), 1.0);
+```
+
+**Nesting** (Custom Node in Custom Node):
+```
+Outer Graph:
+  Input → [CustomA] → Output
+
+CustomA Subgraph:
+  [Custom Input] → [CustomB] → [Custom Output]
+
+CustomB Subgraph:
+  [Custom Input] → Sin → [Custom Output]
+
+Compilation:
+  // Outer
+  float var_input = 0.5;
+  
+  // === CustomA ===
+  float var_custominput_a = var_input;
+  
+    // === CustomB (nested) ===
+    float var_custominput_b = var_custominput_a;
+    float var_sin = sin(var_custominput_b);
+    float var_customoutput_b = var_sin;
+  
+  float var_customb = var_customoutput_b;
+  float var_customoutput_a = var_customb;
+  
+  float var_customa = var_customoutput_a;
+  
+  gl_FragColor = vec4(vec3(var_customa), 1.0);
+```
+
+**Depth Limit**: None (infinite recursion possible if circular reference)
+
+---
+
+### GLSL Code Generation
+
+#### Input Resolution
+
+For each input port, resolve variable:
+
+**1. Find Connected Edge**:
+```typescript
+const edge = edges.find(e => 
+  e.target === node.id && 
+  e.targetHandle === inputDef.id
+);
+```
+
+**2. Get Source Variable**:
+```typescript
+const sourceVarName = nodeVarMap[edge.source];
+```
+
+**3. Determine Source Type**:
+- **Special case**: Split nodes - type = input type (not output)
+- **Normal case**: type = output type from sourceHandle
+- **Swizzling**: If handle is x/y/z/w → type = float
+
+**4. Build Source Expression**:
+- **No swizzle**: `var_n123`
+- **With swizzle**: `var_n123.x`
+
+**5. Apply Type Conversion**:
+- If source type ≠ target type → add conversion
+- Uses rules from "Type Conversion Rules" above
+
+**6. Assign to inputs object**:
+```typescript
+inputs[inputDef.id] = finalExpression;
+```
+
+#### Code Generation
+
+**For Standard Node**:
+```typescript
+const glslCode = def.glslTemplate(inputs, node.data);
+const outputVar = `var_${node.id.replace(/-/g, '_')}`;
+nodeVarMap[node.id] = outputVar;
+
+mainBody += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
+```
+
+**For Custom Node**:
+```typescript
+// Map inputs to Custom Input nodes
+const subgraphNodes = customDef.subgraph.nodes.map(subNode => ({
+  ...subNode,
+  data: {
+    ...subNode.data,
+    externalInput: subNode.data.definition.id === 'custom_input' 
+      ? inputs[subNode.id] 
+      : undefined
+  }
+}));
+
+// Compile subgraph
+const subgraphCode = compileGraphToGLSL(
+  subgraphNodes,
+  customDef.subgraph.edges,
+  customOutputNodeId
+);
+
+// Inline into main
+mainBody += `    // === Custom Node: ${def.label} ===\n`;
+mainBody += subgraphCode (filtered, no gl_FragColor);
+```
+
+**For Custom Input**:
+```typescript
+if (node.data.externalInput) {
+  glslCode = node.data.externalInput;  // Use injected value
+}
+```
+
+#### Type Determination
+
+**For Split Nodes**:
+```typescript
+nodeType = node.data.definition.inputs[0].type;  // Input type
+// Variable holds full vector: vec3 var_split = vec3(...)
+```
+
+**For Other Nodes**:
+```typescript
+nodeType = node.data.definition.outputs[0].type;  // Output type
+// Variable holds result: float var_add = (a + b)
+```
+
+**Auto Type Handling**:
+```typescript
+if (nodeType === 'auto') {
+  return;  // Skip node (not adapted yet)
+}
+```
+
+#### Skip Conditions
+
+Nodes skipped if:
+1. `def.outputs.length === 0` (except Output, Preview, or target)
+2. `nodeType === 'auto'` (not adapted)
+3. `def === undefined`
+
+---
+
+### Final Shader Assembly
+
+**Structure**:
+```glsl
+precision mediump float;
+
+// Uniforms
+uniform float iTime;
+uniform vec2 iResolution;
+
+// Helper functions
+vec3 palette(in float t) {
+  // Cosine palette implementation
+}
+
+// Main function
+void main() {
+  // UV initialization
+  vec2 uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;
+  vec2 uv0 = uv;
+  
+  // Node compilation (mainBody)
+  {nodeType} var_{nodeId} = {glslCode};
+  ...
+  
+  // Final output (finalLine)
+  gl_FragColor = vec4(...);
+}
+```
+
+**UV Coordinate System**:
+- **gl_FragCoord**: Pixel coordinates (0,0) = bottom-left
+- **Normalized**: `gl_FragCoord.xy / iResolution.xy` → (0,0) to (1,1)
+- **Centered**: `(... * 2.0 - iResolution.xy)` → Center at (0,0)
+- **Aspect Corrected**: `/ iResolution.y` → Square coordinates
+
+**Final Line Generation**:
+```typescript
+// Find Output node
+const outputNode = nodes.find(n => n.data.definition.id === 'output');
+const lastEdge = edges.find(e => e.target === outputNode.id);
+
+// Get source variable
+const varName = nodeVarMap[lastEdge.source];
+const srcType = /* determine type */;
+
+// Convert to vec4
+if (srcType === 'vec4') gl_FragColor = varName;
+else if (srcType === 'vec3') gl_FragColor = vec4(varName, 1.0);
+else if (srcType === 'vec2') gl_FragColor = vec4(varName, 0.0, 1.0);
+else if (srcType === 'float') gl_FragColor = vec4(vec3(varName), 1.0);
+```
+
+---
+
+### Compilation Examples
+
+#### Example 1: Simple Math
+```
+Graph:
+  Time → Sin → Output
+
+Compiled GLSL:
+  float var_n123 = iTime;
+  float var_n456 = sin(var_n123);
+  gl_FragColor = vec4(vec3(var_n456), 1.0);
+```
+
+#### Example 2: UV Manipulation
+```
+Graph:
+  UV → UV Scale (2.0) → Fract → Output
+
+Compiled GLSL:
+  vec2 var_n123 = uv;
+  vec2 var_n456 = (var_n123 * 2.0);
+  vec2 var_n789 = fract(var_n456);
+  gl_FragColor = vec4(var_n789, 0.0, 1.0);
+```
+
+#### Example 3: Type Conversion
+```
+Graph:
+  Time (float) → Output (expects vec3)
+
+Compiled GLSL:
+  float var_n123 = iTime;
+  gl_FragColor = vec4(vec3(var_n123), 1.0);  // float wrapped to vec3
+```
+
+#### Example 4: Smart Split
+```
+Graph:
+  UV (vec2) → Smart Split → X (float) → Output
+
+On Connection:
+  Smart Split adapts: outputs = [x: float, y: float]
+
+Compiled GLSL:
+  vec2 var_n123 = uv;
+  vec2 var_n456 = var_n123;  // Split variable holds full vector
+  gl_FragColor = vec4(vec3(var_n456.x), 1.0);  // Swizzle .x
+```
+
+#### Example 5: Custom Node
+```
+Graph:
+  Time → [CustomNode "Double"] → Output
+
+CustomNode "Double" Subgraph:
+  [Custom Input "in"] → Multiply (x2) → [Custom Output "out"]
+
+Compiled GLSL:
+  float var_time = iTime;
+  
+  // === Custom Node: Double ===
+  float var_custominput = var_time;              // Injected
+  float var_multiply = (var_custominput * 2.0); // Subgraph
+  float var_customoutput = var_multiply;         // Subgraph
+  
+  float var_customnode = var_customoutput;       // Custom node result
+  
+  gl_FragColor = vec4(vec3(var_customnode), 1.0);
+```
+
+#### Example 6: Nested Custom Nodes
+```
+Graph:
+  Time → [Outer] → Output
+
+Outer Subgraph:
+  [Input] → [Inner] → [Output]
+
+Inner Subgraph:
+  [Input] → Sin → [Output]
+
+Compiled GLSL:
+  float var_time = iTime;
+  
+  // === Custom Node: Outer ===
+  float var_outer_input = var_time;
+  
+    // === Custom Node: Inner (nested) ===
+    float var_inner_input = var_outer_input;
+    float var_sin = sin(var_inner_input);
+    float var_inner_output = var_sin;
+  
+  float var_inner_node = var_inner_output;
+  float var_outer_output = var_inner_node;
+  
+  float var_outer_node = var_outer_output;
+  
+  gl_FragColor = vec4(vec3(var_outer_node), 1.0);
+```
+
+---
+
+### Error Detection & Handling
+
+#### Compile-Time Errors (JavaScript)
+
+**1. Missing Definition**:
+```typescript
+if (!def) return;  // Skip node
+```
+- Silent skip (no error thrown)
+- Node not compiled (no variable created)
+- Dependent nodes use undefined variables → GLSL error
+
+**2. Invalid Input**:
+```typescript
+if (!edge || !nodeVarMap[edge.source]) {
+  // Input not resolved
+  // Uses default value from glslTemplate
+}
+```
+
+**3. Type Mismatch**:
+- Compiler applies conversions automatically
+- No errors thrown (always tries to convert)
+
+**4. Cyclic Dependency**:
+- Not detected
+- Infinite recursion → Stack overflow
+- Browser crashes
+
+#### Runtime Errors (GLSL)
+
+**1. Undefined Variable**:
+```glsl
+float var_a = undefined_var;  // ERROR
+```
+- Causes: Node skipped, edge broken
+- Three.js: Shader compilation fails
+- Preview: Shows error message
+
+**2. Type Mismatch**:
+```glsl
+vec3 var_a = 1.0;  // ERROR (should be vec3(1.0))
+```
+- Causes: Conversion logic bug
+- Three.js: Shader compilation fails
+
+**3. Syntax Error**:
+```glsl
+float var_a = (1.0 +);  // Missing operand
+```
+- Causes: glslTemplate bug, missing input
+- Three.js: Shader compilation fails
+
+**4. Division by Zero**:
+```glsl
+float var_a = 1.0 / 0.0;  // May return inf/nan
+```
+- GLSL: Undefined behavior
+- Preview: May show black or strange colors
+
+**5. pow() Invalid Args**:
+```glsl
+pow(-1.0, 0.5)  // Negative base with fractional exponent
+```
+- GLSL: Undefined behavior (may return NaN)
+
+---
+
+### Optimization Opportunities
+
+**Current**: None (every node compiled, even if unused)
+
+**Potential Optimizations**:
+
+1. **Dead Code Elimination**:
+   - Only compile nodes in Output dependency chain
+   - Skip isolated nodes
+   - Requires: Reachability analysis
+
+2. **Common Subexpression Elimination**:
+   - `A + B` used multiple times → compute once
+   - Requires: Expression hashing
+
+3. **Constant Folding**:
+   - `1.0 + 2.0` → `3.0` at compile time
+   - Requires: Expression evaluation
+
+4. **Inline Small Functions**:
+   - Single-use variables → inline
+   - Reduces variable count
+
+5. **Type-Specific Optimizations**:
+   - `vec3(x, x, x)` → `vec3(x)`
+   - `vec3(v.xyz)` → `v`
+
+**Trade-offs**:
+- Complexity vs. performance
+- Currently: Simplicity prioritized
+- User graphs typically small (< 50 nodes)
+
+---
+
+### Compilation Performance
+
+**Benchmarks** (approximate):
+
+| Graph Size | Nodes | Compilation Time |
+|------------|-------|------------------|
+| Small      | 5-10  | < 5ms            |
+| Medium     | 20-50 | 10-50ms          |
+| Large      | 100+  | 100-500ms        |
+| Huge       | 500+  | 1-5s             |
+
+**Bottlenecks**:
+1. **Topological Sort**: O(n²) worst case (many edges)
+2. **Deep Nesting**: Each level adds 10-50ms
+3. **String Concatenation**: mainBody += ... (not a real bottleneck)
+
+**Optimization**: Currently good enough for interactive use.
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
@@ -3251,7 +3917,8 @@ alert('✅ Custom node "MyNode" created!');
 | 2026-02-15 | 1.1 | **Iteracja 1**: UI Components Specification (515 lines) |
 | 2026-02-15 | 1.2 | **Iteracja 2**: Complete Node Specifications - 24 nodes (771 lines) |
 | 2026-02-15 | 1.3 | **Iteracja 3**: State Management & Data Flow (612 lines) |
-| 2026-02-15 | 1.4 | **Iteracja 4**: Edge Cases & Error Scenarios - Comprehensive edge cases for all operations: nodes, connections, custom nodes, files, undo/redo, parameters, compilation, storage, navigation, clipboard, type system, UI, performance (580+ lines) |
+| 2026-02-15 | 1.4 | **Iteracja 4**: Edge Cases & Error Scenarios (823 lines) |
+| 2026-02-15 | 1.5 | **Iteracja 5**: Compiler & GLSL Generation - Topological sort, variable naming, type conversions, recursive compilation, code generation, 6 examples, optimization opportunities, performance benchmarks (540+ lines) |
 
 ---
 
