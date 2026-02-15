@@ -469,19 +469,92 @@ function EditorInner({ onChange }: Props) {
   const navigateBack = useCallback(() => {
     if (navigationStack.length === 0) return;
     
+    // If we're leaving a custom node, save its updated subgraph
+    if (currentContext !== 'Main') {
+      const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
+        const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
+        return def.label === currentContext && 'isCustom' in def;
+      });
+      
+      if (customNodeId) {
+        const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
+        
+        // Extract updated ports from current subgraph
+        const ports = extractCustomNodePorts({ nodes });
+        
+        // Update custom node with new subgraph + ports
+        const updatedCustomNode: CustomNodeDefinition = {
+          ...customDef,
+          inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
+          outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
+          subgraph: {
+            nodes,
+            edges
+          }
+        };
+        
+        // Save to library
+        addCustomNode(updatedCustomNode);
+        
+        // Update registry
+        (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
+        
+        console.log('✅ Saved custom node:', customNodeId, 'with ports:', ports);
+      }
+    }
+    
     const previous = navigationStack[navigationStack.length - 1];
     setNavigationStack(prev => prev.slice(0, -1));
     setCurrentContext(previous.name);
-    setNodes(previous.nodes);
+    
+    // Restore nodes but refresh custom node definitions from library
+    const refreshedNodes = previous.nodes.map(node => {
+      const def = node.data?.definition;
+      if (def && 'isCustom' in def && def.isCustom) {
+        // This is a custom node instance - reload definition from library
+        const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
+        if (freshDef) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              definition: freshDef
+            }
+          };
+        }
+      }
+      return node;
+    });
+    
+    setNodes(refreshedNodes);
     setEdges(previous.edges);
-  }, [navigationStack, setNodes, setEdges]);
+  }, [navigationStack, setNodes, setEdges, currentContext, nodes, edges]);
 
   const navigateToLevel = useCallback((levelIndex: number) => {
     if (levelIndex === 0) {
       // Jump to Main - restore from first stack entry (bottom of stack)
       if (navigationStack.length > 0) {
         const mainState = navigationStack[0];
-        setNodes(mainState.nodes);
+        
+        // Refresh custom node definitions
+        const refreshedNodes = mainState.nodes.map(node => {
+          const def = node.data?.definition;
+          if (def && 'isCustom' in def && def.isCustom) {
+            const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
+            if (freshDef) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  definition: freshDef
+                }
+              };
+            }
+          }
+          return node;
+        });
+        
+        setNodes(refreshedNodes);
         setEdges(mainState.edges);
       } else {
         // No stack - use default (shouldn't happen in normal flow)
@@ -495,7 +568,26 @@ function EditorInner({ onChange }: Props) {
       const targetLevel = navigationStack[levelIndex - 1];
       setNavigationStack(prev => prev.slice(0, levelIndex));
       setCurrentContext(targetLevel.name);
-      setNodes(targetLevel.nodes);
+      
+      // Refresh custom node definitions
+      const refreshedNodes = targetLevel.nodes.map(node => {
+        const def = node.data?.definition;
+        if (def && 'isCustom' in def && def.isCustom) {
+          const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
+          if (freshDef) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                definition: freshDef
+              }
+            };
+          }
+        }
+        return node;
+      });
+      
+      setNodes(refreshedNodes);
       setEdges(targetLevel.edges);
     }
   }, [navigationStack, setNodes, setEdges]);

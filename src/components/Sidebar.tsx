@@ -82,24 +82,62 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
   };
   
   const handleDeleteCustomNode = (nodeId: string) => {
-    // Check if custom node is used on canvas
-    const usedOnCanvas = nodes.some(n => n.data?.definition?.id === nodeId);
+    console.log('🗑️ DELETE CUSTOM NODE:', nodeId);
+    
+    // Check if node exists
+    const customNodes = loadCustomNodes();
+    const nodeExists = customNodes.some(n => n.id === nodeId);
+    console.log('Node exists in library:', nodeExists);
+    
+    if (!nodeExists) {
+      alert(`❌ Custom node "${nodeId}" not found!`);
+      setContextMenu(null);
+      return;
+    }
+    
+    // Check if used on canvas
+    const usedOnCanvas = nodes.some(n => {
+      const defId = n.data?.definition?.id;
+      console.log(`Checking node ${n.id}: definition.id = ${defId}`);
+      return defId === nodeId;
+    });
+    
+    console.log('Used on canvas:', usedOnCanvas);
     
     if (usedOnCanvas) {
       const confirmed = window.confirm(
-        `⚠️ This custom node is currently used on the canvas.\n\nDelete anyway? (Used instances will become invalid)`
+        `⚠️ This custom node is currently used on the canvas.\n\nDelete anyway?`
       );
-      if (!confirmed) return;
+      console.log('User confirmed:', confirmed);
+      
+      if (!confirmed) {
+        console.log('❌ User cancelled');
+        setContextMenu(null);
+        return;
+      }
     }
     
-    // Delete from library
-    deleteCustomNode(nodeId);
-    
-    // Remove from NODE_REGISTRY
-    delete (NODE_REGISTRY as Record<string, unknown>)[nodeId];
-    
-    // Refresh sidebar
-    window.dispatchEvent(new Event('customNodesUpdated'));
+    try {
+      console.log('Deleting from localStorage...');
+      deleteCustomNode(nodeId);
+      
+      console.log('Deleting from NODE_REGISTRY...');
+      const registryBefore = Object.keys(NODE_REGISTRY).includes(nodeId);
+      delete (NODE_REGISTRY as Record<string, unknown>)[nodeId];
+      const registryAfter = Object.keys(NODE_REGISTRY).includes(nodeId);
+      console.log(`Registry: before=${registryBefore}, after=${registryAfter}`);
+      
+      console.log('Forcing sidebar refresh...');
+      setRefreshKey(prev => prev + 1);  // Direct state update
+      window.dispatchEvent(new Event('customNodesUpdated'));
+      
+      console.log('✅ Deletion complete!');
+      alert(`✅ Custom node deleted successfully!`);
+      
+    } catch (error) {
+      console.error('❌ Deletion failed:', error);
+      alert(`❌ Failed to delete: ${error}`);
+    }
     
     setContextMenu(null);
   };
