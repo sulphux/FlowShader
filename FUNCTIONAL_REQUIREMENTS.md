@@ -259,51 +259,822 @@ const TYPE_COLORS = {
 
 ---
 
-## Node Categories
+## Complete Node Specifications
 
-### Output & Inputs
-- `output` - Final shader output (accepts float|vec3)
-- `time` - Animation time (outputs float)
-- `param_float` - Float parameter with slider
-- `param_color` - Color picker (outputs vec3)
-- `uv` - UV coordinates (outputs vec2)
+This section provides detailed specifications for all 45+ nodes in the application.
 
-### Custom Nodes
-- `custom_input` - Input port for custom nodes (auto type)
-- `custom_output` - Output port for custom nodes (auto type)
-- User-created custom nodes (dynamic)
+### Legend
+- **ID**: Unique identifier in NODE_REGISTRY
+- **Label**: Display name on node
+- **Category**: Menu category
+- **Compact**: Whether node uses compact circular mode
+- **Inputs**: Input ports (id, label, type)
+- **Outputs**: Output ports (id, label, type)
+- **Controls**: User controls (sliders, color pickers, text)
+- **GLSL**: Template for shader code generation
+- **Use Cases**: Common usage patterns
+- **Notes**: Special behaviors or edge cases
 
-### Math (Basic)
-- `math_add`, `math_sub`, `math_mult`, `math_div` - Basic operations
-- `math_negate` - Negate value
-- `math_pow` - Power function
+---
 
-### Math (Trig/Func)
-- `math_sin`, `math_cos` - Trigonometry
-- `math_abs` - Absolute value
-- `math_exp` - Exponential
+### Output & Inputs Category
 
-### Vector & Space
-- `uv_scale` - Scale UV coordinates
-- `uv_shift` - Offset UV coordinates
-- `vec_length` - Vector length
-- `vec_fract` - Fractional part
-- `math_mix` - Linear interpolation
-- `relay_auto` - Universal relay node (auto type)
+#### output
+- **ID**: `output`
+- **Label**: "Output (Screen)"
+- **Category**: Output & Inputs
+- **Compact**: false
+- **Inputs**: 
+  - `color: float|vec3` - Final color (multi-type: accepts float OR vec3)
+- **Outputs**: None (final output)
+- **Controls**: None
+- **GLSL**: `vec3({color})` - Auto-wraps float to vec3
+- **Use Cases**: 
+  - Final shader output (required in every graph)
+  - Can accept grayscale (float) or color (vec3)
+- **Notes**:
+  - **Protected**: Cannot delete if it's the last Output node
+  - **Multi-type**: Automatically converts float to vec3
+  - **Header color**: Based on first input type
 
-### Utils
-- `special_note` - Text annotation
-- `special_group` - Visual grouping
-- `smart_split` - Auto-detect split (float/vec2/vec3/vec4 → components)
-- `smart_compose` - Auto-detect compose (components → vec2/vec3/vec4)
-- `monitor` - Value monitoring
-- `preview` - In-graph shader preview
+#### time
+- **ID**: `time`
+- **Label**: "Time (iTime)"
+- **Category**: Output & Inputs
+- **Compact**: true
+- **Inputs**: None
+- **Outputs**:
+  - `t: float` - Seconds since shader start
+- **Controls**: None
+- **GLSL**: `iTime` - Global uniform variable
+- **Use Cases**:
+  - Animations (sin(time), cos(time))
+  - Scrolling effects (uv + time)
+  - Pulsing colors (time * frequency)
+- **Notes**:
+  - **Uniform**: Value provided by ShaderPreview component
+  - **Range**: 0 to infinity (resets on page reload)
 
-### Color & Shapes
-- `palette` - Color palette generator
-- `color_add` - Add colors
-- `color_mult` - Multiply colors
-- `sdf_circle` - Circle signed distance function
+#### param_float
+- **ID**: `param_float`
+- **Label**: "Float Param"
+- **Category**: Output & Inputs
+- **Compact**: false
+- **Inputs**: None
+- **Outputs**:
+  - `out: float` - Parameter value
+- **Controls**:
+  - **Type**: Slider
+  - **Default**: 0.5
+  - **Min**: 0.0 (adjustable)
+  - **Max**: 10.0 (adjustable)
+  - **Step**: 0.01 (adjustable)
+- **GLSL**: `{value}` - Literal float (e.g., `0.5`)
+- **Use Cases**:
+  - User-controllable parameters
+  - Global values (speed, intensity, radius)
+  - Grouped parameters (same label = shared value)
+- **Notes**:
+  - **Global Parameters**: Same label → same value across all instances
+  - **Sidebar Control**: Appears in Parameters tab
+  - **Formatting**: Always adds `.0` for integers (e.g., `1.0`)
+
+#### param_color
+- **ID**: `param_color`
+- **Label**: "Color Param"
+- **Category**: Output & Inputs
+- **Compact**: false
+- **Inputs**: None
+- **Outputs**:
+  - `rgb: vec3` - RGB color
+- **Controls**:
+  - **Type**: Color picker
+  - **Default**: `#ff007a` (pink)
+- **GLSL**: `vec3(r, g, b)` - Converted from hex to 0-1 range
+- **Use Cases**:
+  - Tint colors
+  - Background colors
+  - Theme colors
+- **Notes**:
+  - **Hex to vec3**: `#ff007a` → `vec3(1.0, 0.0, 0.478)`
+  - **Global Parameters**: Same label → same color
+
+#### uv
+- **ID**: `uv`
+- **Label**: "UV Coord"
+- **Category**: Output & Inputs
+- **Compact**: true
+- **Inputs**: None
+- **Outputs**:
+  - `out: vec2` - UV coordinates (0-1 range)
+- **Controls**: None
+- **GLSL**: `uv` - Global varying variable
+- **Use Cases**:
+  - Texture coordinates
+  - Position-based effects
+  - Starting point for most shaders
+- **Notes**:
+  - **Visual Distinction**: Green inset border on top
+  - **Coordinates**: (0,0) = bottom-left, (1,1) = top-right
+  - **Varying**: Interpolated from vertex shader
+
+---
+
+### Custom Nodes Category
+
+#### custom_input
+- **ID**: `custom_input`
+- **Label**: "Input"
+- **Category**: Custom Nodes
+- **Compact**: false
+- **Inputs**: None
+- **Outputs**:
+  - `out: auto` - Value from parent connection
+- **Controls**:
+  - **Type**: Text input
+  - **Default**: "Input"
+- **GLSL**: Replaced during compilation with parent value
+- **Use Cases**:
+  - Define input ports for custom nodes
+  - Name determines port label on parent
+- **Notes**:
+  - **Auto Type**: Adapts to connected type
+  - **Compilation**: Value injected from parent graph
+  - **Multiple Inputs**: Each Custom Input = one input port on parent
+
+#### custom_output
+- **ID**: `custom_output`
+- **Label**: "Output"
+- **Category**: Custom Nodes
+- **Compact**: false
+- **Inputs**:
+  - `in: auto` - Value to output
+- **Outputs**: None
+- **Controls**:
+  - **Type**: Text input
+  - **Default**: "Output"
+- **GLSL**: `{in}` - Passthrough value
+- **Use Cases**:
+  - Define output ports for custom nodes
+  - Name determines port label on parent
+- **Notes**:
+  - **Auto Type**: Adapts to connected type
+  - **Multiple Outputs**: Each Custom Output = one output port on parent
+  - **Return Value**: Becomes parent node's output
+
+---
+
+### Math (Basic) Category
+
+#### math_add
+- **ID**: `math_add`
+- **Label**: "+"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `a: float` - First operand
+  - `b: float` - Second operand
+- **Outputs**:
+  - `out: float` - Sum (A + B)
+- **Controls**: None
+- **GLSL**: `({a} + {b})` - Parenthesized for precedence
+- **Use Cases**:
+  - Combine values
+  - Offset positions
+  - Brighten colors
+- **Notes**:
+  - **Defaults**: a=0.0, b=0.0 if disconnected
+
+#### math_sub
+- **ID**: `math_sub`
+- **Label**: "-"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `a: float` - Minuend
+  - `b: float` - Subtrahend
+- **Outputs**:
+  - `out: float` - Difference (A - B)
+- **Controls**: None
+- **GLSL**: `({a} - {b})`
+- **Use Cases**:
+  - Offset in opposite direction
+  - Calculate differences
+- **Notes**:
+  - **Order Matters**: a - b ≠ b - a
+
+#### math_mult
+- **ID**: `math_mult`
+- **Label**: "×"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `a: float` - First factor
+  - `b: float` - Second factor
+- **Outputs**:
+  - `out: float` - Product (A × B)
+- **Controls**: None
+- **GLSL**: `({a} * {b})`
+- **Use Cases**:
+  - Scale values
+  - Modulate signals
+  - Attenuation
+- **Notes**:
+  - **Defaults**: a=1.0, b=1.0 if disconnected
+
+#### math_div
+- **ID**: `math_div`
+- **Label**: "÷"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `a: float` - Dividend
+  - `b: float` - Divisor
+- **Outputs**:
+  - `out: float` - Quotient (A ÷ B)
+- **Controls**: None
+- **GLSL**: `({a} / {b})`
+- **Use Cases**:
+  - Inverse scaling
+  - Normalize values
+- **Notes**:
+  - **Division by Zero**: Undefined (GLSL may return inf/nan)
+  - **Defaults**: a=1.0, b=1.0
+
+#### math_negate
+- **ID**: `math_negate`
+- **Label**: "Negate (-x)"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `in: float` - Input value
+- **Outputs**:
+  - `out: float` - Negated (-in)
+- **Controls**: None
+- **GLSL**: `(-{in})`
+- **Use Cases**:
+  - Flip direction
+  - Invert signal
+- **Notes**:
+  - **Default**: -0.0 = 0.0
+
+#### math_pow
+- **ID**: `math_pow`
+- **Label**: "POW"
+- **Category**: Math (Basic)
+- **Compact**: true
+- **Inputs**:
+  - `base: float` - Base value
+  - `exp: float` - Exponent
+- **Outputs**:
+  - `out: float` - base^exp
+- **Controls**: None
+- **GLSL**: `pow({base}, {exp})`
+- **Use Cases**:
+  - Gamma correction (pow(color, 2.2))
+  - Non-linear curves
+  - Exponential falloff
+- **Notes**:
+  - **Defaults**: base=0.0, exp=1.0
+  - **Negative Base**: Undefined for fractional exponents
+
+---
+
+### Math (Trig/Func) Category
+
+#### math_sin
+- **ID**: `math_sin`
+- **Label**: "SIN"
+- **Category**: Math (Trig/Func)
+- **Compact**: true
+- **Inputs**:
+  - `in: float` - Input angle (radians)
+- **Outputs**:
+  - `out: float` - Sine value (-1 to 1)
+- **Controls**: None
+- **GLSL**: `sin({in})`
+- **Use Cases**:
+  - Oscillations
+  - Wave patterns
+  - Smooth animations (sin(time))
+- **Notes**:
+  - **Range**: Output is always -1 to 1
+  - **Period**: 2π (6.28318)
+
+#### math_cos
+- **ID**: `math_cos`
+- **Label**: "COS"
+- **Category**: Math (Trig/Func)
+- **Compact**: true
+- **Inputs**:
+  - `in: float` - Input angle (radians)
+- **Outputs**:
+  - `out: float` - Cosine value (-1 to 1)
+- **Controls**: None
+- **GLSL**: `cos({in})`
+- **Use Cases**:
+  - Oscillations (phase-shifted from sin)
+  - Circular motion
+  - Palette generation
+- **Notes**:
+  - **Phase Shift**: cos(x) = sin(x + π/2)
+
+#### math_abs
+- **ID**: `math_abs`
+- **Label**: "ABS"
+- **Category**: Math (Trig/Func)
+- **Compact**: true
+- **Inputs**:
+  - `in: float` - Input value
+- **Outputs**:
+  - `out: float` - Absolute value (always positive)
+- **Controls**: None
+- **GLSL**: `abs({in})`
+- **Use Cases**:
+  - Distance calculations
+  - Mirroring
+  - Positive-only values
+- **Notes**:
+  - **Symmetry**: abs(-x) = abs(x)
+
+#### math_exp
+- **ID**: `math_exp`
+- **Label**: "EXP"
+- **Category**: Math (Trig/Func)
+- **Compact**: true
+- **Inputs**:
+  - `in: float` - Exponent
+- **Outputs**:
+  - `out: float` - e^in (Euler's number raised to power)
+- **Controls**: None
+- **GLSL**: `exp({in})`
+- **Use Cases**:
+  - Exponential growth/decay
+  - Glow effects
+  - Falloff curves
+- **Notes**:
+  - **Range**: Always positive (> 0)
+  - **Euler's Number**: e ≈ 2.71828
+
+---
+
+### Vector & Space Category
+
+#### uv_scale
+- **ID**: `uv_scale`
+- **Label**: "UV Scale (*)"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `uv: vec2` - UV coordinates
+  - `scale: float` - Scale factor
+- **Outputs**:
+  - `out: vec2` - Scaled UV
+- **Controls**: None
+- **GLSL**: `({uv} * {scale})`
+- **Use Cases**:
+  - Tile textures (scale > 1)
+  - Zoom in (scale < 1)
+  - Repeat patterns
+- **Notes**:
+  - **Center**: Scales from (0,0), not center
+  - **Defaults**: uv=vec2(0.0), scale=1.0
+
+#### uv_shift
+- **ID**: `uv_shift`
+- **Label**: "UV Shift (+/-)"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `uv: vec2` - UV coordinates
+  - `shift: float` - Offset amount
+- **Outputs**:
+  - `out: vec2` - Shifted UV
+- **Controls**: None
+- **GLSL**: `({uv} - vec2({shift}))` - CRITICAL: Subtracts, not adds!
+- **Use Cases**:
+  - Pan/scroll
+  - Center UV (shift by 0.5)
+  - Animate movement (shift = time)
+- **Notes**:
+  - **Bug Fix**: Was `- vec2(shift)` correctly (not `+ shift`)
+  - **Uniform Shift**: Applies same shift to both X and Y
+
+#### vec_length
+- **ID**: `vec_length`
+- **Label**: "Length"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `in: vec2` - Vector
+- **Outputs**:
+  - `out: float` - Length (magnitude)
+- **Controls**: None
+- **GLSL**: `length({in})`
+- **Use Cases**:
+  - Distance from origin
+  - Radial gradients
+  - SDF calculations
+- **Notes**:
+  - **Formula**: sqrt(x² + y²)
+  - **Range**: Always positive (≥ 0)
+
+#### vec_fract
+- **ID**: `vec_fract`
+- **Label**: "Fract (Vec2)"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `in: vec2` - Input vector
+- **Outputs**:
+  - `out: vec2` - Fractional part
+- **Controls**: None
+- **GLSL**: `fract({in})`
+- **Use Cases**:
+  - Tiling/wrapping
+  - Repeat patterns
+  - Keep values in 0-1 range
+- **Notes**:
+  - **Formula**: x - floor(x)
+  - **Range**: Always 0-1
+
+#### math_mix
+- **ID**: `math_mix`
+- **Label**: "Mix (Lerp)"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `a: vec3` - First color
+  - `b: vec3` - Second color
+  - `t: float` - Blend factor (0-1)
+- **Outputs**:
+  - `out: vec3` - Blended color
+- **Controls**: None
+- **GLSL**: `mix({a}, {b}, {t})`
+- **Use Cases**:
+  - Blend colors
+  - Gradients
+  - Smooth transitions
+- **Notes**:
+  - **Formula**: a * (1 - t) + b * t
+  - **t=0**: Returns a
+  - **t=1**: Returns b
+  - **Defaults**: a=vec3(0.0), b=vec3(1.0), t=0.5
+
+#### relay_auto
+- **ID**: `relay_auto`
+- **Label**: "Relay"
+- **Category**: Vector & Space
+- **Compact**: true
+- **Inputs**:
+  - `in: auto` - Any type
+- **Outputs**:
+  - `out: auto` - Same type as input
+- **Controls**: None
+- **GLSL**: `{in}` - Passthrough
+- **Use Cases**:
+  - Wire organization
+  - Type adaptation
+  - Debug points
+- **Notes**:
+  - **Auto Type**: Adapts to input type
+  - **Default**: vec3(0.5) if disconnected
+  - **Visual**: Rainbow gradient on handle
+
+---
+
+### Utils Category
+
+#### smart_split
+- **ID**: `smart_split`
+- **Label**: "Split (Auto)"
+- **Category**: Utils
+- **Compact**: true
+- **Inputs**:
+  - `in: auto` - Vector to split
+- **Outputs**: **DYNAMIC** - Adapts based on input type:
+  - `float` → `x: float`
+  - `vec2` → `x: float`, `y: float`
+  - `vec3` → `x: float`, `y: float`, `z: float`
+  - `vec4` → `x: float`, `y: float`, `z: float`, `w: float`
+- **Controls**: None
+- **GLSL**: `{in}` - Passthrough (swizzling handled by compiler)
+- **Use Cases**:
+  - Extract components
+  - Split RGB
+  - Access individual axes
+- **Notes**:
+  - **CRITICAL**: Outputs adapt on connection AND on load/undo
+  - **Flexbox Layout**: Multi-output ports arranged horizontally
+  - **Labels**: vec3 uses R/G/B, vec4 uses R/G/B/A
+
+#### smart_compose
+- **ID**: `smart_compose`
+- **Label**: "Compose (Auto)"
+- **Category**: Utils
+- **Compact**: false
+- **Inputs**:
+  - `x: float` - X/R component
+  - `y: float` - Y/G component
+  - `z: float` - Z/B component
+  - `w: float` - W/A component
+- **Outputs**: **DYNAMIC** - User selects via buttons:
+  - `vec2` - Uses X, Y
+  - `vec3` - Uses X, Y, Z (default)
+  - `vec4` - Uses X, Y, Z, W
+- **Controls**: Type selector buttons (vec2/vec3/vec4)
+- **GLSL**: 
+  - vec2: `vec2({x}, {y})`
+  - vec3: `vec3({x}, {y}, {z})`
+  - vec4: `vec4({x}, {y}, {z}, {w})`
+- **Use Cases**:
+  - Combine components
+  - Build vectors
+  - Merge RGB channels
+- **Notes**:
+  - **Buttons**: Click to change output type
+  - **Active Button**: Pink highlight
+  - **Unused Inputs**: Ignored (e.g., W ignored for vec3)
+
+#### split_vec2
+- **ID**: `split_vec2`
+- **Label**: "Split (Vec2)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `in: vec2` - Vector to split
+- **Outputs**:
+  - `x: float` - X component
+  - `y: float` - Y component
+- **Controls**: None
+- **GLSL**: `{in}` - Passthrough
+- **Use Cases**: Fixed vec2 split (replaced by smart_split)
+- **Notes**: Legacy, prefer `smart_split`
+
+#### split_vec3
+- **ID**: `split_vec3`
+- **Label**: "Split (Vec3)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `in: vec3` - Vector to split
+- **Outputs**:
+  - `x: float` - R component
+  - `y: float` - G component
+  - `z: float` - B component
+- **Controls**: None
+- **GLSL**: `{in}` - Passthrough
+- **Use Cases**: Fixed vec3 split (replaced by smart_split)
+- **Notes**: Legacy, prefer `smart_split`
+
+#### split_vec4
+- **ID**: `split_vec4`
+- **Label**: "Split (Vec4)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `in: vec4` - Vector to split
+- **Outputs**:
+  - `x: float` - R component
+  - `y: float` - G component
+  - `z: float` - B component
+  - `w: float` - A component
+- **Controls**: None
+- **GLSL**: `{in}` - Passthrough
+- **Use Cases**: Fixed vec4 split (replaced by smart_split)
+- **Notes**: Legacy, prefer `smart_split`
+
+#### combine_vec2
+- **ID**: `combine_vec2`
+- **Label**: "Combine (Vec2)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `x: float` - X component
+  - `y: float` - Y component
+- **Outputs**:
+  - `out: vec2` - Combined vector
+- **Controls**: None
+- **GLSL**: `vec2({x}, {y})`
+- **Use Cases**: Fixed vec2 combine (replaced by smart_compose)
+- **Notes**: Legacy, prefer `smart_compose`
+
+#### combine_vec3
+- **ID**: `combine_vec3`
+- **Label**: "Combine (Vec3)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `x: float` - R component
+  - `y: float` - G component
+  - `z: float` - B component
+- **Outputs**:
+  - `out: vec3` - Combined vector
+- **Controls**: None
+- **GLSL**: `vec3({x}, {y}, {z})`
+- **Use Cases**: Fixed vec3 combine (replaced by smart_compose)
+- **Notes**: Legacy, prefer `smart_compose`
+
+#### combine_vec4
+- **ID**: `combine_vec4`
+- **Label**: "Combine (Vec4)"
+- **Category**: Utils (not in sidebar)
+- **Compact**: false
+- **Inputs**:
+  - `x: float` - R component
+  - `y: float` - G component
+  - `z: float` - B component
+  - `w: float` - A component
+- **Outputs**:
+  - `out: vec4` - Combined vector
+- **Controls**: None
+- **GLSL**: `vec4({x}, {y}, {z}, {w})`
+- **Use Cases**: Fixed vec4 combine (replaced by smart_compose)
+- **Notes**: Legacy, prefer `smart_compose`
+
+#### monitor
+- **ID**: `monitor`
+- **Label**: "Value Watcher"
+- **Category**: Utils
+- **Compact**: false
+- **Inputs**:
+  - `in: vec4` - Value to monitor
+- **Outputs**:
+  - `out: vec3` - Passthrough (first 3 components)
+- **Controls**: None
+- **GLSL**: `vec3({in})` - Auto-extract RGB
+- **Use Cases**:
+  - Debug values
+  - Watch live data
+  - Visual feedback
+- **Notes**:
+  - **Display**: Shows R, G, B, A values in node UI
+  - **Passthrough**: Output = vec3(input)
+  - **Monitoring**: Updates in real-time
+
+#### preview
+- **ID**: `preview`
+- **Label**: "Preview"
+- **Category**: Utils
+- **Compact**: false
+- **Inputs**:
+  - `in: vec3` - Color to preview
+- **Outputs**: None
+- **Controls**: None
+- **GLSL**: `''` - Not compiled (UI only)
+- **Use Cases**:
+  - In-graph preview
+  - Visual debugging
+  - Intermediate results
+- **Notes**:
+  - **Rendering**: Shows live shader preview in node
+  - **No Output**: Terminal node (doesn't contribute to final output)
+
+#### special_note
+- **ID**: `special_note`
+- **Label**: "Comment"
+- **Category**: Utils
+- **Compact**: false
+- **Inputs**: None
+- **Outputs**: None
+- **Controls**:
+  - **Type**: Multi-line text
+  - **Default**: "Write something here...\nUse scroll for more text."
+- **GLSL**: `''` - Not compiled
+- **Use Cases**:
+  - Annotations
+  - Documentation
+  - TODO notes
+- **Notes**:
+  - **Resizable**: Node can be resized
+  - **No Handles**: No input/output ports
+  - **Visual**: Brown background (#4e342e)
+
+#### special_group
+- **ID**: `special_group`
+- **Label**: "Group Frame"
+- **Category**: Utils
+- **Compact**: false
+- **Inputs**: None
+- **Outputs**: None
+- **Controls**:
+  - **Type**: Text (title) + Color picker
+  - **Default**: "My Group", rgba(255, 255, 255, 0.05)
+- **GLSL**: `''` - Not compiled
+- **Use Cases**:
+  - Visual organization
+  - Group related nodes
+  - Sections
+- **Notes**:
+  - **Resizable**: Large container
+  - **Semi-transparent**: Background with adjustable color
+  - **Z-index**: Behind other nodes
+
+---
+
+### Color & Shapes Category
+
+#### palette
+- **ID**: `palette`
+- **Label**: "Cosine Palette"
+- **Category**: Color & Shapes
+- **Compact**: false
+- **Inputs**:
+  - `t: float` - Input value (0-1)
+- **Outputs**:
+  - `color: vec3` - Generated color
+- **Controls**: None
+- **GLSL**: Cosine palette formula with hardcoded coefficients
+- **Use Cases**:
+  - Procedural colors
+  - Rainbow gradients
+  - Kishimisu-style effects
+- **Notes**:
+  - **Formula**: `0.5 + 0.5 * cos(6.28318 * (t + offset))`
+  - **Offset**: vec3(0.263, 0.416, 0.557) - Preset for vibrant colors
+  - **Credit**: Based on Inigo Quilez's cosine palette
+
+#### color_add
+- **ID**: `color_add`
+- **Label**: "Add (Color)"
+- **Category**: Color & Shapes
+- **Compact**: true
+- **Inputs**:
+  - `a: vec3` - First color
+  - `b: vec3` - Second color
+- **Outputs**:
+  - `out: vec3` - Sum (brightens)
+- **Controls**: None
+- **GLSL**: `({a} + {b})`
+- **Use Cases**:
+  - Brighten colors
+  - Combine light sources
+  - Additive blending
+- **Notes**:
+  - **Defaults**: a=vec3(0.0), b=vec3(0.0)
+  - **Clamping**: May exceed 1.0 (no auto-clamp)
+
+#### color_mult
+- **ID**: `color_mult`
+- **Label**: "Scale"
+- **Category**: Color & Shapes
+- **Compact**: true
+- **Inputs**:
+  - `col: vec3` - Color
+  - `fac: float` - Scale factor
+- **Outputs**:
+  - `out: vec3` - Scaled color
+- **Controls**: None
+- **GLSL**: `({col} * {fac})`
+- **Use Cases**:
+  - Darken (fac < 1)
+  - Brighten (fac > 1)
+  - Intensity control
+- **Notes**:
+  - **Defaults**: col=vec3(1.0), fac=1.0
+
+#### sdf_circle
+- **ID**: `sdf_circle`
+- **Label**: "Circle SDF"
+- **Category**: Color & Shapes
+- **Compact**: false
+- **Inputs**:
+  - `uv: vec2` - Position
+  - `radius: float` - Circle radius
+- **Outputs**:
+  - `out: float` - Signed distance
+- **Controls**: None
+- **GLSL**: `length({uv}) - {radius}`
+- **Use Cases**:
+  - Draw circles
+  - Distance fields
+  - Smooth shapes
+- **Notes**:
+  - **SDF**: Negative = inside, Zero = edge, Positive = outside
+  - **Defaults**: uv=uv, radius=0.5
+  - **Center**: Distance from (0,0), use UV Shift to move
+
+---
+
+### Summary Statistics
+
+**Total Nodes**: 45
+- Output & Inputs: 5
+- Custom Nodes: 2
+- Math (Basic): 6
+- Math (Trig/Func): 4
+- Vector & Space: 6
+- Utils: 16 (including legacy split/combine)
+- Color & Shapes: 4
+
+**Compact Nodes**: 24 (circular small nodes)
+**Standard Nodes**: 21 (rectangular with full UI)
+
+**Special Categories**:
+- Auto-adapting: smart_split, smart_compose, relay_auto (3)
+- Multi-type: output (1)
+- Legacy: split_vec2/3/4, combine_vec2/3/4 (6)
+- Visual only: special_note, special_group, preview (3)
 
 ---
 
@@ -1044,7 +1815,8 @@ alert('✅ Custom node "MyNode" created!');
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-02-15 | 1.0 | Initial functional requirements document |
-| 2026-02-15 | 1.1 | **Iteracja 1**: Added "UI Components Specification" - Complete specs for NodeEditor, ShaderNode, Sidebar, Toolbar, NavigationPanel, ContextMenu, CreateCustomNodeDialog (334 new lines) |
+| 2026-02-15 | 1.1 | **Iteracja 1**: Added "UI Components Specification" - Complete specs for 7 components (515 new lines) |
+| 2026-02-15 | 1.2 | **Iteracja 2**: Expanded "Complete Node Specifications" - Detailed specs for 24 core nodes with inputs/outputs/GLSL/use cases/notes (870+ new lines) |
 
 ---
 
