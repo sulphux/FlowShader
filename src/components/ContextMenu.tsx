@@ -134,9 +134,9 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, onPa
             )}
             {onCreateCustom && (
               <div 
-                onClick={() => { if (hasSelection) { onCreateCustom(); onClose(); }}} 
-                style={{ ...itemStyle(false), opacity: hasSelection ? 1 : 0.3, cursor: hasSelection ? 'pointer' : 'not-allowed' }}
-                onMouseEnter={(e) => { if (hasSelection) { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}}
+                onClick={() => { onCreateCustom(); onClose(); }} 
+                style={{ ...itemStyle(false), opacity: 1, cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
               >
                 📦 Create Custom Node
