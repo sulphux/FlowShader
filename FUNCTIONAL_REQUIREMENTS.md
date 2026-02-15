@@ -5193,6 +5193,7 @@ alert('✅ Custom node "MyNode" created!');
 | 2026-02-15 | 1.4 | **Iteracja 4**: Edge Cases & Error Scenarios (823 lines) |
 | 2026-02-15 | 1.5 | **Iteracja 5**: Compiler & GLSL Generation (667 lines) |
 | 2026-02-15 | 1.6 | **Iteracja 6**: Connection System Deep Dive - 6 validation rules, 9-step pipeline, drag-to-add flow, handle rendering, auto-adaptation (Smart Split + Relay Auto), multi-type ports, swizzling, batch operations, performance (480+ lines) |
+| 2026-02-15 | 1.7 | **Iteracja 7**: Undo/Redo & History System (640 lines) |
 
 ---
 
