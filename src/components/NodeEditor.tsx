@@ -341,10 +341,6 @@ function EditorInner({ onChange }: Props) {
   
   const handleCreateCustomNode = useCallback((name: string, description: string) => {
     const selectedNodes = nodes.filter(n => n.selected);
-    if (selectedNodes.length === 0) {
-      alert('Please select nodes to create a custom node.');
-      return;
-    }
     
     // Extract selected nodes and their edges
     const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
