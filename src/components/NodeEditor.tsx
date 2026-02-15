@@ -388,14 +388,14 @@ function EditorInner({ onChange }: Props) {
             value: undefined,
           }
         },
-        // Default Output node
+        // Default Custom Output node (NOT screen Output!)
         {
-          id: `output_default`,
+          id: `custom_output_default`,
           type: 'shaderNode',
           position: { x: 400, y: 200 },
           data: {
-            definition: NODE_REGISTRY['output'],
-            value: undefined,
+            definition: NODE_REGISTRY['custom_output'],
+            value: 'Output',
           }
         }
       ];
@@ -461,12 +461,12 @@ function EditorInner({ onChange }: Props) {
           }
         },
         {
-          id: `output_default`,
+          id: `custom_output_default`,
           type: 'shaderNode',
           position: { x: 400, y: 200 },
           data: {
-            definition: NODE_REGISTRY['output'],
-            value: undefined,
+            definition: NODE_REGISTRY['custom_output'],
+            value: 'Output',
           }
         }
       ];
