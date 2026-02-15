@@ -2203,6 +2203,828 @@ Verification:
 
 ---
 
+## Edge Cases & Error Scenarios
+
+This section documents edge cases, error conditions, and how the system handles them for each major functionality.
+
+### Node Operations
+
+#### Add Node to Canvas
+
+**Normal Case:**
+- User drags from sidebar or selects from context menu
+- Node appears at drop/click position
+- Unique label generated
+- Added to graph successfully
+
+**Edge Cases:**
+1. **Duplicate Label**:
+   - System appends number: "Add", "Add 2", "Add 3"
+   - Counter increments until unique
+   - Preserves original definition label
+
+2. **Canvas Boundary**:
+   - Node can be placed anywhere (no bounds checking)
+   - User responsibility to keep organized
+
+3. **Special Nodes**:
+   - Group: Larger size (200x150 default)
+   - Preview: Smaller size (100x100)
+   - Note: Medium size (160x100)
+
+4. **Empty NODE_REGISTRY[typeId]**:
+   - Should never happen (validated before drag)
+   - If happens → undefined behavior, likely crash
+
+**Error Scenarios:**
+- **Out of Memory**: Browser may crash with 1000+ nodes
+- **Invalid typeId**: Returns without adding (silent fail)
+
+#### Delete Node
+
+**Normal Case:**
+- User selects node(s) and presses Delete
+- Nodes and connected edges removed
+- Undo snapshot created
+
+**Edge Cases:**
+1. **Last Output Node**:
+   - **BLOCKED** - Cannot delete
+   - Alert: "Cannot delete the last Output node!"
+   - Deletion prevented entirely
+
+2. **No Selection**:
+   - Delete key does nothing (no nodes to delete)
+
+3. **Node with Many Connections**:
+   - All connected edges deleted automatically
+   - Orphaned nodes remain (no auto-cleanup)
+
+4. **Delete While in Custom Node**:
+   - Deletes from current subgraph context
+   - Does not affect parent graph
+
+**Error Scenarios:**
+- **Orphaned Edges**: Should never happen (edges cleaned up automatically)
+
+---
+
+### Connection Operations
+
+#### Create Connection
+
+**Normal Case:**
+- Drag from output to compatible input
+- Type validation passes
+- Single connection created
+- Previous connection (if any) replaced
+
+**Edge Cases:**
+1. **Incompatible Types**:
+   - **BLOCKED** - Connection not created
+   - Alert: "Cannot connect {source} to {target}\n\n{reason}"
+   - Examples:
+     - float → vec3: "Incompatible types"
+     - vec3 → float: "Incompatible types"
+
+2. **Same Node**:
+   - Allowed (e.g., Add node: out → a creates feedback loop)
+   - Compiler may detect cycles later
+
+3. **Multiple Outputs to Same Input**:
+   - New connection REPLACES old connection
+   - Only ONE edge per input allowed
+   - Old edge automatically removed
+
+4. **Auto Type Adaptation**:
+   - auto → float: auto becomes float
+   - float → auto: auto becomes float
+   - After disconnect: auto returns to auto
+
+5. **Smart Split Adaptation**:
+   - Connect float to Smart Split input
+   - Outputs change to: [x: float]
+   - Connect vec3 to Smart Split input
+   - Outputs change to: [x, y, z: float]
+   - Previous connections preserved if ports still exist
+
+6. **Multi-Type Ports**:
+   - float|vec3 accepts float: ✅
+   - float|vec3 accepts vec3: ✅
+   - float|vec3 accepts vec2: ❌
+
+**Error Scenarios:**
+- **Cyclic Dependency**: Not checked during connection (checked during compilation)
+- **Missing Handle**: If sourceHandle or targetHandle not found → silent fail
+
+#### Delete Connection
+
+**Normal Case:**
+- Right-click edge → Delete
+- Or delete source/target node
+- Edge removed from graph
+
+**Edge Cases:**
+1. **Last Connection to Node**:
+   - Node becomes isolated (no auto-delete)
+   - Still compiles (uses default values)
+
+2. **Delete Node Deletes Edges**:
+   - All edges to/from node automatically removed
+
+3. **Smart Split Disconnect**:
+   - If input disconnected → outputs revert to [auto: auto]
+   - Node shrinks back to single port
+
+**Error Scenarios:**
+- **Edge Not Found**: Should never happen (React state consistency)
+
+---
+
+### Custom Node Operations
+
+#### Create Custom Node
+
+**Normal Case:**
+- User selects nodes (or none for empty)
+- Right-click → Create Custom Node
+- Enters name and description
+- Custom node created with proper ports
+
+**Edge Cases:**
+1. **Empty Name**:
+   - Alert: "Please enter a name for the custom node."
+   - Creation blocked
+
+2. **Name with Spaces**:
+   - Converted to snake_case: "My Node" → `custom_my_node`
+   - Lowercase enforced
+
+3. **Name with Special Characters**:
+   - Replaced with underscores: "Node@#$" → `custom_node____`
+   - Safe for JavaScript object keys
+
+4. **No Selection (Empty Custom Node)**:
+   - ✅ **ALLOWED** (fixed in latest commit)
+   - Creates with defaults:
+     - Custom Input at (100, 200)
+     - Output at (400, 200)
+
+5. **Selection Without Custom Input/Output**:
+   - Creates with placeholder outputs: [{ id: 'out', label: 'Out', type: 'vec3' }]
+   - User should add Custom Input/Output nodes inside
+
+6. **Selection with Partial Edges**:
+   - Only includes edges where BOTH source AND target are selected
+   - External connections ignored
+
+7. **Selection Includes Another Custom Node**:
+   - ✅ **ALLOWED** - Nesting supported
+   - Recursive compilation handles it
+
+8. **Name Collision**:
+   - Currently: Overwrites existing (addCustomNode filters by id)
+   - **TODO**: Should warn or auto-rename
+
+**Error Scenarios:**
+- **localStorage Full** (>5MB):
+  - saveCustomNodes() fails silently
+  - console.error logged
+  - Node not saved (lost on reload)
+
+- **Circular Self-Reference**:
+  - Custom node contains instance of itself
+  - Currently: Not prevented
+  - Compiler: Infinite recursion → stack overflow
+  - **TODO**: Detect and prevent
+
+#### Edit Custom Node (Navigate In)
+
+**Normal Case:**
+- Double-click custom node instance
+- Enters subgraph editing mode
+- Navigation panel appears
+- Edit nodes inside
+
+**Edge Cases:**
+1. **Empty Subgraph**:
+   - System adds default Custom Input + Output
+   - Positions: (100, 200) and (400, 200)
+
+2. **Deep Nesting** (3+ levels):
+   - ✅ Supported (no depth limit)
+   - Navigation panel shows full breadcrumb trail
+
+3. **Edit While Another Custom Node Open**:
+   - Navigation stack preserves hierarchy
+   - Can navigate: Main → Outer → Inner → Edit Inner
+
+**Error Scenarios:**
+- **Missing Custom Node Definition**:
+  - If NODE_REGISTRY[id] deleted → undefined behavior
+  - Should check before entering
+
+#### Navigate Back (Exit)
+
+**Normal Case:**
+- Click "Exit to Main" or breadcrumb
+- Saves current subgraph
+- Extracts updated ports
+- Restores parent graph
+
+**Edge Cases:**
+1. **No Custom Input/Output**:
+   - Ports arrays empty: inputs=[], outputs=[]
+   - Custom node on parent has no handles
+   - Compilation may fail
+
+2. **Changed Port Count**:
+   - Added ports: New handles appear on parent instances
+   - Removed ports: Connections to removed ports deleted
+   - All instances refresh (React re-render)
+
+3. **Changed Port Types**:
+   - Custom Input/Output are always 'auto'
+   - No type change issues
+
+4. **Navigate Back from Main**:
+   - navigationStack.length === 0 → Early return
+   - No crash
+
+**Error Scenarios:**
+- **Restore Main State Error**:
+  - navigationStack[0] should always be Main
+  - If corrupted → uses initialNodesDefault (fallback)
+
+#### Delete Custom Node
+
+**Normal Case:**
+- Right-click in sidebar → Delete
+- Check if used on canvas
+- Show warning if used
+- Delete from storage + registry
+
+**Edge Cases:**
+1. **Used on Canvas**:
+   - Confirmation dialog: "⚠️ This custom node is currently used on the canvas. Delete anyway?"
+   - User can cancel
+   - If confirmed → Deletes (instances become orphaned)
+
+2. **Not Used on Canvas**:
+   - No confirmation (immediate delete)
+
+3. **Delete Non-Existent**:
+   - deleteCustomNode() silently succeeds (filter removes nothing)
+   - No error thrown
+
+4. **Rapid Deletion**:
+   - Multiple deletes in quick succession
+   - Each triggers sidebar refresh
+   - May cause flicker (acceptable)
+
+**Error Scenarios:**
+- **localStorage Write Fail**:
+   - console.error logged
+   - Node may not be deleted persistently
+   - Appears deleted until refresh
+
+- **NODE_REGISTRY Delete Fail**:
+   - Manual delete (no try/catch)
+   - Should never fail
+
+---
+
+### File Operations
+
+#### Save Graph
+
+**Normal Case:**
+- User clicks Save (Ctrl+S)
+- If file path exists → quick save
+- If no path → prompts for filename
+- JSON downloaded
+
+**Edge Cases:**
+1. **Save As (Ctrl+Shift+S)**:
+   - Always prompts for filename
+   - Pre-fills with current filename (without .json)
+   - User can rename
+
+2. **Empty Graph**:
+   - Saves `{ nodes: [Output], edges: [] }`
+   - Valid JSON (can be reloaded)
+
+3. **Large Graph** (100+ nodes):
+   - JSON may be 100KB+
+   - Browser handles download fine
+
+4. **Special Characters in Filename**:
+   - User enters "My Graph!"
+   - Saved as "My Graph!.json"
+   - May cause issues on some filesystems
+
+5. **Cancel File Prompt**:
+   - prompt() returns null
+   - Uses fallback: `shader_graph_{timestamp}.json`
+
+**Error Scenarios:**
+- **JSON.stringify Fail**:
+  - Should never happen (all nodes are serializable)
+  - If happens → unhandled exception
+
+- **Download Blocked**:
+  - Browser popup blocker may prevent
+  - User must allow downloads
+
+#### Load Graph
+
+**Normal Case:**
+- User clicks Load
+- File picker opens
+- Selects .json file
+- Graph restored
+
+**Edge Cases:**
+1. **Invalid JSON**:
+   - Parse error caught
+   - console.error logged
+   - Graph not changed (stays as-is)
+
+2. **JSON Without nodes/edges**:
+   - Missing nodes → uses initialNodesDefault
+   - Missing edges → uses []
+
+3. **Old Format** (before custom nodes):
+   - No customNodes field → ignored
+   - Backward compatible
+
+4. **Smart Split Nodes in File**:
+   - Restored with saved outputs
+   - Auto-adaptation re-runs on load
+   - Outputs may change if connections differ
+
+5. **Load While Editing Custom Node**:
+   - Loads into current context (replaces subgraph)
+   - May be unexpected → **TODO**: Warn or force to Main
+
+6. **Cancel File Picker**:
+   - No file selected → nothing happens
+
+**Error Scenarios:**
+- **File Read Error**:
+   - FileReader may fail
+   - No error handling currently
+   - **TODO**: Add try/catch
+
+- **Corrupted Custom Nodes**:
+   - loadCustomNodes() returns empty array
+   - Graph loads but custom nodes missing
+   - User sees broken references
+
+---
+
+### Undo/Redo Operations
+
+#### Undo (Ctrl+Z)
+
+**Normal Case:**
+- User makes change
+- After 2s → saveToHistory()
+- Presses Ctrl+Z
+- Graph restored to previous state
+
+**Edge Cases:**
+1. **Undo Immediately After Change** (< 2s):
+   - No snapshot yet (debounced)
+   - Undo does nothing (historyIndex doesn't change)
+
+2. **Undo to Empty Graph**:
+   - Restores to snapshot with only Output node
+   - Valid state
+
+3. **Undo Smart Split Connection**:
+   - Smart Split outputs revert to previous type
+   - If was vec3, reverts to vec3
+
+4. **Multiple Undos in Sequence**:
+   - Each undo goes back one step
+   - Stops at historyIndex === 0
+
+5. **Undo After Delete Last Output**:
+   - Output node restored
+   - Protection only applies to delete action, not undo
+
+**Error Scenarios:**
+- **Corrupted Snapshot**:
+   - JSON.parse may fail (shouldn't happen)
+   - If fails → graph broken
+   - **TODO**: Validate snapshot before saving
+
+#### Redo (Ctrl+Y)
+
+**Normal Case:**
+- User undoes change
+- Presses Ctrl+Y
+- Graph restored to next state
+
+**Edge Cases:**
+1. **Redo After New Action**:
+   - Future states cleared
+   - Redo becomes unavailable (canRedo = false)
+
+2. **Multiple Redos**:
+   - Stops at historyIndex === history.length - 1
+
+3. **Redo Unavailable**:
+   - Button grayed out
+   - Shortcut does nothing
+
+**Error Scenarios:**
+- **History Corruption**: Same as Undo
+
+---
+
+### Parameter Operations
+
+#### Update Global Parameter
+
+**Normal Case:**
+- User changes slider in Sidebar Parameters tab
+- All nodes with same label update simultaneously
+- Shader recompiles
+
+**Edge Cases:**
+1. **No Nodes with Label**:
+   - Parameter appears in tab but unused
+   - Slider still functional
+
+2. **Mixed Types Same Label**:
+   - Should never happen (same label = same type)
+   - If happens → only matching type updates
+
+3. **Parameter on Canvas** (not in Sidebar):
+   - Value only updates if user drags slider on node itself
+   - Sidebar parameter controls global value
+
+4. **Min > Max**:
+   - Slider broken (value clamped incorrectly)
+   - **TODO**: Validate min < max
+
+5. **Step Too Small** (< 0.0001):
+   - Slider may be too sensitive
+   - Precision issues
+
+**Error Scenarios:**
+- **NaN Value**:
+   - parseFloat() may return NaN
+   - GLSL compilation may fail
+   - **TODO**: Validate numeric input
+
+---
+
+### Compilation Edge Cases
+
+#### Compile Graph to GLSL
+
+**Normal Case:**
+- Graph has valid connections
+- Topological sort succeeds
+- GLSL code generated
+
+**Edge Cases:**
+1. **Cyclic Dependency**:
+   - A → B → C → A (cycle)
+   - Topological sort fails (no valid ordering)
+   - Currently: **NOT DETECTED**
+   - Result: Undefined behavior, may infinite loop
+   - **TODO**: Add cycle detection
+
+2. **Disconnected Nodes**:
+   - Nodes without inputs use default values
+   - Compiled as literals (e.g., `0.0`, `vec3(0.0)`)
+
+3. **Multiple Output Nodes**:
+   - ✅ Allowed
+   - Only first Output node used for final output
+   - Others ignored (dead code)
+
+4. **No Output Node**:
+   - Compilation fails
+   - Final shader: `gl_FragColor = vec4(vec3(0.0), 1.0)` (black)
+
+5. **Custom Node Inside Custom Node** (Nesting):
+   - Recursive compilation
+   - Each level inlines GLSL
+   - Deep nesting (10+ levels) may be slow
+
+6. **Custom Node Self-Reference**:
+   - Custom node contains instance of itself
+   - Infinite recursion
+   - Stack overflow
+   - **TODO**: Detect and prevent
+
+7. **Missing glslTemplate**:
+   - After JSON deserialization
+   - Restored via loadCustomNodes()
+   - If restoration fails → compilation error
+
+**Error Scenarios:**
+- **GLSL Syntax Error**:
+  - Generated code may have syntax errors
+  - Three.js shows shader compilation error in console
+  - Preview shows error message
+
+- **Variable Name Collision**:
+  - Multiple nodes generate var_n123
+  - Should never happen (IDs unique)
+  - If happens → GLSL redeclaration error
+
+---
+
+### Storage & Persistence
+
+#### localStorage Operations
+
+**Normal Case:**
+- State changes saved automatically
+- localStorage updated
+- Data persists across sessions
+
+**Edge Cases:**
+1. **localStorage Disabled**:
+   - Private browsing mode
+   - setItem throws exception
+   - Caught in try/catch
+   - console.error logged
+   - App still works (no persistence)
+
+2. **localStorage Full** (>5MB):
+   - setItem throws QuotaExceededError
+   - Caught in try/catch
+   - console.error logged
+   - Old data remains (no update)
+   - **TODO**: Show user warning
+
+3. **Corrupted JSON**:
+   - Parse fails
+   - Caught in try/catch
+   - Returns default state (initialNodesDefault)
+   - No data loss (user can manually fix JSON)
+
+4. **Custom Nodes JSON Corrupted**:
+   - loadCustomNodes() returns []
+   - Custom nodes not loaded
+   - User loses custom nodes until fixed
+
+5. **Cross-Tab Editing**:
+   - Tab A saves custom node
+   - Tab B receives 'storage' event
+   - Tab B refreshes custom nodes
+   - Both tabs synchronized
+
+**Error Scenarios:**
+- **Race Condition** (Multiple Tabs):
+  - Tab A and Tab B both save simultaneously
+  - Last write wins
+  - Earlier changes lost
+  - **TODO**: Add conflict detection
+
+- **Browser Crash Mid-Save**:
+  - Partial write to localStorage
+  - Next load may have corrupted data
+  - Handled by try/catch (returns defaults)
+
+---
+
+### Navigation & Context
+
+#### Custom Node Navigation
+
+**Normal Case:**
+- Enter custom node → navigation stack grows
+- Exit → navigation stack shrinks
+- State preserved correctly
+
+**Edge Cases:**
+1. **Navigate to Level 0 (Main)**:
+   - Restores from navigationStack[0]
+   - If stack empty → uses initialNodesDefault
+
+2. **Jump to Middle Level**:
+   - Click breadcrumb "Level 2" when at "Level 4"
+   - Pops levels 3 and 4
+   - Restores Level 2 state
+
+3. **Exit Without Saving**:
+   - navigateBack() always saves before exit
+   - No "discard changes" option
+   - **Auto-save on exit**
+
+4. **Edit Then Immediately Exit**:
+   - Changes saved
+   - Ports extracted
+   - Instances refreshed
+
+5. **Deep Nesting** (10+ levels):
+   - Breadcrumb panel may overflow
+   - **TODO**: Add scrolling or collapse
+
+**Error Scenarios:**
+- **Navigation Stack Corruption**:
+  - If stack cleared unexpectedly → can't navigate back
+  - Main state lost
+  - **TODO**: Persist stack to localStorage
+
+- **Port Extraction Fails**:
+  - If extractCustomNodePorts() fails → empty ports
+  - Custom node has no handles
+  - Compilation fails
+
+---
+
+### Clipboard Operations
+
+#### Copy (Ctrl+C)
+
+**Normal Case:**
+- User selects nodes
+- Presses Ctrl+C
+- Clipboard filled
+
+**Edge Cases:**
+1. **No Selection**:
+   - Early return (clipboard unchanged)
+
+2. **Copy Single Node**:
+   - Clipboard has 1 node, 0 edges
+
+3. **Copy with External Edges**:
+   - Only internal edges copied
+   - External connections lost
+
+**Error Scenarios:**
+- None (simple array filter)
+
+#### Paste (Ctrl+V)
+
+**Normal Case:**
+- Clipboard has data
+- Presses Ctrl+V
+- Nodes pasted with offset
+
+**Edge Cases:**
+1. **Empty Clipboard**:
+   - Early return (nothing pasted)
+
+2. **Paste Same Selection Multiple Times**:
+   - Each paste creates new IDs
+   - Offset: +50px X and Y each time
+   - Can create many copies
+
+3. **Paste Custom Node Instance**:
+   - ✅ Works (copies instance, not definition)
+   - All instances use same NODE_REGISTRY[id]
+
+4. **Paste Across Custom Node Contexts**:
+   - Copy in Main → Enter custom node → Paste
+   - ✅ Works (pastes into current context)
+
+**Error Scenarios:**
+- **ID Collision**: Should never happen (new IDs generated)
+
+#### Cut (Ctrl+X)
+
+**Normal Case:**
+- Copies then deletes selected
+
+**Edge Cases:**
+1. **Cut Last Output Node**:
+   - Copy succeeds
+   - Delete blocked
+   - Output node remains
+
+2. **Cut All Nodes**:
+   - Clipboard filled
+   - All deleted except last Output
+   - Graph nearly empty
+
+---
+
+### Type System Edge Cases
+
+#### Type Validation
+
+**Edge Cases:**
+1. **auto → auto**:
+   - ✅ Valid
+   - Both adapt to first concrete type in chain
+
+2. **float|vec3 → float|vec3**:
+   - ✅ Valid (multi-type to multi-type)
+
+3. **float|vec3 → auto**:
+   - ✅ Valid
+   - auto adapts to actual type (float OR vec3)
+
+4. **Swizzling Multi-Type**:
+   - float|vec3.x → ❌ Invalid
+   - Can't swizzle multi-type ports
+
+5. **Empty Type String**:
+   - Should never happen
+   - If happens → validation fails (no match)
+
+**Error Scenarios:**
+- **Unknown Type** ('vec5', 'int'):
+  - Not in TYPE_COLORS
+  - Handle renders with default color (#555)
+  - Validation: Exact match only (vec5 → vec5 would work)
+
+---
+
+### UI Edge Cases
+
+#### Context Menu Positioning
+
+**Edge Cases:**
+1. **Menu Near Screen Edge**:
+   - Auto-adjusts position to stay visible
+   - Checks: right, bottom boundaries
+   - May open upward or leftward
+
+2. **Submenu Near Right Edge**:
+   - Opens on left side instead
+   - Calculated via `openLeft` state
+
+3. **Very Small Window**:
+   - Menu may still overflow
+   - User must scroll or resize window
+
+#### Drag & Drop
+
+**Edge Cases:**
+1. **Drop Outside Canvas**:
+   - ReactFlow's onDrop not fired
+   - No node created
+
+2. **Drop on Existing Node**:
+   - Creates at drop position (may overlap)
+   - No auto-positioning
+
+3. **Drag Non-Node Element**:
+   - dataTransfer has no 'application/reactflow'
+   - onDrop early return
+
+#### Keyboard Shortcuts
+
+**Edge Cases:**
+1. **Ctrl+S While Input Focused**:
+   - Shortcut still fires (useEffect on document)
+   - Input loses focus briefly
+
+2. **Multiple Keys Pressed**:
+   - Ctrl+Z+Y simultaneously → Last one wins
+
+3. **Shortcuts While Dialog Open**:
+   - Dialog has own keyboard handlers
+   - May conflict (e.g., Escape closes dialog and menu)
+
+---
+
+### Performance Edge Cases
+
+#### Large Graphs
+
+**Edge Cases:**
+1. **100+ Nodes**:
+   - ReactFlow handles well
+   - Compilation slows (O(n²) topological sort)
+   - Rendering: ~60fps
+
+2. **1000+ Nodes**:
+   - Browser may lag
+   - Compilation: 1-5 seconds
+   - Rendering: 10-30fps
+
+3. **Deep Custom Node Nesting** (10+ levels):
+   - Recursive compilation overhead
+   - Each level adds 10-50ms
+   - Total: 100-500ms for deep graphs
+
+**Error Scenarios:**
+- **Stack Overflow**:
+  - Circular custom node reference
+  - Infinite recursion in compiler
+  - Browser crashes
+  - **TODO**: Add recursion depth limit
+
+- **Out of Memory**:
+  - History snapshots too large
+  - Browser crashes
+  - **TODO**: Compress snapshots or reduce history size
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
@@ -2428,7 +3250,8 @@ alert('✅ Custom node "MyNode" created!');
 | 2026-02-15 | 1.0 | Initial functional requirements document |
 | 2026-02-15 | 1.1 | **Iteracja 1**: UI Components Specification (515 lines) |
 | 2026-02-15 | 1.2 | **Iteracja 2**: Complete Node Specifications - 24 nodes (771 lines) |
-| 2026-02-15 | 1.3 | **Iteracja 3**: State Management & Data Flow - React state, localStorage, NODE_REGISTRY, 7 data flow diagrams, memory management (450+ lines) |
+| 2026-02-15 | 1.3 | **Iteracja 3**: State Management & Data Flow (612 lines) |
+| 2026-02-15 | 1.4 | **Iteracja 4**: Edge Cases & Error Scenarios - Comprehensive edge cases for all operations: nodes, connections, custom nodes, files, undo/redo, parameters, compilation, storage, navigation, clipboard, type system, UI, performance (580+ lines) |
 
 ---
 
