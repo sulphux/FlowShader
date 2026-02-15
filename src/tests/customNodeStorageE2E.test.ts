@@ -361,7 +361,7 @@ describe('Custom Node Storage E2E - HARD Tests', () => {
       const edge: Edge = {
         id: 'e1',
         source: 'sin-1',
-        sourceHandle: 'result',
+        sourceHandle: 'out',
         target: 'custom_output-1',
         targetHandle: 'in'
       };
@@ -369,7 +369,7 @@ describe('Custom Node Storage E2E - HARD Tests', () => {
 
       // Simulate onConnect detection (target is custom_output)
       const sourceNode = currentNodes.find(n => n.id === 'sin-1');
-      const sourceType = sourceNode?.data?.definition?.outputs?.find((p: any) => p.id === 'result')?.type;
+      const sourceType = sourceNode?.data?.definition?.outputs?.find((p: any) => p.id === 'out')?.type;
       const targetNode = currentNodes.find(n => n.id === 'custom_output-1');
       if (targetNode && sourceType) {
         targetNode.data.detectedType = sourceType; // 'float'
@@ -677,7 +677,7 @@ describe('Custom Node Storage E2E - HARD Tests', () => {
             }
           ],
           edges: [
-            { id: 'e1', source: 'add-1', sourceHandle: 'result', target: 'mult-1', targetHandle: 'a' }
+            { id: 'e1', source: 'add-1', sourceHandle: 'out', target: 'mult-1', targetHandle: 'a' }
           ]
         },
         glslTemplate: () => 'vec3(1.0)',
