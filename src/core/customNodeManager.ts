@@ -105,6 +105,11 @@ export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
   const outputs: Array<{ id: string; label: string; type: string }> = [];
 
   subgraph.nodes.forEach(node => {
+    // Defensive: Check if node.data and node.data.definition exist
+    if (!node.data || !node.data.definition) {
+      return;
+    }
+    
     if (node.data.definition.id === 'custom_input') {
       const portName = node.data.value || node.data.definition.controls?.defaultValue || 'Input';
       // Use detected type from node data, or fall back to definition output type, or 'auto'
