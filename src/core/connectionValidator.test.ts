@@ -21,43 +21,52 @@ describe('connectionValidator', () => {
       });
     });
 
-    describe('Rule 2: float → vector expansion (allowed)', () => {
-      it('should allow float → vec2', () => {
+    describe('Rule 2: float → vector BLOCKED (Auto-Adapter)', () => {
+      it('should block float → vec2', () => {
         const result = validateConnection('float', 'vec2');
-        expect(result.valid).toBe(true);
+        expect(result.valid).toBe(false);
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Combine');
       });
 
-      it('should allow float → vec3', () => {
+      it('should block float → vec3', () => {
         const result = validateConnection('float', 'vec3');
-        expect(result.valid).toBe(true);
+        expect(result.valid).toBe(false);
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Combine');
       });
 
-      it('should allow float → vec4', () => {
+      it('should block float → vec4', () => {
         const result = validateConnection('float', 'vec4');
-        expect(result.valid).toBe(true);
+        expect(result.valid).toBe(false);
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Combine');
       });
     });
 
-    describe('Rule 3: vector → float (BLOCKED - requires Split)', () => {
+    describe('Rule 3: vector → float BLOCKED (Auto-Adapter)', () => {
       it('should block vec2 → float', () => {
         const result = validateConnection('vec2', 'float');
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
-        expect(result.reason).toContain('Split node');
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Split');
       });
 
       it('should block vec3 → float', () => {
         const result = validateConnection('vec3', 'float');
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
-        expect(result.reason).toContain('Split node');
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Split');
       });
 
       it('should block vec4 → float', () => {
         const result = validateConnection('vec4', 'float');
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
-        expect(result.reason).toContain('Split node');
+        expect(result.requiresAdapter).toBe(true);
+        expect(result.reason).toContain('Auto-inserting Split');
       });
     });
 
@@ -65,8 +74,9 @@ describe('connectionValidator', () => {
       it('should block vec2 → vec3', () => {
         const result = validateConnection('vec2', 'vec3');
         expect(result.valid).toBe(false);
+        expect(result.requiresAdapter).toBe(true);
         expect(result.requiresSplit).toBe(false);
-        expect(result.reason).toContain('Split and Combine');
+        expect(result.reason).toContain('Auto-inserting Split + Combine');
       });
 
       it('should block vec2 → vec4', () => {
@@ -159,9 +169,9 @@ describe('connectionValidator', () => {
         const expectedResults: Record<string, boolean> = {
           // float source
           'float→float': true,
-          'float→vec2': true,
-          'float→vec3': true,
-          'float→vec4': true,
+          'float→vec2': false,
+          'float→vec3': false,
+          'float→vec4': false,
           
           // vec2 source
           'vec2→float': false,
@@ -198,11 +208,11 @@ describe('connectionValidator', () => {
   describe('isValidConnection', () => {
     it('should return true for valid connections', () => {
       expect(isValidConnection('float', 'float')).toBe(true);
-      expect(isValidConnection('float', 'vec3')).toBe(true);
       expect(isValidConnection('vec2', 'vec2')).toBe(true);
     });
 
     it('should return false for invalid connections', () => {
+      expect(isValidConnection('float', 'vec3')).toBe(false);
       expect(isValidConnection('vec3', 'float')).toBe(false);
       expect(isValidConnection('vec2', 'vec4')).toBe(false);
       expect(isValidConnection('vec4', 'vec2')).toBe(false);
@@ -215,13 +225,14 @@ describe('connectionValidator', () => {
       expect(validTargets).toEqual(['float', 'vec2', 'vec3', 'vec4', 'auto']);
     });
 
-    it('should return all vector types + auto for float source', () => {
+    it('should return only float + auto for float source', () => {
       const validTargets = getValidTargetTypes('float');
       expect(validTargets).toContain('float');
-      expect(validTargets).toContain('vec2');
-      expect(validTargets).toContain('vec3');
-      expect(validTargets).toContain('vec4');
       expect(validTargets).toContain('auto');
+      expect(validTargets).not.toContain('vec2');
+      expect(validTargets).not.toContain('vec3');
+      expect(validTargets).not.toContain('vec4');
+      expect(validTargets.length).toBe(2);
     });
 
     it('should return only same type + auto for vec2 source', () => {
@@ -320,9 +331,10 @@ describe('connectionValidator', () => {
   });
 
   describe('Integration tests - Real-world scenarios', () => {
-    it('Scenario: Time (float) → Color Add (vec3) - should work', () => {
+    it('Scenario: Time (float) → Color Add (vec3) - should fail with adapter', () => {
       const result = validateConnection('float', 'vec3');
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.requiresAdapter).toBe(true);
     });
 
     it('Scenario: UV (vec2) → Length (vec2) - should work', () => {
