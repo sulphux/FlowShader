@@ -13,7 +13,7 @@ import ContextMenu from './ContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import CreateCustomNodeDialog from './CreateCustomNodeDialog';
 import { addCustomNode, extractCustomNodePorts, loadCustomNodes, type CustomNodeDefinition } from '../core/customNodeManager';
-import type { ShaderNodeDefinition } from '../core/types';
+import type { ShaderNodeDefinition, DataType } from '../core/types';
 import Legend from './Legend';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
@@ -22,6 +22,7 @@ import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { validateConnection } from '../core/connectionValidator';
+import { insertAutoAdapter } from '../core/autoAdapterSystem';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -47,6 +48,25 @@ const NODE_TYPES: NodeTypes = {
   previewNode: PreviewNode,
   monitorNode: MonitorNode,
 };
+
+/**
+ * Helper function to extract type from a node's handle (input or output)
+ */
+function getHandleType(node: Node | undefined, handleId: string | null): DataType {
+  if (!node?.data?.definition || !handleId) return 'auto';
+  
+  const def = node.data.definition;
+  
+  // Check outputs
+  const output = def.outputs?.find((o: { id: string; type: string }) => o.id === handleId);
+  if (output) return output.type as DataType;
+  
+  // Check inputs
+  const input = def.inputs?.find((i: { id: string; type: string }) => i.id === handleId);
+  if (input) return input.type as DataType;
+  
+  return 'auto';
+}
 
 function EditorInner({ onChange }: Props) {
 
@@ -675,10 +695,12 @@ function EditorInner({ onChange }: Props) {
   );
 
   const onConnect: OnConnect = useCallback((params) => {
+        // 1. Find source/target nodes
         const sourceNode = nodes.find(n => n.id === params.source);
         const targetNode = nodes.find(n => n.id === params.target);
+        
         if (!sourceNode || !targetNode) { 
-            setEdges((eds) => addEdge(params, eds)); 
+            console.warn('Auto-Adapter: Source or target node not found');
             return; 
         }
 
@@ -688,21 +710,21 @@ function EditorInner({ onChange }: Props) {
         const inputDef = targetDef.inputs.find((i: { id: string; type: string }) => i.id === params.targetHandle);
         
         if (!outputDef) { 
-            setEdges((eds) => addEdge(params, eds)); 
+            console.warn('Auto-Adapter: Source output definition not found');
             return; 
         }
 
-        const sourceType = outputDef.type;
+        // 2. Get types from handles
+        const sourceType = getHandleType(sourceNode, params.sourceHandle);
+        const targetType = getHandleType(targetNode, params.targetHandle);
 
         // === SINGLE CONNECTION PER INPUT ===
-        // Remove any existing connection to the target input port
-        if (params.target && params.targetHandle) {
-            setEdges((eds) => eds.filter(edge => 
-                !(edge.target === params.target && edge.targetHandle === params.targetHandle)
-            ));
-        }
+        // Remove any existing connection to the target input port FIRST
+        setEdges((eds) => eds.filter(edge => 
+            !(edge.target === params.target && edge.targetHandle === params.targetHandle)
+        ));
 
-        // === AUTO TYPE ADAPTATION ===
+        // === AUTO TYPE ADAPTATION (Smart Split + Relay) ===
         
         // Smart Split Node - adapts outputs based on input type
         if (targetDef.id === 'smart_split' && inputDef?.type === 'auto') {
@@ -772,7 +794,7 @@ function EditorInner({ onChange }: Props) {
         
         if (sourceDef.id === 'relay_auto' && outputDef.type === 'auto' && inputDef) {
             // Source is relay_auto with auto output, adapt it to target input type
-            const targetType = inputDef.type;
+            const targetTypeActual = inputDef.type;
             setNodes(nds => nds.map(n => {
                 if (n.id === sourceNode.id) {
                     return {
@@ -781,8 +803,8 @@ function EditorInner({ onChange }: Props) {
                             ...n.data,
                             definition: {
                                 ...n.data.definition,
-                                inputs: [{ id: 'in', label: targetType, type: targetType }],
-                                outputs: [{ id: 'out', label: targetType, type: targetType }]
+                                inputs: [{ id: 'in', label: targetTypeActual, type: targetTypeActual }],
+                                outputs: [{ id: 'out', label: targetTypeActual, type: targetTypeActual }]
                             }
                         }
                     }
@@ -791,30 +813,42 @@ function EditorInner({ onChange }: Props) {
             }));
         }
 
-        // Validate connection using our validator
-        if (inputDef) {
-            const targetType = inputDef.type;
-            const validation = validateConnection(
-                sourceType as 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto', 
-                targetType as 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto'
+        // === VALIDATION + AUTO-ADAPTER INTEGRATION ===
+        
+        // 3. Validate connection
+        const validation = validateConnection(sourceType, targetType);
+        
+        // 4. If invalid + requires adapter → auto-insert
+        if (!validation.valid && validation.requiresAdapter) {
+            const result = insertAutoAdapter(
+                nodes, edges, params, sourceType, targetType
             );
             
-            // BLOCK invalid connections
-            if (!validation.valid) {
-                console.warn(`❌ Connection blocked: ${sourceType} → ${targetType}`);
-                console.warn(`Reason: ${validation.reason}`);
+            if (result.newNodes.length > 0) {
+                setNodes(nds => [...nds, ...result.newNodes]);
+                setEdges(eds => [...eds, ...result.newEdges]);
                 
-                // Show user-friendly error message
-                alert(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`);
-                return; // Block the connection
+                console.log('✅ Auto-Adapter inserted:', {
+                    adapterNodes: result.newNodes.map(n => n.data.definition.label),
+                    edgeCount: result.newEdges.length
+                });
+                
+                return; // Don't create direct edge
             }
-
-            // Connection is valid - create edge
-            const edgeColor = TYPE_COLORS[sourceType] || '#fff';
-            const newEdge = { ...params, style: { stroke: edgeColor, strokeWidth: 3 }, animated: false };
-            setEdges((eds) => addEdge(newEdge, eds));
         }
-    }, [nodes, setNodes, setEdges]);
+        
+        // 5. If invalid + no adapter → block (show error)
+        if (!validation.valid) {
+            console.warn('❌ Connection blocked:', validation.reason);
+            alert(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`);
+            return;
+        }
+        
+        // 6. Valid connection → proceed normally
+        const edgeColor = TYPE_COLORS[sourceType] || '#fff';
+        const newEdge = { ...params, style: { stroke: edgeColor, strokeWidth: 3 }, animated: false };
+        setEdges((eds) => addEdge(newEdge, eds));
+    }, [nodes, edges, setNodes, setEdges]);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => { if(ref.current) { const bounds = ref.current.getBoundingClientRect(); mousePos.current = { x: e.clientX - bounds.left, y: e.clientY - bounds.top }; } }, []);
   const onConnectStart = useCallback((_, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
