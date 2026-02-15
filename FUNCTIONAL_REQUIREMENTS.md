@@ -307,6 +307,520 @@ const TYPE_COLORS = {
 
 ---
 
+## UI Components Specification
+
+This section provides complete technical specifications for all UI components in the application.
+
+### NodeEditor Component
+
+**File**: `src/components/NodeEditor.tsx`
+
+**Purpose**: Main graph editor component, manages the ReactFlow instance and all node/edge operations.
+
+#### Props
+```typescript
+interface Props {
+  onChange?: (nodes: Node[], edges: Edge[]) => void;
+}
+```
+- `onChange` (optional): Callback fired when graph changes (nodes or edges modified)
+
+#### State Variables
+- `nodes` (Node[]): All nodes on canvas
+- `edges` (Edge[]): All connections between nodes
+- `reactFlowInstance`: ReactFlow instance for programmatic control
+- `menu`: Context menu state (`{x, y, visible, type}` or null)
+- `menuFilter` (string | null): Type filter for filtered context menu
+- `pendingConnection`: Connection being created (for auto-add on drop)
+- `clipboard`: Copy/paste buffer (`{nodes: Node[], edges: Edge[]}` or null)
+- `showCode` (boolean): Show GLSL code modal
+- `currentCode` (string): Generated GLSL code
+- `history` (HistoryState[]): Undo history stack (max 50)
+- `historyIndex` (number): Current position in history
+- `currentFilePath` (string | null): Current file path (for Save vs Save As)
+- `showCustomDialog` (boolean): Show Create Custom Node dialog
+- `navigationStack`: Stack of navigation levels for custom nodes
+- `currentContext` (string): Current navigation context (e.g., "Main", "MyCustomNode")
+- `connectionStartRef`: Ref for tracking connection start (for drag-to-add)
+
+#### Key Event Handlers
+
+**Node Operations:**
+- `onNodesChange`: Update nodes array (ReactFlow callback)
+- `onEdgesChange`: Update edges array (ReactFlow callback)
+- `onConnect`: Create new edge with validation
+- `onAddNode(typeId: string)`: Add node to canvas at menu position
+- `deleteSelected()`: Delete selected nodes/edges
+- `handleCopy()`: Copy selected to clipboard
+- `handlePaste()`: Paste from clipboard with offset
+- `handleCut()`: Copy then delete selected
+
+**Custom Nodes:**
+- `handleCreateCustomNode(name, description)`: Create new custom node
+- `enterCustomNode(nodeId)`: Enter custom node subgraph (double-click)
+- `navigateBack()`: Go up one level in navigation stack
+- `navigateToLevel(index)`: Jump to specific level
+- `navigateToMain()`: Exit all custom nodes to Main
+
+**File Operations:**
+- `handleSave(saveAs?)`: Save graph to file (or Save As)
+- `handleLoad()`: Load graph from file
+- `handleClear()`: Clear all nodes (with confirmation)
+- `handleNew()`: New project (reset without confirmation)
+
+**History:**
+- `saveToHistory()`: Create snapshot (debounced 2s)
+- `undo()`: Restore previous state
+- `redo()`: Restore next state
+
+**View:**
+- `handleFitView()`: Center and zoom to show all nodes
+
+**Compilation:**
+- `onShowCode()`: Compile graph and show GLSL modal
+
+#### Keyboard Shortcuts Handled
+- `Ctrl+Z`: Undo
+- `Ctrl+Y` / `Ctrl+Shift+Z`: Redo
+- `Ctrl+C`: Copy selected
+- `Ctrl+V`: Paste
+- `Ctrl+X`: Cut
+- `Delete`: Delete selected
+- `Ctrl+S`: Save
+- `Ctrl+Shift+S`: Save As
+
+#### Special Behaviors
+- **Auto-add on drag**: Drag from handle → drop on empty → show filtered menu → auto-connect
+- **Single connection per input**: New connection replaces existing
+- **Smart Split adaptation**: Auto-adapt output type based on input connection
+- **Relay Auto adaptation**: Adapt on both connect and load/undo
+- **Last Output protection**: Can't delete if only one Output node exists
+- **Undo debouncing**: Only save history every 2s to prevent spam
+- **Custom node defaults**: Add Custom Input + Output if subgraph empty
+
+---
+
+### ShaderNode Component
+
+**File**: `src/components/ShaderNode.tsx`
+
+**Purpose**: Renders individual nodes with inputs/outputs, controls, and special modes.
+
+#### Props
+```typescript
+interface NodeProps {
+  id: string;
+  data: {
+    definition: ShaderNodeDefinition;
+    label?: string;
+    value?: any;
+    min?: number;
+    max?: number;
+    step?: number;
+    adaptedOutputs?: { id: string; label: string; type: string }[];
+  };
+  selected: boolean;
+}
+```
+
+#### Special Node Types
+1. **Note (`special_note`)**:
+   - Resizable text area
+   - Title input + multi-line content
+   - Brown background (#4e342e)
+   - No handles
+
+2. **Group (`special_group`)**:
+   - Resizable container
+   - Large title + color picker
+   - Semi-transparent background
+   - No handles
+   - Acts as visual grouping
+
+3. **UV (`uv`)**:
+   - Special inset top border (green)
+   - Visual distinction for UV coordinates
+
+4. **Float Param (`param_float`)**:
+   - Slider control
+   - Min/max/step adjustable
+   - No inputs, single float output
+
+5. **Color Param (`param_color`)**:
+   - Color picker control
+   - No inputs, vec3 output (RGB)
+
+6. **Smart Compose (`smart_compose`)**:
+   - Type selector buttons (vec2/vec3/vec4)
+   - Dynamically changes input count
+
+7. **Custom Node**:
+   - Purple border (#9c27b0)
+   - 🔲 icon next to label
+   - "🔲 CUSTOM" badge on top
+   - Purple box-shadow
+
+8. **Compact Mode (`def.compact`)**:
+   - Small circular node
+   - Label in center
+   - Multi-output ports in flexbox layout (for Smart Split)
+
+#### Rendering Logic
+```
+if (isNote) → ResizableNote
+else if (isGroup) → ResizableGroup  
+else if (compact) → CompactNode
+else → StandardNode
+```
+
+#### Standard Node Structure
+```
+<div> (baseStyle + customStyle/uvStyle)
+  {renderInfoIcon()} - if description exists
+  {isCustomNode && <Badge>🔲 CUSTOM</Badge>}
+  <HeaderStrip color={headerColor} />
+  <TitleBar>
+    <input editable label />
+  </TitleBar>
+  {isSmartCompose && <TypeSelector />}
+  <Body>
+    <InputsColumn>
+      {inputs.map => <Handle + Label + MultiTypeIndicator>}
+    </InputsColumn>
+    {controls && <ControlsSection>}
+    <OutputsColumn>
+      {outputs.map => <Label + Handle + MultiTypeIndicator>}
+    </OutputsColumn>
+  </Body>
+</div>
+```
+
+#### Visual Styling
+- **Header color**: Based on first output type (or first input for processing nodes)
+- **Border**: Selected = pink (#ff007a), Normal = gray (#555), Custom = purple (#9c27b0)
+- **Box-shadow**: Selected = pink glow, Custom = purple glow
+- **Handle colors**: TYPE_COLORS (red/green/blue/yellow/purple)
+
+---
+
+### Sidebar Component
+
+**File**: `src/components/Sidebar.tsx`
+
+**Purpose**: Node library, parameter controls, and custom nodes management.
+
+#### Props
+```typescript
+interface Props {
+  nodes: Node[];
+  setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
+  currentContext?: string; // Current navigation context (default: 'Main')
+}
+```
+
+#### State Variables
+- `collapsed` (boolean): Sidebar collapsed state
+- `activeTab` ('lib' | 'params'): Active tab (Library vs Parameters)
+- `refreshKey` (number): Force re-render for custom nodes
+- `contextMenu` ({x, y, nodeId} | null): Right-click menu on custom node
+
+#### Tabs
+
+**1. Library Tab (`'lib'`)**
+- Shows node categories in accordion
+- Drag-and-drop to add nodes
+- Categories:
+  - Output & Inputs
+  - Math (Basic)
+  - Math (Trig/Func)
+  - Vector & Space
+  - Utils
+  - Color & Shapes
+  - **Custom Nodes** (dynamic, loaded from localStorage)
+
+**2. Parameters Tab (`'params'`)**
+- Shows all parameter nodes (param_float, param_color)
+- Grouped by label (same name = one entry)
+- Slider for floats, color picker for colors
+- Changes update ALL nodes with same label (global params)
+
+#### Custom Nodes Features
+- **Loading**: Loaded via `loadCustomNodes()` on mount and refreshKey change
+- **Refresh triggers**:
+  - localStorage 'storage' event (from other tabs)
+  - Custom 'customNodesUpdated' event (from same window)
+- **Context menu**: Right-click → Delete (with usage warning)
+- **Deletion flow**:
+  1. Check if used on canvas
+  2. Show warning if used
+  3. Confirm deletion
+  4. Remove from localStorage + NODE_REGISTRY
+  5. Force refresh (setRefreshKey)
+
+#### Drag & Drop
+```javascript
+onDragStart(event, nodeType) {
+  event.dataTransfer.setData('application/reactflow', nodeType);
+  event.dataTransfer.effectAllowed = 'move';
+}
+```
+
+#### Visual Features
+- **Color indicators**: Input/output type colors next to node names
+- **Multi-type indicators**: Special component for float|vec3 etc.
+- **Collapse button**: Triangle icon, toggles sidebar width
+
+---
+
+### Toolbar Component
+
+**File**: `src/components/Toolbar.tsx`
+
+**Purpose**: Top-right toolbar with file operations and view controls.
+
+#### Props
+```typescript
+interface Props {
+  onSave: (saveAs?: boolean) => void;
+  onLoad: () => void;
+  onClear: () => void;
+  onNew: () => void;
+  onFitView: () => void;
+  onShowCode: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  currentFile?: string | null;
+}
+```
+
+#### Buttons (Left to Right)
+
+1. **File Path Display** (if currentFile)
+   - Shows current file name
+   - Gray, non-clickable
+   - Example: "📄 beautiful.json"
+
+2. **New**
+   - Creates new project
+   - No confirmation (instant reset)
+   - Clears file path
+
+3. **Save**
+   - If file path exists → Save
+   - If no path → Save As (file picker)
+
+4. **Save As**
+   - Always shows file picker
+   - Updates currentFile path
+
+5. **Load**
+   - Shows file picker
+   - Loads graph + custom nodes
+
+6. **Undo** (Ctrl+Z)
+   - Disabled if !canUndo
+   - Grayed out when disabled
+
+7. **Redo** (Ctrl+Y)
+   - Disabled if !canRedo
+   - Grayed out when disabled
+
+8. **Fit View**
+   - Centers all nodes
+   - Zoom with 0.2 padding
+   - 300ms animation
+
+9. **Show Code**
+   - Compiles graph
+   - Shows GLSL modal
+
+10. **Clear All**
+    - Clears graph with confirmation
+    - Warning dialog: "Clear all nodes?"
+
+#### Visual Styling
+- **Background**: Dark gray (#1a1a1a)
+- **Buttons**: Gray (#333) with hover effect (#444)
+- **Disabled**: Opacity 0.3, cursor not-allowed
+
+---
+
+### NavigationPanel Component
+
+**File**: `src/components/NavigationPanel.tsx`
+
+**Purpose**: Breadcrumb navigation for custom node hierarchy.
+
+#### Props
+```typescript
+interface NavigationPanelProps {
+  breadcrumbs: string[];            // ['Main', 'OuterNode', 'InnerNode']
+  currentContext: string;            // 'InnerNode'
+  onNavigateToLevel: (index) => void;
+  onNavigateBack: () => void;
+  onNavigateToMain: () => void;
+}
+```
+
+#### Visibility
+- **Hidden** when `currentContext === 'Main'`
+- **Visible** when inside any custom node
+
+#### Visual Structure
+```
+┌─────────────────────────────────────┐
+│ ✏️ EDITING: InnerNode               │  (Big banner)
+├─────────────────────────────────────┤
+│ 📍 🏠 Main › 🔲 OuterNode › InnerNode│  (Breadcrumbs, clickable)
+├─────────────────────────────────────┤
+│ [← Up One Level] [🏠 Exit to Main] │  (Quick nav buttons)
+└─────────────────────────────────────┘
+```
+
+#### Features
+- **Breadcrumbs**: Clickable buttons to jump to any level
+- **Current level**: Highlighted in purple (#8a2be2)
+- **Hover effects**: Border changes to purple on hover
+- **Icons**: 🏠 for Main, 🔲 for custom nodes
+- **Backdrop blur**: Semi-transparent purple background
+
+#### Positioning
+- **Fixed** position: top: 80px, left: 10px
+- **Z-index**: 100 (above canvas, below modals)
+- **Max-width**: 600px
+
+---
+
+### ContextMenu Component
+
+**File**: `src/components/ContextMenu.tsx`
+
+**Purpose**: Right-click menu with node categories and actions.
+
+#### Props
+```typescript
+interface Props {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onAddNode: (typeId: string) => void;
+  filterType?: string | null;        // Type filter for drag-from-handle
+  onPaste?: () => void;
+  onCreateCustom?: () => void;
+  hasClipboard?: boolean;
+  hasSelection?: boolean;
+}
+```
+
+#### Menu Variants
+
+**1. Pane Context Menu** (Right-click on empty canvas)
+```
+📋 Paste (Ctrl+V)           [enabled if hasClipboard]
+📦 Create Custom Node       [ALWAYS enabled]
+──────────────────
+Output & Inputs     ›
+Math (Basic)        ›
+...
+```
+
+**2. Filtered Context Menu** (Drag from handle, drop on empty)
+```
+Connecting: float →         [header showing type]
+──────────────────
+Compatible nodes only       [filtered by type]
+Math (Basic)        ›
+...
+```
+
+**3. Node Context Menu** (Right-click on node)
+- Shown via NodeContextMenu component (separate file)
+- Actions: Copy, Cut, Delete, Edit Definition (custom only)
+
+#### Behavior
+- **Auto-positioning**: Adjusts if near screen edge
+- **Submenu direction**: Opens left if near right edge
+- **Filter logic**: Uses `isValidConnection()` for type compatibility
+- **Click outside**: Closes menu
+- **Hover category**: Shows submenu with node list
+- **Click node**: Adds to canvas, closes menu
+
+#### Visual Styling
+- **Background**: Dark (#1a1a1a)
+- **Border**: Gray (#444)
+- **Hover**: Item highlights with pink (#ff007a) or gray (#333)
+- **Submenu**: Positioned absolutely, same styling
+
+---
+
+### CreateCustomNodeDialog Component
+
+**File**: `src/components/CreateCustomNodeDialog.tsx`
+
+**Purpose**: Modal dialog for creating custom nodes.
+
+#### Props
+```typescript
+interface Props {
+  onClose: () => void;
+  onCreate: (name: string, description: string) => void;
+}
+```
+
+#### Fields
+1. **Name** (required)
+   - Text input
+   - Placeholder: "My Custom Effect"
+   - Validation: Must not be empty
+   - Auto-focus on open
+
+2. **Description** (optional)
+   - Textarea
+   - Placeholder: "What does this custom node do?"
+   - Resizable vertically
+
+#### Buttons
+- **Cancel**: Close dialog without creating
+- **Create**: Validate and call onCreate()
+
+#### Keyboard Shortcuts
+- `Enter` (in name field): Create
+- `Escape`: Cancel
+
+#### Validation
+- Empty name → Alert: "Please enter a name for the custom node."
+- Valid → Calls onCreate(name.trim(), description.trim())
+
+#### Visual Layout
+```
+┌──────────────────────────────────┐
+│ 📦 Create Custom Node            │
+├──────────────────────────────────┤
+│ Name *                           │
+│ [My Custom Effect________]       │
+│                                  │
+│ Description (optional)           │
+│ [What does this...________]      │
+│ [                          ]     │
+│                                  │
+│          [Cancel]  [Create]      │
+├──────────────────────────────────┤
+│ 💡 Tip: Use "Custom Input" and  │
+│ "Custom Output" nodes inside...  │
+└──────────────────────────────────┘
+```
+
+#### Styling
+- **Modal overlay**: rgba(0,0,0,0.8), covers full screen
+- **Dialog**: 400px wide, centered
+- **Background**: Dark gray (#1a1a1a)
+- **Inputs**: Dark background (#222), light text
+- **Create button**: Pink (#ff007a) with hover effect
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
@@ -530,6 +1044,7 @@ alert('✅ Custom node "MyNode" created!');
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-02-15 | 1.0 | Initial functional requirements document |
+| 2026-02-15 | 1.1 | **Iteracja 1**: Added "UI Components Specification" - Complete specs for NodeEditor, ShaderNode, Sidebar, Toolbar, NavigationPanel, ContextMenu, CreateCustomNodeDialog (334 new lines) |
 
 ---
 
