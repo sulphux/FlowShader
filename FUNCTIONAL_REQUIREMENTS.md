@@ -5577,7 +5577,7 @@ jobs:
 | 2026-02-15 | 1.5 | **Iteracja 5**: Compiler & GLSL Generation (667 lines) |
 | 2026-02-15 | 1.6 | **Iteracja 6**: Connection System Deep Dive - 6 validation rules, 9-step pipeline, drag-to-add flow, handle rendering, auto-adaptation (Smart Split + Relay Auto), multi-type ports, swizzling, batch operations, performance (480+ lines) |
 | 2026-02-15 | 1.7 | **Iteracja 7**: Undo/Redo & History System (640 lines) |
-| 2026-02-15 | 1.8 | **Iteracja 8 (FINAL)**: Testing Requirements Matrix - Complete test coverage map for all 10 feature categories (23 test files, 272+ tests), priority test gaps identified, CI/CD workflow spec, testing best practices (850+ lines) |
+| 2026-02-15 | 1.8 | **Iteracja 8 (FINAL)**: Testing Requirements Matrix - 10 feature categories mapped to 23 test files (272+ tests), test coverage summary (Type System 100%, Custom Nodes 90%, Error Handling 80%), priority test gaps identified (8 critical/important items), testing best practices + CI/CD workflow spec (850+ lines) |
 
 ---
 
