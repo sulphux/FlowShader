@@ -4324,6 +4324,646 @@ Validation:
 
 ---
 
+## Undo/Redo & History System Specification
+
+This section provides complete specification of the undo/redo history management system.
+
+### Overview
+
+**Purpose**: Allow users to undo and redo graph changes with keyboard shortcuts.
+
+**Implementation**: Array-based history with circular buffer and debouncing.
+
+**Shortcuts**:
+- `Ctrl+Z`: Undo (go back one state)
+- `Ctrl+Y` or `Ctrl+Shift+Z`: Redo (go forward one state)
+
+---
+
+### State Variables
+
+```typescript
+const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+const [historyIndex, setHistoryIndex] = useState(-1);
+const maxHistorySize = 50;
+```
+
+**history**:
+- Array of snapshots
+- Each snapshot: `{ nodes: Node[], edges: Edge[] }`
+- Deep copied (JSON.parse(JSON.stringify()))
+- Maximum 50 snapshots (circular buffer)
+
+**historyIndex**:
+- Current position in history
+- `-1`: No history (initial state)
+- `0`: First snapshot
+- `history.length - 1`: Latest snapshot
+
+**maxHistorySize**:
+- Constant: 50
+- Oldest snapshots removed when exceeded
+
+---
+
+### History Snapshot Creation
+
+#### saveToHistory() Function
+
+```typescript
+const saveToHistory = useCallback(() => {
+  // 1. Create deep copy snapshot
+  const snapshot = { 
+    nodes: JSON.parse(JSON.stringify(nodes)), 
+    edges: JSON.parse(JSON.stringify(edges)) 
+  };
+  
+  // 2. Clear future states if we're not at the end
+  setHistory(prev => {
+    const newHistory = prev.slice(0, historyIndex + 1);  // Trim future
+    newHistory.push(snapshot);                            // Add new snapshot
+    return newHistory.slice(-maxHistorySize);             // Keep last 50
+  });
+  
+  // 3. Update index (capped at maxHistorySize - 1)
+  setHistoryIndex(prev => Math.min(prev + 1, maxHistorySize - 1));
+}, [nodes, edges, historyIndex, maxHistorySize]);
+```
+
+**Process**:
+1. **Deep Copy**: JSON serialization to avoid reference sharing
+2. **Branch Handling**: `slice(0, historyIndex + 1)` removes future states
+3. **Circular Buffer**: `slice(-maxHistorySize)` keeps last 50
+4. **Index Update**: Increments but caps at 49
+
+**Memory**:
+- Each snapshot: ~10-100KB depending on graph size
+- 50 snapshots: ~500KB - 5MB total
+
+---
+
+### Debouncing Mechanism
+
+#### Auto-Save Trigger
+```typescript
+useEffect(() => {
+  const currentHash = getLogicHash(nodes, edges);
+  
+  if (currentHash !== lastLogicHash.current && nodes.length > 0) {
+    const timeoutId = setTimeout(() => {
+      saveToHistory();
+    }, 2000); // 2 second debounce
+    
+    return () => clearTimeout(timeoutId);
+  }
+}, [nodes, edges, saveToHistory]);
+```
+
+**Logic**:
+1. **Hash Comparison**: Only trigger if graph actually changed
+2. **2s Delay**: Wait 2 seconds after last change
+3. **Cleanup**: Clear timeout if user makes another change within 2s
+4. **Empty Graph Skip**: `nodes.length > 0` prevents snapshot of empty state
+
+**getLogicHash()**:
+```typescript
+const getLogicHash = (nodes: Node[], edges: Edge[]) => {
+  return JSON.stringify({ 
+    nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })), 
+    edges 
+  });
+};
+```
+- Creates string representation of graph logic (ignores positions)
+- Used to detect meaningful changes
+
+**Why Debounce?**:
+- Prevents snapshot on every keystroke (e.g., editing label)
+- Prevents snapshot on every node drag
+- Reduces memory usage
+- Improves performance
+
+**Edge Cases**:
+- User makes change, waits 2s → snapshot
+- User makes change, undoes within 2s → no snapshot (cleared by cleanup)
+- User makes rapid changes → only last state captured (previous timeouts canceled)
+
+---
+
+### Undo Operation
+
+#### undo() Function
+
+```typescript
+const undo = useCallback(() => {
+  if (historyIndex > 0) {
+    const prevState = history[historyIndex - 1];
+    setNodes(prevState.nodes);
+    setEdges(prevState.edges);
+    setHistoryIndex(prev => prev - 1);
+  }
+}, [history, historyIndex, setNodes, setEdges]);
+```
+
+**Process**:
+1. **Check Availability**: `historyIndex > 0` (must have previous state)
+2. **Get Previous State**: `history[historyIndex - 1]`
+3. **Restore State**: setNodes(), setEdges()
+4. **Decrement Index**: Move back in history
+
+**After Restore**:
+- ReactFlow re-renders with restored graph
+- Smart Split nodes auto-adapt (if needed)
+- Relay Auto nodes auto-adapt (if needed)
+- Compilation updates
+- **NO new snapshot created** (restoring doesn't trigger saveToHistory)
+
+**Button State**:
+```typescript
+canUndo={historyIndex > 0}
+```
+- Grayed out when historyIndex === 0 or -1
+- Enabled when previous states exist
+
+---
+
+### Redo Operation
+
+#### redo() Function
+
+```typescript
+const redo = useCallback(() => {
+  if (historyIndex < history.length - 1) {
+    const nextState = history[historyIndex + 1];
+    setNodes(nextState.nodes);
+    setEdges(nextState.edges);
+    setHistoryIndex(prev => prev + 1);
+  }
+}, [history, historyIndex, setNodes, setEdges]);
+```
+
+**Process**:
+1. **Check Availability**: `historyIndex < history.length - 1` (must have future state)
+2. **Get Next State**: `history[historyIndex + 1]`
+3. **Restore State**: setNodes(), setEdges()
+4. **Increment Index**: Move forward in history
+
+**After Restore**:
+- Same as Undo (re-render, auto-adapt)
+
+**Button State**:
+```typescript
+canRedo={historyIndex < history.length - 1}
+```
+- Grayed out when at latest state
+- Enabled when future states exist
+
+---
+
+### Branching Behavior
+
+#### Scenario: Undo Then Make Change
+
+**Timeline**:
+```
+1. Initial state (A)
+2. Make change → State B
+3. Make change → State C
+4. Undo → Back to B (historyIndex = 1)
+5. Make new change → State D
+
+History Array:
+Before step 5: [A, B, C]  (index = 1, at B)
+After step 5:  [A, B, D]  (index = 2, at D, C is lost)
+```
+
+**Implementation**:
+```typescript
+setHistory(prev => {
+  const newHistory = prev.slice(0, historyIndex + 1);  // [A, B]
+  newHistory.push(snapshot);                            // [A, B, D]
+  return newHistory.slice(-maxHistorySize);
+});
+```
+
+**Behavior**:
+- **Future states discarded**: State C is permanently lost
+- **Linear history**: No tree structure (no multi-branch)
+- **User expectation**: Standard undo/redo behavior (like most apps)
+
+---
+
+### Operations Captured in History
+
+#### Captured ✅
+
+1. **Add Node**:
+   - Drag from sidebar
+   - Select from context menu
+   - Paste
+
+2. **Delete Node**:
+   - Delete key
+   - Context menu delete
+   - Cut
+
+3. **Move Node**:
+   - Drag to new position
+   - **Note**: Only captured after 2s (debounced)
+
+4. **Edit Node Value**:
+   - Change slider
+   - Edit label
+   - Change color
+   - **Note**: Only captured after 2s (debounced)
+
+5. **Create Edge**:
+   - Drag connection
+   - Auto-add connection
+
+6. **Delete Edge**:
+   - Right-click edge
+   - Delete source/target node
+
+7. **Paste**:
+   - Ctrl+V (multiple nodes + edges)
+
+8. **Smart Split Adaptation**:
+   - Output ports change
+   - Captured in node.data.definition
+
+9. **Relay Auto Adaptation**:
+   - Input/output types change
+   - Captured in node.data.definition
+
+10. **Create Custom Node**:
+    - New custom node added to registry
+    - **Note**: Definition itself NOT in history (only instances)
+
+#### NOT Captured ❌
+
+1. **Navigation** (Enter/Exit Custom Nodes):
+   - navigationStack changes
+   - currentContext changes
+   - **Reason**: Navigation is separate from graph editing
+
+2. **UI State**:
+   - Sidebar collapsed
+   - Active tab (Library vs Parameters)
+   - Context menu state
+   - **Reason**: UI state is ephemeral
+
+3. **File Operations**:
+   - currentFilePath
+   - **Reason**: File path is metadata, not graph content
+
+4. **Viewport** (Pan/Zoom):
+   - ReactFlow viewport state
+   - **Reason**: User can re-pan manually
+
+5. **Selection State**:
+   - Which nodes are selected
+   - **Reason**: Selection is temporary UI state
+
+---
+
+### History Lifecycle
+
+#### Initialization
+```typescript
+const [history, setHistory] = useState<Array<{ nodes, edges }>>([]);
+const [historyIndex, setHistoryIndex] = useState(-1);
+```
+- Empty array
+- Index = -1 (no history)
+
+#### First Change
+```
+User adds node
+   ↓
+After 2s → saveToHistory()
+   ↓
+history = [{ nodes: [Output, Add], edges: [] }]
+historyIndex = 0
+```
+
+#### Subsequent Changes
+```
+User adds connection
+   ↓
+After 2s → saveToHistory()
+   ↓
+history = [State0, State1]
+historyIndex = 1
+```
+
+#### After Undo
+```
+User presses Ctrl+Z
+   ↓
+undo()
+   ↓
+historyIndex = 0
+Graph restored to State0
+history array unchanged
+```
+
+#### After New Change (Branching)
+```
+User adds node (while at historyIndex=0)
+   ↓
+After 2s → saveToHistory()
+   ↓
+history.slice(0, 0+1) = [State0]  // Remove State1
+history.push(State2) = [State0, State2]
+historyIndex = 1
+```
+
+#### Max Size Reached
+```
+history.length = 50
+User makes change
+   ↓
+After 2s → saveToHistory()
+   ↓
+newHistory = prev.slice(0, 50) = [all 50 states]
+newHistory.push(State51) = [51 states]
+newHistory.slice(-50) = [State2...State51]  // State1 removed
+historyIndex = 49 (capped)
+```
+
+---
+
+### Integration with Other Systems
+
+#### Smart Split Restoration
+```typescript
+// After undo/redo, re-adapt Smart Split nodes
+const restored = history[newIndex];
+setNodes(restored.nodes);
+
+// Smart Split nodes in restored state have saved outputs
+// If outputs don't match current connections → auto-adapt
+// (handled in restoreGraph logic)
+```
+
+#### Custom Node Instances
+```
+Snapshot includes:
+  - Custom node instances (nodes with type='shaderNode', definition.isCustom=true)
+  - Their positions, connections
+
+Snapshot does NOT include:
+  - Custom node definitions (in NODE_REGISTRY)
+  - Custom node subgraphs
+
+Behavior:
+  - Undo/Redo restores instances
+  - Definitions persist (not affected by history)
+  - If definition changed between undo → instance uses NEW definition
+```
+
+#### Manual Save Points
+```typescript
+// Some operations call saveToHistory() immediately (no debounce)
+
+handleClear() → saveToHistory() → Clear graph
+handleNew() → saveToHistory() → New project
+
+// Creates snapshot BEFORE destructive action
+// Ensures user can undo back to state before Clear/New
+```
+
+---
+
+### Edge Cases & Limitations
+
+#### Edge Case 1: Undo During 2s Window
+```
+User adds node
+User waits 1s
+User presses Ctrl+Z
+   ↓
+No snapshot created yet (debounce not complete)
+Undo does nothing (historyIndex unchanged)
+```
+- **Workaround**: Wait 2s before undoing
+- **Improvement**: Could save immediately on undo
+
+#### Edge Case 2: Many Rapid Changes
+```
+User drags node continuously for 10 seconds
+   ↓
+Timeout resets on each move (every frame)
+After user stops → 2s later → ONE snapshot
+   ↓
+Undo goes back to state before dragging started
+All intermediate positions lost
+```
+- **Behavior**: Entire drag session = one undoable action
+- **Expected**: Users typically undo "actions", not micro-moves
+
+#### Edge Case 3: Undo After Load File
+```
+User loads file
+User presses Ctrl+Z
+   ↓
+historyIndex = -1 (no history after load)
+Undo does nothing
+```
+- **Behavior**: Loading clears history
+- **Reason**: Prevents mixing two different graphs
+- **Improvement**: Could snapshot before load
+
+#### Edge Case 4: History Limit Overflow
+```
+User makes 100 changes
+   ↓
+history.length = 50 (oldest 50 discarded)
+historyIndex = 49
+   ↓
+User can only undo 50 steps (not all 100)
+```
+- **Behavior**: Oldest changes lost
+- **Trade-off**: Memory vs. unlimited history
+
+#### Limitation 1: No Redo After Edit
+```
+Timeline:
+1. State A
+2. Change → State B
+3. Change → State C
+4. Undo → Back to B
+5. Change → State D (creates branch)
+6. Press Ctrl+Y (Redo)
+   ↓
+Result: Nothing (State C was discarded in step 5)
+```
+- **Standard behavior**: Most apps work this way
+- **Alternative**: Tree-based history (complex, not implemented)
+
+#### Limitation 2: No Partial Undo
+```
+User adds 5 nodes in sequence
+After 2s → ONE snapshot
+   ↓
+Undo removes all 5 nodes at once
+Cannot undo individual additions
+```
+- **Reason**: Debouncing groups rapid actions
+- **Trade-off**: Fewer snapshots vs. granular control
+
+#### Limitation 3: Position-Only Changes
+```
+User drags node slightly
+After 2s → snapshot
+   ↓
+Undo restores old position (even if difference is 1px)
+```
+- **Inefficiency**: Snapshots even for tiny moves
+- **Improvement**: Could have position threshold (e.g., >10px)
+
+---
+
+### Memory Optimization Strategies
+
+#### Current: Deep Copy via JSON
+```typescript
+JSON.parse(JSON.stringify(nodes))
+```
+- **Pros**: Simple, safe (no references)
+- **Cons**: Slow for large graphs, memory intensive
+
+#### Potential: Structural Sharing
+```typescript
+// Only copy changed nodes, share unchanged
+const snapshot = {
+  nodes: nodes.map(n => changedIds.has(n.id) ? {...n} : n),
+  edges: edges // Reuse if unchanged
+};
+```
+- **Pros**: Faster, less memory
+- **Cons**: Complex, risk of reference bugs
+
+#### Potential: Delta Encoding
+```typescript
+// Store only changes, not full state
+const delta = {
+  type: 'ADD_NODE',
+  node: newNode
+};
+```
+- **Pros**: Minimal memory per snapshot
+- **Cons**: Complex to implement, slower to restore
+
+**Current Choice**: Simplicity over optimization (JSON deep copy).
+
+---
+
+### Keyboard Shortcut Implementation
+
+```typescript
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key === 'z') {
+      e.preventDefault();
+      undo();
+    }
+    if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+      e.preventDefault();
+      redo();
+    }
+    // ... other shortcuts
+  };
+  
+  document.addEventListener('keydown', handleKeyDown);
+  return () => document.removeEventListener('keydown', handleKeyDown);
+}, [undo, redo, /* other handlers */]);
+```
+
+**Details**:
+- **Global Listener**: Attached to document (works even if input focused)
+- **preventDefault()**: Prevents browser default (e.g., Ctrl+Z = browser undo)
+- **Redo Variants**: Ctrl+Y OR Ctrl+Shift+Z (both supported)
+
+---
+
+### Testing Requirements for Undo/Redo
+
+#### Unit Tests (Currently: 3 tests)
+1. **History Management**: Push, trim, branch
+2. **Index Tracking**: Increment, decrement, cap
+3. **Deep Copy**: Ensure no reference sharing
+
+#### Integration Tests (Needed)
+1. **Undo After Add Node**: Verify node removed
+2. **Redo After Undo**: Verify node restored
+3. **Branch After Undo**: Verify future discarded
+4. **Max Size**: Verify oldest removed after 50
+5. **Debounce**: Verify 2s delay works
+6. **Smart Split Restore**: Verify outputs adapted
+
+#### E2E Tests (Needed)
+1. **Full Workflow**: Add → Edit → Undo → Redo → Verify all states
+2. **Complex Graph**: 20 nodes, 30 edges → Undo → Verify
+3. **Custom Nodes**: Create → Undo → Verify instance removed
+4. **Navigation**: Edit subgraph → Undo → Verify context unchanged
+
+---
+
+### Performance Characteristics
+
+#### Snapshot Creation
+- **Small graph** (5 nodes): ~1ms
+- **Medium graph** (20 nodes): ~5ms
+- **Large graph** (100 nodes): ~50ms
+- **Huge graph** (500 nodes): ~500ms
+
+**Bottleneck**: JSON.parse(JSON.stringify())
+
+#### Restore Speed
+- **Small graph**: < 1ms
+- **Large graph**: ~10ms (React re-render)
+
+**Bottleneck**: React reconciliation
+
+#### Memory Usage
+- **Per snapshot**: 10KB - 100KB
+- **50 snapshots**: 500KB - 5MB
+- **Browser limit**: ~50MB (safe)
+
+---
+
+### Future Improvements (TODO)
+
+1. **Immediate Snapshot on Undo**:
+   - If user undoes within 2s window → save current state first
+   - Prevents losing uncommitted changes
+
+2. **Position Threshold**:
+   - Only snapshot if node moved > 10px
+   - Reduces snapshots from micro-adjustments
+
+3. **Selective Snapshots**:
+   - Snapshot on "important" actions (add/delete node)
+   - Skip on "minor" actions (label edit)
+
+4. **Compressed Snapshots**:
+   - Use delta encoding or structural sharing
+   - Reduce memory 50-90%
+
+5. **Persist History**:
+   - Save history to localStorage
+   - Restore after page reload
+   - Allows undo across sessions
+
+6. **Visual History Timeline**:
+   - UI showing all snapshots
+   - Click to jump to specific state
+   - Like Git history viewer
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
