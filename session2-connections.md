@@ -1,8 +1,37 @@
 # SESSION 2: Connection System Audit
 
 **Date**: 2026-02-15  
-**Status**: ✅ COMPLETE  
+**Status**: ✅ COMPLETE (with spec conflict discovered)  
 **Test Count**: ~50 tests across 3 files
+
+---
+
+## ⚠️ CRITICAL DISCOVERY: Spec/Implementation Mismatch!
+
+**Issue Found**: Tests validate **PERMISSIVE** mode, but project owner wants **STRICT** mode
+
+### Current Implementation (tested):
+```typescript
+float → vec3  ✅ Allowed (auto-expansion in compiler)
+```
+
+### Desired Behavior (owner requirement):
+```typescript
+float → vec3  ❌ BLOCKED → Auto-insert "Combine Vec3" node
+```
+
+**Impact**: 
+- ❌ Current tests are "technically correct" but validate WRONG spec
+- ❌ Requires implementation refactor (validator + auto-adapter system)
+- ❌ Requires test refactor (change expectations from ✅ to ❌)
+
+**Action Required**:
+1. Implement Auto-Adapter System (`autoAdapterSystem.ts`)
+2. Update `connectionValidator.ts` to block float→vec conversions
+3. Refactor tests to expect STRICT validation
+4. Add tests for auto-adapter insertion
+
+**Spec Updated**: ✅ FUNCTIONAL_REQUIREMENTS.md v1.9 now documents STRICT mode
 
 ---
 
@@ -621,3 +650,82 @@ All tests verify meaningful behavior, no shallow tests detected. ✅
 **Session Completed**: 2026-02-15  
 **Next Session**: SESSION 3 (UI Components Audit - BIGGEST GAP 🔴)  
 **Estimated Next Session Duration**: ~15 min
+
+---
+
+## 🚨 Post-Session Update: Spec Conflict Resolution
+
+### What Changed After Session 2?
+
+**Discovery**: Project owner clarified type validation philosophy should be **STRICT** (Unreal Engine style), not **PERMISSIVE**
+
+**Before (tested)**:
+```
+float → vec3  ✅ (compiler auto-expands)
+```
+
+**After (desired)**:
+```
+float → vec3  ❌ → Auto-inserts "Combine Vec3" node
+                   User's float connects to Combine.x
+                   Combine.y, Combine.z = 0.0 (default)
+```
+
+### Updated Type Matrix (STRICT Mode)
+
+```
+SOURCE → TARGET    float  vec2  vec3  vec4  auto
+─────────────────  ─────  ────  ────  ────  ────
+float              ✅     ❌    ❌    ❌    ✅
+vec2               ❌     ✅    ❌    ❌    ✅
+vec3               ❌     ❌    ✅    ❌    ✅
+vec4               ❌     ❌    ❌    ✅    ✅
+auto               ✅     ✅    ✅    ✅    ✅
+```
+
+**Only ✅**: Same type OR auto
+
+### Implementation Backlog (NEW)
+
+1. **Auto-Adapter System** (~3-4 hours):
+   - Detect incompatible connection attempt
+   - Auto-insert Split/Combine nodes at midpoint
+   - Create edges: source → adapter → target
+   - Show toast notification
+
+2. **Update Validator** (~1 hour):
+   - Change Rule 2: `float → vec3` from ✅ to ❌
+   - Add `requiresAdapter: true` flag
+   - Update error messages
+
+3. **Refactor Tests** (~2 hours):
+   - Change 12 tests: `expect(valid).toBe(true)` → `expect(valid).toBe(false)`
+   - Add 10+ tests for auto-adapter insertion
+   - Update integration scenarios
+
+4. **Right-Click "Split Values"** (~2 hours):
+   - Context menu on output handles
+   - Creates Split node + auto-connects
+   - Unreal Blueprint style
+
+**Total Effort**: ~8-10 hours
+
+### Why This Matters
+
+**Philosophy Shift**:
+- ❌ OLD: "Make it easy, auto-convert types"
+- ✅ NEW: "Make it explicit, show conversions visually"
+
+**Benefits of STRICT mode**:
+1. Users **see** type conversions (Split/Combine nodes visible)
+2. Users **understand** data flow better
+3. Debugging easier (explicit conversion steps)
+4. Matches Unreal Engine (familiar to gamedevs)
+
+**Current Status**: Spec updated (v1.9), implementation pending
+
+---
+
+**Spec Version**: 1.9 (STRICT mode documented)  
+**Implementation Version**: Still PERMISSIVE (requires refactor)  
+**Test Suite**: Validates PERMISSIVE (requires refactor)

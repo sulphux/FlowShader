@@ -2,12 +2,15 @@
 
 ## Core Principles
 
-### 1. **Unreal Engine-Style Strict Type Validation**
-- ✅ NO automatic type conversions between incompatible types
-- ✅ `float` ≠ `vec3` - must use explicit conversion nodes
+### 1. **Unreal Engine-Style Strict Type Validation + Auto-Adapters**
+- ✅ NO automatic type conversions (strict type matching only)
+- ✅ `float` ≠ `vec3` - BLOCKED, auto-inserts Combine node
+- ✅ `vec3` ≠ `float` - BLOCKED, auto-inserts Split node  
 - ✅ `auto` type can connect to anything (universal adapter)
 - ✅ Multi-type ports (e.g., `float|vec3`) accept only specified types
 - ✅ Connection validation happens BEFORE edge creation
+- ✅ **Auto-Adapter System**: Inserts Split/Combine nodes automatically (like Unreal Blueprint)
+- ✅ **Right-click "Split Values"**: Context menu shortcut (backlog)
 - ✅ Type colors match Unreal Engine convention (Red=float, Green=vec2, Blue=vec3, Yellow=vec4, Purple=auto)
 
 ### 2. **Custom Nodes are the Killer Feature**
@@ -3713,22 +3716,29 @@ vec4 → vec4 ✅
 - Same types always valid
 - No conversion needed
 
-**Rule 2: Float Expansion**
+**Rule 2: Float to Vector - BLOCKED (Auto-Adapter)**
 ```typescript
-float → vec2 ✅  // Expands to vec2(float)
-float → vec3 ✅  // Expands to vec3(float)
-float → vec4 ✅  // Expands to vec4(float, float, float, 1.0)
+float → vec2 ❌  // Requires Combine Vec2 (auto-inserted)
+float → vec3 ❌  // Requires Combine Vec3 (auto-inserted)
+float → vec4 ❌  // Requires Combine Vec4 (auto-inserted)
 ```
-- Float can connect to any vector
-- Compiler handles expansion
+- **Direct connection blocked** (strict type matching only)
+- **Auto-Adapter System**: Automatically inserts Combine node between
+- Float connects to Combine.x, other inputs default to 0.0
+- User can manually connect y, z, w later
+- **Reason**: "Cannot connect float to {vecType} directly. Inserting Combine node..."
 
-**Rule 3: Vector to Float - BLOCKED**
+**Rule 3: Vector to Float - BLOCKED (Auto-Adapter)**
 ```typescript
-vec2 → float ❌  // Requires Split node
-vec3 → float ❌  // Requires Split node
-vec4 → float ❌  // Requires Split node
+vec2 → float ❌  // Requires Split Vec2 (auto-inserted)
+vec3 → float ❌  // Requires Split Vec3 (auto-inserted)
+vec4 → float ❌  // Requires Split Vec4 (auto-inserted)
 ```
-- **Reason**: "Cannot connect {vecType} to float directly. Use Split node to extract components."
+- **Direct connection blocked** (strict type matching only)
+- **Auto-Adapter System**: Automatically inserts Split node between
+- Vector connects to Split.in, Split.x connects to target
+- User can access .y, .z, .w outputs if needed
+- **Reason**: "Cannot connect {vecType} to float directly. Inserting Split node..."
 - **requiresSplit**: true
 - Forces explicit conversion
 
@@ -3816,6 +3826,201 @@ isValidSwizzle('vec3', 'w') // → false (vec3 has no w)
 isValidSwizzle('float', 'x') // → false (can't swizzle scalar)
 isValidSwizzle('float|vec3', 'x') // → false (can't swizzle multi-type)
 ```
+
+---
+
+### Auto-Adapter System (Unreal Engine Style)
+
+**Inspiration**: Unreal Engine Blueprint auto-converts types by inserting "Break Vector" / "Make Vector" nodes
+
+**Purpose**: Allow users to drag incompatible types → system auto-inserts conversion nodes
+
+**File**: `src/core/autoAdapterSystem.ts` (TODO: Implement)
+
+#### When Auto-Adapter Triggers
+
+**Scenario 1: float → vec3 (Insert Combine)**
+```
+User attempts:  [Time (float)] → [Color Input (vec3)]
+
+System reacts:
+1. Block direct connection
+2. Insert "Combine Vec3" node at midpoint
+3. Connect: Time.out → Combine.x
+4. Connect: Combine.out → Color.in
+5. Leave Combine.y, Combine.z empty (default 0.0)
+
+Result:
+[Time] → [Combine Vec3] → [Color]
+          ↑ x = Time
+          ↑ y = 0.0
+          ↑ z = 0.0
+```
+
+**Scenario 2: vec3 → float (Insert Split)**
+```
+User attempts:  [UV (vec2)] → [Sin (float)]
+
+System reacts:
+1. Block direct connection
+2. Insert "Split Vec2" node at midpoint
+3. Connect: UV.out → Split.in
+4. Connect: Split.x → Sin.in (default to .x component)
+5. Leave Split.y unused (user can connect manually)
+
+Result:
+[UV] → [Split Vec2] → [Sin]
+        ↑ x → connected
+        ↑ y (unused)
+```
+
+**Scenario 3: vec2 → vec3 (Insert Split + Combine)**
+```
+User attempts:  [UV (vec2)] → [Color Input (vec3)]
+
+System reacts:
+1. Block direct connection
+2. Insert "Split Vec2" + "Combine Vec3" at midpoint
+3. Connect: UV.out → Split.in
+4. Connect: Split.x → Combine.x
+5. Connect: Split.y → Combine.y
+6. Connect: Combine.out → Color.in
+7. Leave Combine.z empty (default 0.0)
+
+Result:
+[UV] → [Split Vec2] → [Combine Vec3] → [Color]
+        ↑ x → Combine.x
+        ↑ y → Combine.y
+                       ↑ z = 0.0
+```
+
+#### Implementation Strategy
+
+**Step 1: Detect Incompatible Connection**
+```typescript
+onConnect(params) {
+  const validation = validateConnection(sourceType, targetType);
+  
+  if (!validation.valid && validation.requiresAdapter) {
+    insertAutoAdapter(params, sourceType, targetType);
+    return; // Don't create direct edge
+  }
+}
+```
+
+**Step 2: Insert Appropriate Adapter Node**
+```typescript
+function insertAutoAdapter(params, sourceType, targetType) {
+  const midpoint = {
+    x: (sourceNode.position.x + targetNode.position.x) / 2,
+    y: (sourceNode.position.y + targetNode.position.y) / 2
+  };
+  
+  if (isFloatToVector(sourceType, targetType)) {
+    // Insert Combine node
+    const combineNode = createNode('combine_vecN', midpoint);
+    connectNodes(sourceNode, combineNode, 'x');
+    connectNodes(combineNode, targetNode);
+  }
+  
+  else if (isVectorToFloat(sourceType, targetType)) {
+    // Insert Split node
+    const splitNode = createNode('split_vecN', midpoint);
+    connectNodes(sourceNode, splitNode);
+    connectNodes(splitNode, targetNode, 'x'); // Default .x
+  }
+  
+  else if (isDifferentVectors(sourceType, targetType)) {
+    // Insert Split + Combine
+    const splitNode = createNode('split_vecN', { x: midpoint.x - 100, y: midpoint.y });
+    const combineNode = createNode('combine_vecM', { x: midpoint.x + 100, y: midpoint.y });
+    connectNodes(sourceNode, splitNode);
+    connectComponents(splitNode, combineNode);
+    connectNodes(combineNode, targetNode);
+  }
+}
+```
+
+**Step 3: User Feedback**
+```typescript
+// Show toast notification
+toast.success(`✨ Auto-inserted Combine Vec3 node`);
+
+// Or info popup
+alert('ℹ️ Cannot connect float to vec3 directly.\nInserted Combine node. Connect y, z manually if needed.');
+```
+
+#### Alternative: Right-Click Context Menu (Unreal Style)
+
+**Feature**: Right-click on output handle → "Split Values"
+
+**Behavior**:
+```
+User: Right-click on UV.out (vec2)
+Menu shows:
+  📋 Copy
+  ✂️ Cut
+  🔀 Split Values    ← NEW
+  
+User clicks "Split Values"
+→ Creates Split Vec2 node next to UV
+→ Auto-connects UV.out → Split.in
+→ User can now connect Split.x, Split.y individually
+```
+
+**Implementation**:
+```typescript
+// In context menu callback
+if (menuAction === 'split_values') {
+  const splitNode = createNode('split_' + outputType, {
+    x: node.position.x + 200,
+    y: node.position.y
+  });
+  
+  connectNodes(node, splitNode, outputHandle);
+  
+  toast.success(`✨ Created Split ${outputType.toUpperCase()} node`);
+}
+```
+
+**Status**: ⚠️ TODO (Backlog item)
+
+---
+
+### Type Compatibility Matrix (STRICT Mode)
+
+**Direct Connection Rules** (without auto-adapters):
+
+```
+SOURCE → TARGET    float  vec2  vec3  vec4  auto
+─────────────────  ─────  ────  ────  ────  ────
+float              ✅     ❌    ❌    ❌    ✅
+vec2               ❌     ✅    ❌    ❌    ✅
+vec3               ❌     ❌    ✅    ❌    ✅
+vec4               ❌     ❌    ❌    ✅    ✅
+auto               ✅     ✅    ✅    ✅    ✅
+```
+
+**Legend**:
+- ✅ = Direct connection allowed (same type or auto)
+- ❌ = Blocked → Auto-Adapter inserts conversion node
+
+**With Auto-Adapter System**:
+```
+SOURCE → TARGET    Result
+─────────────────  ──────────────────────────────────
+float → vec3       Auto-inserts "Combine Vec3"
+vec3 → float       Auto-inserts "Split Vec3"
+vec2 → vec3        Auto-inserts "Split Vec2" + "Combine Vec3"
+float → auto       Direct connection (auto accepts all)
+auto → vec3        Direct connection (auto adapts)
+```
+
+**Key Difference from Permissive Mode**:
+- ❌ OLD: `float → vec3` directly allowed (compiler expands)
+- ✅ NEW: `float → vec3` blocked → inserts Combine node (explicit conversion)
+
+**Rationale**: Forces users to understand type conversions (Unreal Engine philosophy)
 
 ---
 
@@ -5578,6 +5783,7 @@ jobs:
 | 2026-02-15 | 1.6 | **Iteracja 6**: Connection System Deep Dive - 6 validation rules, 9-step pipeline, drag-to-add flow, handle rendering, auto-adaptation (Smart Split + Relay Auto), multi-type ports, swizzling, batch operations, performance (480+ lines) |
 | 2026-02-15 | 1.7 | **Iteracja 7**: Undo/Redo & History System (640 lines) |
 | 2026-02-15 | 1.8 | **Iteracja 8 (FINAL)**: Testing Requirements Matrix - 10 feature categories mapped to 23 test files (272+ tests), test coverage summary (Type System 100%, Custom Nodes 90%, Error Handling 80%), priority test gaps identified (8 critical/important items), testing best practices + CI/CD workflow spec (850+ lines) |
+| 2026-02-15 | 1.9 | **SPEC CORRECTION**: Updated Connection Validation to STRICT mode (float ≠ vec3) + Auto-Adapter System (auto-inserts Split/Combine nodes like Unreal Engine Blueprint). Added Type Compatibility Matrix (5x5). Backlog: Right-click "Split Values" context menu. **NOTE**: Current tests validate PERMISSIVE mode (incorrect, requires refactor). |
 
 ---
 
