@@ -870,12 +870,13 @@ function EditorInner({ onChange }: Props) {
             }));
         }
         
-        // Custom Output - detect type from outgoing connection (target)
-        if (sourceDef.id === 'custom_output' && inputDef) {
-            const detectedType = targetType;
+        // Custom Output - detect type from INCOMING connection (what connects TO it)
+        if (outputDef.id === 'custom_output' && targetDef) {
+            // Custom Output is TARGET here - detect from SOURCE type (what feeds into it)
+            const detectedType = sourceType;  // What connects TO Custom Output
             setNodes(nds => nds.map(n => {
-                if (n.id === sourceNode.id) {
-                    console.log('✅ Custom Output type detected:', {
+                if (n.id === targetNode.id) {  // targetNode is Custom Output!
+                    console.log('✅ Custom Output type detected (INCOMING):', {
                         nodeId: n.id,
                         detectedType,
                         label: n.data.value || 'Output'
