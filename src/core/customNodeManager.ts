@@ -105,23 +105,27 @@ export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
   const outputs: Array<{ id: string; label: string; type: string }> = [];
 
   subgraph.nodes.forEach(node => {
-    // Defensive: Check if node.data and node.data.definition exist
-    if (!node.data || !node.data.definition) {
+    // Defensive: Check if node.data exists
+    if (!node.data) {
       return;
     }
     
-    if (node.data.definition.id === 'custom_input') {
-      const portName = node.data.value || node.data.definition.controls?.defaultValue || 'Input';
-      const detectedType = node.data.detectedType || node.data.definition.outputs?.[0]?.type || 'auto';
+    // Check for Custom Input - by definition.id OR by node.id prefix (fallback)
+    const isCustomInput = node.data.definition?.id === 'custom_input' || node.id.startsWith('custom_input');
+    const isCustomOutput = node.data.definition?.id === 'custom_output' || node.id.startsWith('custom_output');
+    
+    if (isCustomInput) {
+      const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Input';
+      const detectedType = node.data.detectedType || node.data.definition?.outputs?.[0]?.type || 'auto';
       inputs.push({
         id: node.id,
         label: portName,
         type: detectedType
       });
     }
-    if (node.data.definition.id === 'custom_output') {
-      const portName = node.data.value || node.data.definition.controls?.defaultValue || 'Output';
-      const detectedType = node.data.detectedType || node.data.definition.inputs?.[0]?.type || 'auto';
+    if (isCustomOutput) {
+      const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Output';
+      const detectedType = node.data.detectedType || node.data.definition?.inputs?.[0]?.type || 'auto';
       outputs.push({
         id: node.id,
         label: portName,
