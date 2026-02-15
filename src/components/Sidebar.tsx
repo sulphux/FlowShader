@@ -3,7 +3,7 @@ import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import type { Node } from 'reactflow';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
-import { loadCustomNodes } from '../core/customNodeManager';
+import { loadCustomNodes, deleteCustomNode } from '../core/customNodeManager';
 
 interface Props {
     nodes: Node[];
