@@ -3691,6 +3691,639 @@ pow(-1.0, 0.5)  // Negative base with fractional exponent
 
 ---
 
+## Connection System Deep Dive
+
+This section provides complete specification of the connection validation, creation, and management system.
+
+### Connection Validation (Unreal Engine Style)
+
+**File**: `src/core/connectionValidator.ts`
+
+**Purpose**: Enforce strict type checking for connections (no automatic conversions).
+
+#### Validation Rules (6 Total)
+
+**Rule 1: Exact Type Match**
+```typescript
+float → float ✅
+vec2 → vec2 ✅
+vec3 → vec3 ✅
+vec4 → vec4 ✅
+```
+- Same types always valid
+- No conversion needed
+
+**Rule 2: Float Expansion**
+```typescript
+float → vec2 ✅  // Expands to vec2(float)
+float → vec3 ✅  // Expands to vec3(float)
+float → vec4 ✅  // Expands to vec4(float, float, float, 1.0)
+```
+- Float can connect to any vector
+- Compiler handles expansion
+
+**Rule 3: Vector to Float - BLOCKED**
+```typescript
+vec2 → float ❌  // Requires Split node
+vec3 → float ❌  // Requires Split node
+vec4 → float ❌  // Requires Split node
+```
+- **Reason**: "Cannot connect {vecType} to float directly. Use Split node to extract components."
+- **requiresSplit**: true
+- Forces explicit conversion
+
+**Rule 4: Different Vector Types - BLOCKED**
+```typescript
+vec2 → vec3 ❌  // Requires Split + Combine
+vec3 → vec2 ❌  // Requires Split + Combine
+vec4 → vec3 ❌  // Requires Split + Combine
+// ... all combinations blocked
+```
+- **Reason**: "Cannot connect {source} to {target}. Use Split and Combine nodes for explicit conversion."
+- **requiresSplit**: false
+- Forces explicit conversion path
+
+**Rule 5: Auto Type Universal**
+```typescript
+auto → float ✅
+auto → vec2 ✅
+auto → vec3 ✅
+auto → vec4 ✅
+auto → auto ✅
+
+float → auto ✅
+vec2 → auto ✅
+vec3 → auto ✅
+vec4 → auto ✅
+```
+- 'auto' accepts everything
+- 'auto' can output to everything
+- Adapts dynamically
+
+**Rule 6: Multi-Type Ports**
+```typescript
+// Port type: "float|vec3"
+float → float|vec3 ✅    // Matches float option
+vec3 → float|vec3 ✅     // Matches vec3 option
+vec2 → float|vec3 ❌     // No match
+
+// Port type: "vec2|vec4"
+vec2 → vec2|vec4 ✅
+vec4 → vec2|vec4 ✅
+vec3 → vec2|vec4 ❌
+```
+- Multi-type parsed as array: "float|vec3" → ['float', 'vec3']
+- Connection valid if ANY combination works
+- Example: Output node input is "float|vec3"
+
+#### Validation Functions
+
+**validateConnection(source, target)**:
+```typescript
+interface ConnectionValidationResult {
+  valid: boolean;
+  reason?: string;          // Error message for user
+  requiresSplit?: boolean;  // Suggests Split node
+}
+
+// Returns detailed result
+validateConnection('vec3', 'float')
+// → { valid: false, reason: "Cannot connect vec3 to float...", requiresSplit: true }
+```
+
+**isValidConnection(source, target)**:
+```typescript
+// Returns simple boolean (wrapper around validateConnection)
+isValidConnection('float', 'vec3') // → true
+isValidConnection('vec3', 'vec2') // → false
+```
+
+**getValidTargetTypes(source)**:
+```typescript
+// Returns array of all valid target types for given source
+getValidTargetTypes('float') 
+// → ['float', 'vec2', 'vec3', 'vec4', 'auto']
+
+getValidTargetTypes('vec3')
+// → ['vec3', 'auto']  // Only exact match or auto
+```
+
+**isValidSwizzle(source, component)**:
+```typescript
+// Check if swizzling allowed
+isValidSwizzle('vec3', 'x') // → true
+isValidSwizzle('vec3', 'w') // → false (vec3 has no w)
+isValidSwizzle('float', 'x') // → false (can't swizzle scalar)
+isValidSwizzle('float|vec3', 'x') // → false (can't swizzle multi-type)
+```
+
+---
+
+### Connection Creation Pipeline
+
+**Event**: User drags from output handle to input handle
+
+**Pipeline** (9 steps):
+
+#### Step 1: onConnect Callback
+```typescript
+onConnect(params: { source, sourceHandle, target, targetHandle })
+```
+- Fired when user completes drag-and-drop connection
+- params contains source/target node IDs and handle IDs
+
+#### Step 2: Find Source & Target Nodes
+```typescript
+const sourceNode = nodes.find(n => n.id === params.source);
+const targetNode = nodes.find(n => n.id === params.target);
+if (!sourceNode || !targetNode) return; // Abort
+```
+- Lookup nodes in current graph
+- Safety check (should always succeed)
+
+#### Step 3: Get Definitions & Handles
+```typescript
+const sourceDef = sourceNode.data.definition;
+const targetDef = targetNode.data.definition;
+const outputDef = sourceDef.outputs.find(o => o.id === params.sourceHandle);
+const inputDef = targetDef.inputs.find(i => i.id === params.targetHandle);
+```
+- Extract node definitions
+- Find specific input/output port definitions
+
+#### Step 4: Single Connection Per Input (Replacement)
+```typescript
+setEdges((eds) => eds.filter(edge => 
+  !(edge.target === params.target && edge.targetHandle === params.targetHandle)
+));
+```
+- **CRITICAL**: Remove existing connection to same input
+- Only ONE edge per input allowed
+- Previous connection replaced
+
+#### Step 5: Auto Type Adaptation (Smart Split)
+```typescript
+if (targetDef.id === 'smart_split' && inputDef.type === 'auto') {
+  const sourceType = outputDef.type;
+  
+  // Adapt outputs based on input type
+  if (sourceType === 'float') → outputs = [x: float]
+  if (sourceType === 'vec2')  → outputs = [x: float, y: float]
+  if (sourceType === 'vec3')  → outputs = [x: float, y: float, z: float]
+  if (sourceType === 'vec4')  → outputs = [x: float, y: float, z: float, w: float]
+  
+  // Update node definition
+  setNodes(nds => nds.map(n => 
+    n.id === targetNode.id 
+      ? { ...n, data: { ...n.data, definition: { ...def, outputs: newOutputs }}}
+      : n
+  ));
+}
+```
+- Only if target is Smart Split
+- Changes number of output ports
+- Preserves existing connections if ports still exist
+
+#### Step 6: Auto Type Adaptation (Relay Auto - Target)
+```typescript
+if (targetDef.id === 'relay_auto' && inputDef.type === 'auto') {
+  const sourceType = outputDef.type;
+  
+  // Adapt relay to passthrough source type
+  setNodes(nds => nds.map(n =>
+    n.id === targetNode.id
+      ? { ...n, data: { ...n.data, definition: {
+          inputs: [{ id: 'in', label: sourceType, type: sourceType }],
+          outputs: [{ id: 'out', label: sourceType, type: sourceType }]
+        }}}
+      : n
+  ));
+}
+```
+- Only if target is Relay (Auto)
+- Both input AND output adapt to same type
+
+#### Step 7: Auto Type Adaptation (Relay Auto - Source)
+```typescript
+if (sourceDef.id === 'relay_auto' && outputDef.type === 'auto' && inputDef) {
+  const targetType = inputDef.type;
+  
+  // Adapt relay to match target input type
+  setNodes(nds => nds.map(n =>
+    n.id === sourceNode.id
+      ? { ...n, data: { ...n.data, definition: {
+          inputs: [{ id: 'in', label: targetType, type: targetType }],
+          outputs: [{ id: 'out', label: targetType, type: targetType }]
+        }}}
+      : n
+  ));
+}
+```
+- Only if source is Relay (Auto) with auto output
+- Adapts to target's needs
+
+#### Step 8: Type Validation
+```typescript
+const validation = validateConnection(
+  outputDef.type,
+  inputDef?.type || 'auto'
+);
+
+if (!validation.valid) {
+  console.warn(`❌ Connection blocked: ${sourceType} → ${targetType}`);
+  alert(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`);
+  return; // BLOCK connection
+}
+```
+- Uses connectionValidator.ts
+- If invalid → Alert user, abort connection
+- No edge created
+
+#### Step 9: Create Edge
+```typescript
+setEdges((eds) => addEdge(params, eds));
+```
+- ReactFlow's addEdge helper
+- Creates edge object: `{ id, source, sourceHandle, target, targetHandle }`
+- Edge ID auto-generated
+- Graph re-renders with new connection
+
+---
+
+### Drag-to-Add Connection Flow
+
+**Event**: User drags from handle, drops on empty canvas
+
+**Pipeline**:
+
+#### Step 1: onConnectStart
+```typescript
+onConnectStart((_, params) => {
+  connectionStartRef.current = params;
+});
+```
+- Saves connection start info
+- params: `{ nodeId, handleId, handleType: 'source'|'target' }`
+
+#### Step 2: User Drags (No Handler)
+- Mouse moves over canvas
+- No visual feedback during drag
+
+#### Step 3: onConnectEnd (Drop on Empty)
+```typescript
+onConnectEnd((event: MouseEvent | TouchEvent) => {
+  const target = event.target as HTMLElement;
+  
+  // Check if dropped on canvas (not on another handle)
+  if (!target.classList.contains('react-flow__pane')) return;
+  
+  // Show filtered context menu
+  const type = /* extract type from connectionStartRef */;
+  setMenu({ x: clientX, y: clientY, visible: true, type: 'pane' });
+  setMenuFilter(type);
+  setPendingConnection(connectionStartRef.current);
+});
+```
+- Detects drop on empty canvas
+- Shows context menu filtered by type
+- Saves pending connection
+
+#### Step 4: User Selects Node from Menu
+```typescript
+onAddNode(typeId)
+```
+- Creates new node at menu position
+- Stores newNodeId
+
+#### Step 5: Auto-Connect
+```typescript
+// After node created, auto-connect
+if (pendingConnection && newNodeId) {
+  const params = {
+    source: handleType === 'source' ? pendingConnection.nodeId : newNodeId,
+    sourceHandle: handleType === 'source' ? pendingConnection.handleId : compatibleHandle,
+    target: handleType === 'target' ? pendingConnection.nodeId : newNodeId,
+    targetHandle: handleType === 'target' ? pendingConnection.handleId : compatibleHandle
+  };
+  
+  onConnect(params); // Uses normal connection pipeline
+}
+```
+- Automatically connects to new node
+- Goes through full validation pipeline
+
+---
+
+### Handle Rendering
+
+**Location**: `src/components/ShaderNode.tsx`
+
+**Input Handle** (Target):
+```tsx
+<Handle
+  type="target"
+  position={Position.Left}
+  id={input.id}
+  style={{
+    background: TYPE_COLORS[effectiveType],
+    border: '2px solid #000',
+    width: '12px',
+    height: '12px',
+    left: '-7px'
+  }}
+/>
+```
+
+**Output Handle** (Source):
+```tsx
+<Handle
+  type="source"
+  position={Position.Right}
+  id={output.id}
+  style={{
+    background: TYPE_COLORS[effectiveType],
+    border: '2px solid #000',
+    width: '12px',
+    height: '12px',
+    right: '-7px'
+  }}
+/>
+```
+
+**Handle Positioning**:
+- **Inputs**: Left side, evenly spaced vertically
+- **Outputs**: Right side, evenly spaced vertically
+- **Compact Mode**: Outputs in flexbox row (horizontal)
+- **Multi-Output (Smart Split)**: Flexbox layout with space-evenly
+
+**Handle Colors** (TYPE_COLORS):
+- `float`: Red (#ff4444)
+- `vec2`: Green (#44ff44)
+- `vec3`: Blue (#4444ff)
+- `vec4`: Yellow (#ffff44)
+- `auto`: Purple (#9333ea) with rainbow animation
+
+**Rainbow Animation** (for auto type):
+```css
+@keyframes rainbowShift {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(360deg); }
+}
+
+/* Applied to auto handles */
+animation: rainbowShift 3s ease-in-out infinite;
+```
+
+---
+
+### Edge Rendering
+
+**ReactFlow Default**:
+- Bezier curves
+- Animated flow (particles)
+- Color: Inherits from handle color
+
+**Custom Styling**:
+- None currently
+- **TODO**: Color edges by type (like handles)
+
+---
+
+### Visual Feedback
+
+#### During Connection
+
+**Valid Connection** (hovering over compatible handle):
+- Handle highlights (brighter)
+- Cursor: pointer
+- Connection preview line shown (ReactFlow)
+
+**Invalid Connection** (hovering over incompatible handle):
+- Handle does NOT highlight
+- Connection not allowed
+- No visual feedback (ReactFlow default)
+
+**Drop on Empty**:
+- Context menu appears
+- Menu filtered by compatible types
+- Incompatible nodes grayed out or hidden
+
+#### After Connection
+
+**Success**:
+- Edge appears (animated bezier curve)
+- Handles connected
+- Graph auto-saves
+- History snapshot after 2s
+
+**Failure** (validation blocked):
+- Alert dialog: "Cannot connect {source} to {target}\n\n{reason}"
+- No edge created
+- User must try different connection or add conversion node
+
+#### After Adaptation
+
+**Smart Split**:
+- Node visually changes (more output handles appear)
+- Existing connections preserved
+- New handles available immediately
+- Flexbox layout adjusts
+
+**Relay Auto**:
+- Handle colors change (purple → actual type color)
+- Labels update (e.g., "Auto" → "vec3")
+- Adapted type persists until disconnect
+
+---
+
+### Connection Deletion
+
+#### Methods
+
+**1. Right-Click on Edge**:
+```typescript
+onEdgeContextMenu(event, edge) {
+  // Show context menu with Delete option
+  // On delete: setEdges(eds => eds.filter(e => e.id !== edge.id))
+}
+```
+
+**2. Delete Source or Target Node**:
+```typescript
+// Edges automatically removed when node deleted
+setEdges((eds) => eds.filter(e => 
+  e.source !== nodeId && e.target !== nodeId
+));
+```
+
+**3. Replace Connection** (Single per Input Rule):
+```typescript
+// New connection to same input → old edge auto-deleted
+setEdges((eds) => eds.filter(edge => 
+  !(edge.target === newTarget && edge.targetHandle === newHandle)
+));
+```
+
+#### Side Effects
+
+**After Deletion**:
+- Source node unaffected
+- Target node uses default value (from glslTemplate)
+- If Smart Split disconnected → outputs revert to [auto: auto]
+- If Relay Auto disconnected → reverts to [auto → auto]
+- Graph recompiles
+- History snapshot after 2s
+
+---
+
+### Connection State Management
+
+#### Edge Object Structure
+```typescript
+interface Edge {
+  id: string;                    // Auto-generated
+  source: string;                // Source node ID
+  sourceHandle?: string | null;  // Output port ID
+  target: string;                // Target node ID
+  targetHandle?: string | null;  // Input port ID
+  type?: string;                 // Edge type (default: 'default')
+  animated?: boolean;            // Animation (default: false)
+  style?: CSSProperties;         // Custom styling
+}
+```
+
+#### Edge ID Generation
+```typescript
+// ReactFlow auto-generates
+// Format: "reactflow__edge-{source}{sourceHandle}-{target}{targetHandle}"
+// Example: "reactflow__edge-n123out-n456in"
+```
+
+#### Edge Storage
+- **React State**: `edges` array
+- **localStorage**: Saved with graph
+- **Serialization**: Plain objects (no functions)
+
+---
+
+### Batch Connection Operations
+
+#### Copy/Paste with Edges
+
+**Process**:
+```
+1. User selects multiple nodes (Shift+Click or drag-select)
+2. Ctrl+C → Copy to clipboard
+3. Clipboard includes:
+   - All selected nodes
+   - Edges where BOTH source AND target selected
+4. Ctrl+V → Paste
+5. New nodes created with new IDs
+6. Edge IDs remapped:
+   - Old source ID → New source ID
+   - Old target ID → New target ID
+7. Edges recreated with new IDs
+```
+
+**Edge Case**: External edges (one end selected, other not) → **NOT copied**
+
+#### Delete Multiple with Edges
+
+**Process**:
+```
+1. User selects multiple nodes
+2. Press Delete
+3. All selected nodes deleted
+4. All edges to/from deleted nodes auto-removed
+```
+
+**Filter**:
+```typescript
+setEdges((eds) => eds.filter(e => 
+  !deletedIds.has(e.source) && !deletedIds.has(e.target)
+));
+```
+
+---
+
+### Special Connection Behaviors
+
+#### Swizzling (Component Access)
+
+**Not a connection**, but uses handle system:
+
+```
+Edge: vec3_node.x → float_input
+      ^^^^^^^^^ ^
+      source    sourceHandle = 'x'
+      
+Compiler:
+  const sourceVar = nodeVarMap[vec3_node];  // var_n123
+  const expression = sourceVar + '.x';      // var_n123.x
+  // Type: float (swizzled component)
+```
+
+**Valid Swizzles**:
+- vec2: x, y, r, g
+- vec3: x, y, z, r, g, b
+- vec4: x, y, z, w, r, g, b, a
+
+**Usage**: Connections from Split node use swizzling
+
+#### Multi-Type Port Connections
+
+**Example**: Output node input is "float|vec3"
+
+**Scenario 1**: Connect float source
+```
+Validation:
+  float → float|vec3
+  Parse target: ['float', 'vec3']
+  Check: float → float ✅ (matches first option)
+  Result: VALID
+```
+
+**Scenario 2**: Connect vec3 source
+```
+Validation:
+  vec3 → float|vec3
+  Parse target: ['float', 'vec3']
+  Check: vec3 → float ❌
+  Check: vec3 → vec3 ✅ (matches second option)
+  Result: VALID
+```
+
+**Scenario 3**: Connect vec2 source
+```
+Validation:
+  vec2 → float|vec3
+  Parse target: ['float', 'vec3']
+  Check: vec2 → float ❌
+  Check: vec2 → vec3 ❌
+  Result: INVALID (no match)
+```
+
+---
+
+### Connection Performance
+
+#### Edge Rendering
+- **ReactFlow**: Optimized for 100s of edges
+- **Bezier Curves**: SVG paths (hardware accelerated)
+- **Updates**: Only re-render changed edges (React reconciliation)
+
+#### Validation Performance
+- **isValidConnection**: O(1) lookup (simple comparisons)
+- **Multi-type parsing**: O(k) where k = number of types (typically 2)
+- **Validation per connection**: < 1ms
+
+#### Large Graphs
+- **100 edges**: No performance issues
+- **500 edges**: Minor slowdown in drag-and-drop
+- **1000+ edges**: Noticeable lag
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
@@ -3918,7 +4551,8 @@ alert('✅ Custom node "MyNode" created!');
 | 2026-02-15 | 1.2 | **Iteracja 2**: Complete Node Specifications - 24 nodes (771 lines) |
 | 2026-02-15 | 1.3 | **Iteracja 3**: State Management & Data Flow (612 lines) |
 | 2026-02-15 | 1.4 | **Iteracja 4**: Edge Cases & Error Scenarios (823 lines) |
-| 2026-02-15 | 1.5 | **Iteracja 5**: Compiler & GLSL Generation - Topological sort, variable naming, type conversions, recursive compilation, code generation, 6 examples, optimization opportunities, performance benchmarks (540+ lines) |
+| 2026-02-15 | 1.5 | **Iteracja 5**: Compiler & GLSL Generation (667 lines) |
+| 2026-02-15 | 1.6 | **Iteracja 6**: Connection System Deep Dive - 6 validation rules, 9-step pipeline, drag-to-add flow, handle rendering, auto-adaptation (Smart Split + Relay Auto), multi-type ports, swizzling, batch operations, performance (480+ lines) |
 
 ---
 
