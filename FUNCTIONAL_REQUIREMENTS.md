@@ -1592,6 +1592,617 @@ interface Props {
 
 ---
 
+## State Management & Data Flow
+
+This section describes all state variables, their storage locations, and how data flows through the application.
+
+### React State (NodeEditor Component)
+
+#### Core Graph State
+```typescript
+const [nodes, setNodes] = useNodesState(initialData.nodes);
+const [edges, setEdges] = useEdgesState(initialData.edges);
+```
+- **Type**: `Node[]`, `Edge[]`
+- **Source**: ReactFlow hooks (wrapper around useState)
+- **Persistence**: Saved to localStorage on change
+- **Updates**: Via `onNodesChange`, `onEdgesChange`, or direct setters
+- **Triggers**: Graph rendering, compilation, auto-save
+
+#### ReactFlow Instance
+```typescript
+const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+```
+- **Type**: `ReactFlowInstance | null`
+- **Source**: ReactFlow `onInit` callback
+- **Usage**: Programmatic control (fitView, toObject, project coordinates)
+- **Methods**:
+  - `fitView(options)` - Center and zoom
+  - `project({ x, y })` - Convert screen to graph coordinates
+  - `toObject()` - Export graph state
+
+#### Menu State
+```typescript
+const [menu, setMenu] = useState<{ x, y, visible, type, nodeId? } | null>(null);
+const [menuFilter, setMenuFilter] = useState<string | null>(null);
+```
+- **menu**: Context menu position and type
+  - `type: 'pane'` - Right-click on canvas
+  - `type: 'node'` - Right-click on node
+  - `nodeId` - For node context menu
+- **menuFilter**: Type filter for drag-from-handle menus
+  - Example: `'float'` when dragging from float output
+
+#### Clipboard
+```typescript
+const [clipboard, setClipboard] = useState<{ nodes: Node[], edges: Edge[] } | null>(null);
+```
+- **Type**: `{nodes, edges}` or null
+- **Updates**: On Copy (Ctrl+C) or Cut (Ctrl+X)
+- **Usage**: Paste (Ctrl+V) creates copies with offset
+- **Notes**: Only includes internal edges (both source and target selected)
+
+#### File Path
+```typescript
+const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+```
+- **Type**: `string | null`
+- **Usage**: 
+  - `null` - Untitled (new project)
+  - `string` - File path (e.g., "beautiful.json")
+- **Display**: Shown in Toolbar
+- **Behavior**:
+  - Save → Uses currentFilePath (quick save)
+  - Save As → Updates currentFilePath
+
+#### History (Undo/Redo)
+```typescript
+const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+const [historyIndex, setHistoryIndex] = useState(-1);
+const maxHistorySize = 50;
+```
+- **history**: Array of snapshots (max 50)
+- **historyIndex**: Current position (-1 = no history)
+- **Debouncing**: saveToHistory() debounced by 2 seconds
+- **Circular Buffer**: When exceeds 50, removes oldest
+- **Undo**: `historyIndex--`, restore history[historyIndex]
+- **Redo**: `historyIndex++`, restore history[historyIndex]
+- **Branch**: New action after undo clears future states
+
+#### Custom Nodes Navigation
+```typescript
+const [navigationStack, setNavigationStack] = useState<Array<{ name, nodes, edges }>>([]);
+const [currentContext, setCurrentContext] = useState<string>('Main');
+```
+- **navigationStack**: Stack of saved states
+  - Index 0: Main graph
+  - Index 1+: Nested custom nodes
+- **currentContext**: Display name ("Main" or custom node name)
+- **Push**: When entering custom node (double-click)
+- **Pop**: When exiting (navigate back)
+- **Jump**: navigateToLevel(index) - pops to specific level
+
+#### Dialog States
+```typescript
+const [showCode, setShowCode] = useState(false);
+const [currentCode, setCurrentCode] = useState('');
+const [showCustomDialog, setShowCustomDialog] = useState(false);
+```
+- **showCode**: GLSL code modal visibility
+- **currentCode**: Compiled GLSL code
+- **showCustomDialog**: Create Custom Node dialog visibility
+
+#### Connection Tracking
+```typescript
+const [pendingConnection, setPendingConnection] = useState<OnConnectStartParams | null>(null);
+const connectionStartRef = useRef<OnConnectStartParams | null>(null);
+```
+- **pendingConnection**: Connection being created (for auto-add)
+- **connectionStartRef**: Ref to avoid stale closures
+- **Usage**: Drag from handle → drop on empty → auto-connect
+
+#### Other Refs
+```typescript
+const ref = useRef<HTMLDivElement>(null);
+const fileInputRef = useRef<HTMLInputElement>(null);
+const lastLogicHash = useRef<string>("");
+const mousePos = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+const isLoadedRef = useRef(false);
+```
+- **ref**: Main container ref (for coordinate calculations)
+- **fileInputRef**: Hidden file input (for Load button)
+- **lastLogicHash**: Debounce auto-save (prevents duplicate saves)
+- **mousePos**: Current mouse position (for adding nodes at cursor)
+- **isLoadedRef**: Prevents double-load on mount
+
+---
+
+### Sidebar State
+```typescript
+const [collapsed, setCollapsed] = useState(false);
+const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
+const [refreshKey, setRefreshKey] = useState(0);
+const [contextMenu, setContextMenu] = useState<{ x, y, nodeId } | null>(null);
+```
+- **collapsed**: Sidebar collapsed (narrow width)
+- **activeTab**: 'lib' (Library) or 'params' (Parameters)
+- **refreshKey**: Incremented to force re-render (custom nodes refresh)
+- **contextMenu**: Right-click menu on custom node in sidebar
+
+---
+
+### localStorage Storage
+
+#### Keys
+```typescript
+const STORAGE_KEY = 'shader_graph';                  // Main graph
+const CUSTOM_NODES_KEY = 'custom_nodes_library';     // Custom nodes
+```
+
+#### shader_graph Format
+```json
+{
+  "nodes": [...],
+  "edges": [...]
+}
+```
+- **When Saved**: On any graph change (debounced via lastLogicHash)
+- **When Loaded**: On app mount (isLoadedRef prevents double-load)
+- **Size**: Typically 5-50KB depending on graph size
+
+#### custom_nodes_library Format
+```json
+[
+  {
+    "id": "custom_mynode",
+    "label": "MyNode",
+    "description": "...",
+    "inputs": [...],
+    "outputs": [...],
+    "isCustom": true,
+    "subgraph": {
+      "nodes": [...],
+      "edges": [...]
+    }
+    // Note: glslTemplate is NOT saved (function)
+  }
+]
+```
+- **When Saved**: On custom node create/update/delete
+- **When Loaded**: On app mount + on storage events
+- **Functions Lost**: glslTemplate must be restored after JSON.parse
+- **Size**: Can grow large with many custom nodes
+
+#### Storage Events
+```typescript
+window.addEventListener('storage', handleStorageChange);        // Cross-tab sync
+window.dispatchEvent(new Event('customNodesUpdated'));        // Same-window sync
+```
+
+---
+
+### NODE_REGISTRY (Global Object)
+
+```typescript
+export const NODE_REGISTRY = {
+  output: OutputNode,
+  time: TimeNode,
+  // ... 40+ built-in nodes
+};
+```
+
+#### Static Nodes (Built-in)
+- **Source**: `src/nodes/index.ts`
+- **Loaded**: Import time (before app renders)
+- **Count**: 45 nodes
+- **Immutable**: Never modified at runtime
+
+#### Dynamic Nodes (Custom)
+- **Source**: localStorage → loaded on mount
+- **Added**: `NODE_REGISTRY[customNodeId] = customNode`
+- **Deleted**: `delete NODE_REGISTRY[customNodeId]`
+- **Prefix**: All custom nodes start with `custom_`
+- **Restoration**: glslTemplate function restored in loadCustomNodes()
+
+---
+
+### Data Flow Diagrams
+
+#### Flow 1: Add Node to Canvas
+```
+User Action: Drag from sidebar OR Click in context menu
+    ↓
+onDrop() or onAddNode(typeId)
+    ↓
+Get NODE_REGISTRY[typeId] definition
+    ↓
+Create new Node object:
+  - id: unique (timestamp-based)
+  - type: 'shaderNode'
+  - position: mousePos or menu position
+  - data: { definition, value, label }
+    ↓
+setNodes([...nodes, newNode])
+    ↓
+ReactFlow re-renders
+    ↓
+Auto-save to localStorage (debounced)
+    ↓
+saveToHistory() after 2s
+```
+
+#### Flow 2: Create Connection
+```
+User Action: Drag from output handle to input handle
+    ↓
+onConnect(params: { source, sourceHandle, target, targetHandle })
+    ↓
+Get source and target node definitions
+    ↓
+Validate types: isValidConnection(sourceType, targetType)
+    ↓
+    ├─ Invalid → Abort (no edge created)
+    └─ Valid → Continue
+         ↓
+    Check single connection per input:
+    Remove existing edges to same target handle
+         ↓
+    Check auto-adaptation:
+    If Smart Split input → adapt outputs
+    If Relay Auto → adapt both input and output
+         ↓
+    setEdges([...filtered, newEdge])
+         ↓
+    ReactFlow re-renders
+         ↓
+    Auto-save to localStorage
+         ↓
+    saveToHistory() after 2s
+```
+
+#### Flow 3: Compile Graph to GLSL
+```
+User Action: Click "Show Code"
+    ↓
+handleShowCode()
+    ↓
+Convert nodes to GraphNode format
+    ↓
+Call compile(graphNodes, graphEdges)
+    ↓
+Topological sort (dependency order)
+    ↓
+For each node (in order):
+    ├─ Get definition.glslTemplate
+    ├─ Resolve input variables
+    ├─ If custom node → Recursive compile(subgraph)
+    ├─ Generate GLSL statement
+    └─ Assign to variable (e.g., var_n123)
+         ↓
+    Find output node
+         ↓
+    Generate final code:
+      - uniforms (iTime, iResolution)
+      - function declarations
+      - main() { ... gl_FragColor = vec4(output, 1.0); }
+         ↓
+    setCurrentCode(glslCode)
+    setShowCode(true)
+         ↓
+    Modal displays code
+```
+
+#### Flow 4: Save/Load Graph
+```
+SAVE:
+User clicks Save/Save As
+    ↓
+handleSaveFile(saveAs)
+    ↓
+Serialize graph:
+  { nodes, edges }
+    ↓
+    ├─ saveAs=true → Show file picker, update currentFilePath
+    └─ saveAs=false → Use currentFilePath or show picker
+         ↓
+    Create JSON blob
+         ↓
+    Trigger download
+         ↓
+    Update Toolbar (file name display)
+
+LOAD:
+User clicks Load
+    ↓
+File picker opens
+    ↓
+User selects JSON file
+    ↓
+Read file content
+    ↓
+restoreGraph(jsonString, fileName)
+    ↓
+Parse JSON
+    ↓
+Restore nodes + edges
+    ↓
+Auto-adapt Smart Split/Relay Auto nodes
+    ↓
+setNodes(restored), setEdges(restored)
+    ↓
+setCurrentFilePath(fileName)
+    ↓
+ReactFlow re-renders
+```
+
+#### Flow 5: Create Custom Node
+```
+User Action: Right-click → Create Custom Node
+    ↓
+setShowCustomDialog(true)
+    ↓
+User enters name + description
+    ↓
+handleCreateCustomNode(name, description)
+    ↓
+Get selected nodes (or use defaults if empty)
+    ↓
+Extract selected edges (internal only)
+    ↓
+Extract ports from Custom Input/Output nodes
+    ↓
+Create CustomNodeDefinition:
+  - id: custom_{name}
+  - inputs, outputs (from ports)
+  - subgraph: { nodes, edges }
+  - isCustom: true
+  - glslTemplate: placeholder
+    ↓
+addCustomNode(customNode)
+    ↓
+Save to localStorage (CUSTOM_NODES_KEY)
+    ↓
+Add to NODE_REGISTRY[id] = customNode
+    ↓
+Dispatch 'customNodesUpdated' event
+    ↓
+Sidebar catches event → setRefreshKey(prev => prev + 1)
+    ↓
+Sidebar re-renders with new custom node
+```
+
+#### Flow 6: Undo/Redo
+```
+Graph Change:
+setNodes() or setEdges()
+    ↓
+Debounced saveToHistory() (2s delay)
+    ↓
+Check if different from last snapshot
+    ↓
+Create snapshot: { nodes: deep copy, edges: deep copy }
+    ↓
+Clear future states if historyIndex < history.length - 1
+    ↓
+Push snapshot to history
+    ↓
+Trim to maxHistorySize (50)
+    ↓
+setHistoryIndex(history.length - 1)
+
+UNDO (Ctrl+Z):
+undo()
+    ↓
+Check historyIndex > 0
+    ↓
+setHistoryIndex(historyIndex - 1)
+    ↓
+Restore snapshot: history[historyIndex - 1]
+    ↓
+setNodes(), setEdges()
+    ↓
+Auto-adapt Smart Split/Relay Auto
+
+REDO (Ctrl+Y):
+redo()
+    ↓
+Check historyIndex < history.length - 1
+    ↓
+setHistoryIndex(historyIndex + 1)
+    ↓
+Restore snapshot: history[historyIndex + 1]
+    ↓
+setNodes(), setEdges()
+```
+
+#### Flow 7: Navigate Custom Nodes
+```
+ENTER:
+User double-clicks custom node
+    ↓
+onNodeDoubleClick(node)
+    ↓
+Check if node.data.definition.isCustom
+    ↓
+enterCustomNode(nodeId)
+    ↓
+Get custom node definition
+    ↓
+Save current state to navigationStack:
+  { name: currentContext, nodes, edges }
+    ↓
+Load subgraph:
+  - If empty → Add default Custom Input + Output
+  - Else → Load subgraph.nodes + edges
+    ↓
+setNodes(subgraph.nodes)
+setEdges(subgraph.edges)
+setCurrentContext(customNode.label)
+    ↓
+NavigationPanel becomes visible
+    ↓
+User edits subgraph
+
+EXIT:
+User clicks "Exit to Main" or breadcrumb
+    ↓
+navigateBack() or navigateToLevel(index)
+    ↓
+Save current subgraph to custom node definition
+    ↓
+Extract ports from Custom Input/Output nodes
+    ↓
+Update NODE_REGISTRY[nodeId].inputs/outputs
+    ↓
+Refresh all instances of custom node on canvas
+    ↓
+Pop from navigationStack
+    ↓
+Restore parent state:
+  setNodes(navigationStack[index].nodes)
+  setEdges(navigationStack[index].edges)
+    ↓
+setCurrentContext(navigationStack[index].name)
+    ↓
+If index === 0 → NavigationPanel hides
+```
+
+---
+
+### State Update Triggers
+
+#### Triggers for setNodes()
+1. User drags node → `onNodesChange` (position update)
+2. User adds node → `onDrop` or `onAddNode`
+3. User deletes node → `deleteSelected` or context menu delete
+4. Copy/Paste → `handlePaste`
+5. Undo/Redo → `undo()`, `redo()`
+6. Load file → `restoreGraph()`
+7. Navigate custom node → `enterCustomNode()`, `navigateBack()`
+8. Smart Split adaptation → Auto-update node.data.definition.outputs
+9. Parameter update (Sidebar) → Update node.data.value
+
+#### Triggers for setEdges()
+1. User creates connection → `onConnect`
+2. User deletes edge → Context menu or node deletion
+3. Copy/Paste → `handlePaste`
+4. Undo/Redo → `undo()`, `redo()`
+5. Load file → `restoreGraph()`
+6. Navigate custom node → `enterCustomNode()`, `navigateBack()`
+
+#### Triggers for localStorage Write
+1. Graph change → Auto-save (debounced via lastLogicHash)
+2. Create custom node → `addCustomNode()`
+3. Delete custom node → `deleteCustomNode()`
+4. Manual save → `handleSaveFile()`
+5. Clear graph → `handleClear()`
+6. New project → `handleNew()`
+
+#### Triggers for NODE_REGISTRY Update
+1. App mount → `loadCustomNodes()` (adds custom_ nodes)
+2. Create custom node → Direct assignment
+3. Delete custom node → `delete NODE_REGISTRY[id]`
+4. Navigate back from custom node → Update ports
+
+#### Triggers for UI Re-render
+1. State change → React automatic re-render
+2. Custom nodes update → `setRefreshKey(prev => prev + 1)` (Sidebar)
+3. Storage event → Cross-tab sync
+4. customNodesUpdated event → Same-window sync
+
+---
+
+### Critical State Synchronization Points
+
+#### Point 1: Custom Node Creation
+```
+State Changes:
+1. localStorage[CUSTOM_NODES_KEY] ← addCustomNode()
+2. NODE_REGISTRY[id] ← customNode
+3. Sidebar.refreshKey ← +1 (via event)
+4. history ← saveToHistory() after 2s
+
+Verification:
+✅ localStorage has JSON
+✅ NODE_REGISTRY has definition
+✅ Sidebar shows new node
+✅ Can drag onto canvas
+```
+
+#### Point 2: Custom Node Deletion
+```
+State Changes:
+1. localStorage[CUSTOM_NODES_KEY] ← deleteCustomNode()
+2. NODE_REGISTRY[id] ← delete
+3. Sidebar.refreshKey ← +1
+4. history ← saveToHistory() after 2s
+
+Verification:
+✅ localStorage JSON updated
+✅ NODE_REGISTRY no longer has id
+✅ Sidebar removes node
+✅ Existing instances orphaned (no error)
+```
+
+#### Point 3: Port Refresh
+```
+State Changes:
+1. User edits subgraph (adds Custom Input)
+2. navigateBack() extracts new ports
+3. NODE_REGISTRY[id].inputs/outputs ← updated
+4. All instances refresh (React sees definition change)
+5. Canvas re-renders with new handles
+
+Verification:
+✅ Custom node instances show new port
+✅ Can connect to new port
+✅ Old connections preserved if port still exists
+```
+
+#### Point 4: Undo/Redo
+```
+State Changes:
+1. User changes graph
+2. After 2s → saveToHistory()
+3. history array grows (max 50)
+4. historyIndex = history.length - 1
+
+On Undo:
+1. historyIndex--
+2. setNodes(history[historyIndex].nodes)
+3. setEdges(history[historyIndex].edges)
+4. Auto-adapt Smart Split/Relay Auto
+
+Verification:
+✅ Graph restored to previous state
+✅ Smart nodes adapted correctly
+✅ No console errors
+```
+
+---
+
+### Memory Management
+
+#### Limits
+- **History**: 50 snapshots max (~5MB with large graphs)
+- **localStorage**: 5-10MB browser limit
+- **NODE_REGISTRY**: No limit (in-memory object)
+- **Custom Nodes**: Practical limit ~100 nodes before performance issues
+
+#### Cleanup
+- **History Trim**: Removes oldest when > 50
+- **Future States**: Cleared on new action after undo
+- **Navigation Stack**: Cleared on "New" or "Load"
+- **Clipboard**: Persists until overwritten (no auto-clear)
+
+#### Performance Considerations
+- **Deep Copy**: JSON.parse(JSON.stringify()) for history snapshots
+- **Debouncing**: 2s for history, hash-based for auto-save
+- **Memoization**: useMemo for custom nodes list, filtered structure
+- **Event Throttling**: None currently (potential improvement)
+
+---
+
 ## UI Features
 
 ### Keyboard Shortcuts
@@ -1815,8 +2426,9 @@ alert('✅ Custom node "MyNode" created!');
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-02-15 | 1.0 | Initial functional requirements document |
-| 2026-02-15 | 1.1 | **Iteracja 1**: Added "UI Components Specification" - Complete specs for 7 components (515 new lines) |
-| 2026-02-15 | 1.2 | **Iteracja 2**: Expanded "Complete Node Specifications" - Detailed specs for 24 core nodes with inputs/outputs/GLSL/use cases/notes (870+ new lines) |
+| 2026-02-15 | 1.1 | **Iteracja 1**: UI Components Specification (515 lines) |
+| 2026-02-15 | 1.2 | **Iteracja 2**: Complete Node Specifications - 24 nodes (771 lines) |
+| 2026-02-15 | 1.3 | **Iteracja 3**: State Management & Data Flow - React state, localStorage, NODE_REGISTRY, 7 data flow diagrams, memory management (450+ lines) |
 
 ---
 
