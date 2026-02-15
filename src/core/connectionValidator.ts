@@ -4,6 +4,7 @@ export interface ConnectionValidationResult {
   valid: boolean;
   reason?: string;
   requiresSplit?: boolean;
+  requiresAdapter?: boolean;  // NEW - triggers Auto-Adapter System
 }
 
 /**
@@ -20,15 +21,16 @@ function parseMultiType(typeString: string): DataType[] {
  * Validates if a connection between two port types is allowed.
  * Supports multi-type ports (e.g., "float|vec3" accepts both float and vec3)
  * 
- * Rules:
+ * Rules (STRICT MODE - Unreal Engine style):
  * 1. Same types always connect: float→float, vec2→vec2, etc.
- * 2. float can connect to any vector type (will be expanded)
- * 3. Vectors CANNOT directly connect to float (requires explicit Split node)
- * 4. Vectors CANNOT connect to different vector types (no implicit casting)
+ * 2. float → vector BLOCKED (triggers Auto-Adapter: inserts Combine node)
+ * 3. vector → float BLOCKED (triggers Auto-Adapter: inserts Split node)
+ * 4. vector → different vector BLOCKED (triggers Auto-Adapter: inserts Split + Combine)
  * 5. 'auto' type accepts ANY connection and adapts dynamically
  * 6. Multi-type ports (e.g., "float|vec3") accept any of the specified types
  * 
  * This enforces explicit conversions like in Unreal Engine.
+ * Auto-Adapter System automatically inserts conversion nodes when requiresAdapter=true.
  */
 export function validateConnection(
   sourceType: string,
@@ -74,26 +76,32 @@ function validateSingleConnection(
     return { valid: true };
   }
 
-  // Rule 2: float → vector is allowed (expansion)
+  // Rule 2: float → vector BLOCKED (STRICT mode - requires Combine node)
   if (sourceType === 'float' && ['vec2', 'vec3', 'vec4'].includes(targetType)) {
-    return { valid: true };
-  }
-
-  // Rule 3: vector → float requires Split node (BLOCKED)
-  if (['vec2', 'vec3', 'vec4'].includes(sourceType) && targetType === 'float') {
     return {
       valid: false,
-      reason: `Cannot connect ${sourceType} to float directly. Use Split node to extract components.`,
-      requiresSplit: true
+      requiresAdapter: true,
+      reason: `Cannot connect float to ${targetType} directly. Auto-inserting Combine ${targetType.toUpperCase()} node...`
     };
   }
 
-  // Rule 4: Different vector types cannot connect (BLOCKED)
+  // Rule 3: vector → float requires Split node (BLOCKED - triggers Auto-Adapter)
+  if (['vec2', 'vec3', 'vec4'].includes(sourceType) && targetType === 'float') {
+    return {
+      valid: false,
+      reason: `Cannot connect ${sourceType} to float directly. Auto-inserting Split ${sourceType.toUpperCase()} node...`,
+      requiresSplit: true,
+      requiresAdapter: true  // NEW - trigger Auto-Adapter
+    };
+  }
+
+  // Rule 4: Different vector types cannot connect (BLOCKED - triggers Auto-Adapter)
   if (['vec2', 'vec3', 'vec4'].includes(sourceType) && ['vec2', 'vec3', 'vec4'].includes(targetType)) {
     return {
       valid: false,
-      reason: `Cannot connect ${sourceType} to ${targetType}. Use Split and Combine nodes for explicit conversion.`,
-      requiresSplit: false
+      reason: `Cannot connect ${sourceType} to ${targetType} directly. Auto-inserting Split + Combine nodes...`,
+      requiresSplit: false,
+      requiresAdapter: true  // NEW - trigger Auto-Adapter
     };
   }
 
