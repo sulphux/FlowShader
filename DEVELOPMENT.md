@@ -1,5 +1,7 @@
 # Development Guide - FlowShader
 
+> **Quick Links:** [README](./README.md) | [Architecture](./ARCHITECTURE.md) | [Project Summary](./PROJECT_SUMMARY.md)
+
 ## Getting Started
 
 ### Prerequisites
@@ -7,16 +9,19 @@
 - npm or yarn
 - Git
 
-### Installation
+### Installation & Setup
 ```bash
-cd shader-nodes
-npm install
-```
+# Clone the repository
+git clone https://github.com/sulphux/FlowShader.git
+cd FlowShader
 
-### Development Server
-```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
+
 Opens at `http://localhost:5173`
 
 ## Project Structure Explained
@@ -156,12 +161,19 @@ Example: Connect `vec3` output to `float` input via `.x` handle
 
 ## Testing
 
+FlowShader has comprehensive test coverage with 230+ tests across 18 test files.
+
 ### Running Tests
 ```bash
-npm test              # Run all tests
-npm test -- --watch   # Watch mode
-npm test -- --coverage # With coverage report
+npm test                  # Run all tests
+npm run test:ui           # Interactive Vitest UI
+npm run test:coverage     # Generate coverage report
 ```
+
+### Test Structure
+- **Unit Tests:** Core logic (compiler, validator, types)
+- **Component Tests:** React components with Testing Library
+- **Integration Tests:** Node system and connections
 
 ### Writing Tests
 
@@ -371,35 +383,33 @@ git status          # Review changes
 git diff            # Check diff
 ```
 
-## Roadmap & TODOs
+## Roadmap
 
 ### High Priority
-- [ ] Write tests for compiler
-- [ ] Write tests for type conversion
-- [ ] Add more SDF shapes
+- [ ] Add more SDF shapes (rectangle, triangle, polygon)
 - [ ] Texture sampling nodes
 - [ ] Undo/redo system
+- [ ] Export shader code feature
 
 ### Medium Priority
-- [ ] Export shader code feature
 - [ ] Import/export graph templates
 - [ ] Node search/filter in sidebar
-- [ ] Keyboard shortcuts system
+- [ ] Enhanced keyboard shortcuts
 - [ ] Graph minimap
 
 ### Low Priority
 - [ ] Custom function nodes
 - [ ] Shader optimization pass
-- [ ] Performance profiling
+- [ ] Performance profiling for large graphs
 - [ ] Dark/light theme toggle
-- [ ] Localization
+- [ ] Localization support
 
-### Code Quality
-- [ ] Move nodes to `/categories` structure
-- [ ] Add path aliases (@components, @core, etc.)
-- [ ] Extract magic numbers to constants
-- [ ] Add JSDoc comments to complex functions
-- [ ] Set up CI/CD pipeline
+### Completed ✅
+- [x] Write comprehensive tests (230+ tests)
+- [x] Set up testing infrastructure
+- [x] Type validation system
+- [x] Connection validation
+- [x] Path aliases (@components, @core, etc.)
 
 ## Resources
 
@@ -423,6 +433,6 @@ git diff            # Check diff
 
 ---
 
-**Questions?** Check PROJECT_SUMMARY.md or repository issues.
+**Questions?** Check [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) or [open an issue](https://github.com/sulphux/FlowShader/issues).
 
-**Last Updated**: 2026-02-14
+**Last Updated**: 2026-02-19
