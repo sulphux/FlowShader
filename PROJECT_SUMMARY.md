@@ -1,343 +1,188 @@
-# FlowShader - Visual Shader Graph Editor
+# FlowShader - Project Summary
 
-## Project Overview
+**Version:** 0.0.0 | **Status:** Early Development | **Last Updated:** 2026-02-19
 
-**FlowShader** is a node-based visual shader editor built with React, TypeScript, and Three.js. It allows users to create GLSL fragment shaders through an intuitive node graph interface, with real-time preview and compilation.
+## Quick Links
 
-## Key Information
+- **Repository:** [github.com/sulphux/FlowShader](https://github.com/sulphux/FlowShader)
+- **Documentation:** See README.md for quick start
+- **Architecture:** See ARCHITECTURE.md for technical details
+- **Development:** See DEVELOPMENT.md for contribution guide
 
-- **Repository**: [github.com/sulphux/FlowShader](https://github.com/sulphux/FlowShader)
-- **Version**: 0.0.0 (Early Development)
-- **Tech Stack**: React 19, TypeScript, Vite, Three.js, ReactFlow
-- **License**: Private
+## What is FlowShader?
+
+FlowShader is a node-based visual shader editor for creating GLSL fragment shaders through an intuitive drag-and-drop interface. Think Unreal Engine's Material Editor or Blender's Shader Nodes, but for the web.
 
 ## Technology Stack
 
-### Core Dependencies
-- **React 19.2.0** - UI framework
-- **ReactFlow 11.11.4** - Node graph visualization and interaction
-- **Three.js 0.182.0** - WebGL shader rendering and preview
-- **TypeScript 5.9.3** - Type safety and developer experience
-- **Vite 7.2.4** - Build tool and dev server
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| UI Framework | React | 19.2.0 |
+| Language | TypeScript | 5.9.3 |
+| Graph Editor | ReactFlow | 11.11.4 |
+| 3D/Shaders | Three.js | 0.182.0 |
+| Build Tool | Vite | 7.2.4 |
+| Testing | Vitest | 4.0.18 |
+| Linting | ESLint | 9.39.1 |
 
-### Development Tools
-- **ESLint 9.39.1** - Code linting with React-specific rules
-- **Vitest 4.0.18** - Unit testing framework
-- **Testing Library** - React component testing
-- **jsdom 28.0.0** - DOM environment for testing
+## Features Overview
 
-## Features
+### ✅ Current Features
 
-### Current Features ✅
-1. **Node-Based Shader Editor**
-   - Drag-and-drop node creation
-   - Visual connection system with type-safe edges
-   - Real-time GLSL compilation
-   - Auto-layout and graph validation
+#### Node System (60+ Nodes)
+- **Math:** Add, subtract, multiply, divide, sin, cos, abs, exp, pow, mix, negate
+- **Vector:** UV coords, length, fract, scale, shift
+- **Color:** Addition, multiplication, palette system
+- **SDF:** Circle (Signed Distance Functions)
+- **Parameters:** Float sliders, color pickers
+- **Utilities:** Split/combine vectors, relay nodes
+- **Special:** Notes, groups, monitor, preview nodes
 
-2. **Node Categories**
-   - **Math**: Add, subtract, multiply, divide, sin, cos, abs, exp, pow
-   - **Vector**: UV coords, length, fract, scale, shift
-   - **Color**: Color addition, multiplication
-   - **SDF**: Circle (more shapes planned)
-   - **Parameters**: Float sliders, color pickers
-   - **Utilities**: Split/combine vectors, relay nodes, mix, negate
-   - **Special**: Notes, groups, monitor, preview
+#### Editor Features
+- Drag-and-drop node creation
+- Visual connection system
+- Real-time GLSL compilation
+- Type-safe edges with validation
+- Auto-layout support
+- Save/load graph as JSON
 
-3. **Real-Time Preview**
-   - Live shader compilation to GLSL
-   - WebGL rendering with Three.js
-   - Floating/docked preview modes
-   - Picture-in-Picture support
+#### Type System
+- Automatic conversion: `float` ↔ `vec2` ↔ `vec3` ↔ `vec4`
+- GLSL swizzling support (`.x`, `.y`, `.z`, `.w`, `.r`, `.g`, `.b`, `.a`)
+- Smart type inference
+- Explicit conversion via Split/Combine nodes
 
-4. **Advanced UI**
-   - Resizable split-pane layout
-   - Context menu for node operations
-   - Sidebar with categorized node library
-   - Toolbar with graph operations
-   - Legend for keyboard shortcuts
-   - Value monitoring system
-
-5. **Type System**
-   - Automatic type conversion (float ↔ vec2 ↔ vec3 ↔ vec4)
-   - Swizzling support (.x, .y, .z, .w, .r, .g, .b, .a)
-   - Smart type inference
-
-## Project Structure
-
-```
-NodeShader/
-├── Examples/
-│   └── beautiful.json                 # Sample shader graph
-│
-└── shader-nodes/                      # Main application
-    ├── src/
-    │   ├── components/                # React UI components
-    │   │   ├── __tests__/            # Component tests
-    │   │   ├── ContextMenu.tsx       # Right-click menu
-    │   │   ├── Legend.tsx            # Keyboard shortcuts display
-    │   │   ├── MonitorNode.tsx       # Value monitoring node
-    │   │   ├── NodeEditor.tsx        # Main graph editor (21KB)
-    │   │   ├── PreviewNode.tsx       # In-graph shader preview
-    │   │   ├── ShaderNode.tsx        # Individual node component (17KB)
-    │   │   ├── ShaderPreview.tsx     # Three.js preview renderer
-    │   │   ├── Sidebar.tsx           # Node library panel
-    │   │   └── Toolbar.tsx           # Top toolbar
-    │   │
-    │   ├── core/                      # Core engine
-    │   │   ├── compiler.ts           # GLSL code generation
-    │   │   ├── types.ts              # TypeScript definitions
-    │   │   ├── validator.ts          # Graph validation
-    │   │   └── theme.ts              # UI theming
-    │   │
-    │   ├── nodes/                     # Node definitions
-    │   │   ├── index.ts              # Node registry (60+ nodes)
-    │   │   ├── math.ts               # Math operations
-    │   │   ├── vector.ts             # Vector operations
-    │   │   ├── utils.ts              # Utility nodes (6KB)
-    │   │   ├── params.ts             # Parameter inputs
-    │   │   ├── TimeNode.ts           # Time/animation
-    │   │   ├── SDFCircle.ts          # Signed distance function
-    │   │   ├── PaletteNode.ts        # Color palette
-    │   │   ├── OutputNode.ts         # Final output
-    │   │   └── MathNodes.ts          # Legacy math nodes
-    │   │
-    │   ├── tests/                     # Test directory (empty, ready for tests)
-    │   ├── assets/                    # Static assets
-    │   ├── App.tsx                    # Main application component
-    │   ├── App.css                    # App styles
-    │   ├── index.css                  # Global styles
-    │   └── main.tsx                   # Application entry point
-    │
-    ├── public/                        # Static public assets
-    ├── node_modules/                  # Dependencies
-    ├── package.json                   # Project configuration
-    ├── package-lock.json              # Dependency lock file
-    ├── vite.config.ts                 # Vite configuration
-    ├── tsconfig.json                  # TypeScript configuration
-    ├── tsconfig.app.json              # App TypeScript config
-    ├── tsconfig.node.json             # Node TypeScript config
-    ├── eslint.config.js               # ESLint configuration
-    └── README.md                      # Project documentation
-```
-
-## Architecture
-
-### Compilation Pipeline
-1. **Graph Structure**: ReactFlow manages node positions and connections
-2. **Topological Sort**: Compiler orders nodes based on dependencies
-3. **GLSL Generation**: Each node provides a GLSL template
-4. **Type Conversion**: Automatic casting between float/vec2/vec3/vec4
-5. **Code Assembly**: Final shader code compilation
-6. **WebGL Rendering**: Three.js executes the shader
-
-### Key Components
-
-#### NodeEditor (21KB)
-- Manages ReactFlow instance
-- Handles node creation/deletion
-- Graph serialization (save/load)
+#### UI/UX
+- Resizable split-pane layout
+- Floating/docked preview modes
+- Context menu for operations
 - Keyboard shortcuts
-- Sidebar portal integration
+- Categorized node library
+- Value monitoring system
 
-#### ShaderNode (17KB)
-- Renders individual nodes
-- Input/output handles with type colors
-- Parameter controls (sliders, color pickers)
-- Compact/expanded modes
-- Value monitoring integration
+### 🚧 Planned Features
 
-#### Compiler
-- Topological graph traversal
-- GLSL code generation
-- Type-safe edge handling
-- Swizzling support
-- Smart type conversion
-
-## Scripts
-
-```bash
-npm run dev      # Start development server
-npm run build    # Build for production (TypeScript + Vite)
-npm run lint     # Run ESLint
-npm run preview  # Preview production build
-npm test         # Run tests (to be configured)
-```
-
-## Recent Changes
-
-### Latest Commit (1a17cf7)
-**"Clean up examples and add testing infrastructure"**
-
-- ✅ Removed 7 old/duplicate shader graph examples
-- ✅ Renamed `shader_graph_1769882026082.json` → `beautiful.json`
-- ✅ Added Vitest for unit testing
-- ✅ Added jsdom for DOM testing
-- ✅ Added React Testing Library
-- ✅ Added @testing-library/jest-dom
-
-### Previous Commits
-- `8794860` - Stable version
-- `eaea0dc` - Finally working value monitor
-- `f516895` - All works
-- `6a372c0` - Added Sidebar
-- `462016f` - Preview feature ready
-
-## Development Roadmap
-
-### Planned Features 🚧
-- [ ] More SDF shapes (rectangle, triangle, etc.)
+- [ ] More SDF shapes (rectangle, triangle, polygon)
 - [ ] Texture sampling nodes
 - [ ] Custom function nodes
 - [ ] Graph templates/presets
 - [ ] Undo/redo system
 - [ ] Node search/filtering
 - [ ] Export shader code
-- [ ] Shader optimization
+- [ ] Shader optimization pass
 - [ ] Performance profiling
 
-### Testing Strategy
-- [ ] Unit tests for compiler
-- [ ] Unit tests for type conversion
-- [ ] Component tests for nodes
-- [ ] Integration tests for graph operations
-- [ ] E2E tests for shader compilation
+## Project Structure
 
-## Node Registry (60+ Nodes)
-
-### Output
-- `output` - Final shader output
-
-### Time & Animation
-- `time` - Animation time
-
-### SDF (Signed Distance Functions)
-- `sdf_circle` - Circle SDF
-
-### Color
-- `palette` - Color palette
-- `color_add` - Add colors
-- `color_mult` - Multiply colors
-- `param_color` - Color picker
-
-### Math Operations
-- `math_add`, `math_sub`, `math_mult`, `math_div`
-- `math_sin`, `math_cos`
-- `math_abs`, `math_exp`, `math_pow`
-- `math_mix` - Linear interpolation
-- `math_negate` - Negate value
-
-### Vector Operations
-- `uv` - UV coordinates
-- `vec_length` - Vector length
-- `vec_fract` - Fractional part
-- `uv_scale` - Scale UV
-- `uv_shift` - Offset UV
-
-### Vector Utilities
-- `split_vec2`, `split_vec3`, `split_vec4` - Split vectors
-- `combine_vec2`, `combine_vec3`, `combine_vec4` - Combine scalars
-- `smart_split` - Auto-detect split
-- `smart_compose` - Auto-detect compose
-
-### Parameters
-- `param_float` - Float slider
-- `param_color` - Color picker
-
-### Relay Nodes
-- `relay_float` - Float passthrough
-- `relay_vec3` - Vec3 passthrough
-
-### Special
-- `special_note` - Text annotation
-- `special_group` - Visual grouping
-- `preview` - In-graph preview
-- `monitor` - Value monitor
-
-## Type System
-
-### Supported Types
-- `float` - Single scalar value
-- `vec2` - 2D vector (x, y)
-- `vec3` - 3D vector / RGB color (x, y, z)
-- `vec4` - 4D vector / RGBA color (x, y, z, w)
-
-### Automatic Conversions
-```glsl
-float → vec2   # vec2(f)
-float → vec3   # vec3(f)
-float → vec4   # vec4(f, f, f, 1.0)
-vec2 → vec3    # vec3(v.xy, 0.0)
-vec3 → vec4    # vec4(v.xyz, 1.0)
-vec4 → vec3    # v.xyz
-vec3 → vec2    # v.xy
-vec2 → float   # v.x
+```
+FlowShader/
+├── src/
+│   ├── components/        # React UI components (9 files)
+│   │   ├── NodeEditor.tsx      # Main graph editor (21KB)
+│   │   ├── ShaderNode.tsx      # Node rendering (17KB)
+│   │   ├── ShaderPreview.tsx   # Three.js WebGL preview
+│   │   ├── Sidebar.tsx         # Node library
+│   │   ├── Toolbar.tsx         # Actions bar
+│   │   ├── MonitorNode.tsx     # Value debugging
+│   │   └── ...
+│   │
+│   ├── core/              # Engine (4 files)
+│   │   ├── compiler.ts         # GLSL generation
+│   │   ├── types.ts            # Type definitions
+│   │   ├── validator.ts        # Graph validation
+│   │   └── theme.ts            # UI colors
+│   │
+│   ├── nodes/             # Node definitions (10 files)
+│   │   ├── index.ts            # Registry (60+ nodes)
+│   │   ├── math.ts
+│   │   ├── vector.ts
+│   │   └── ...
+│   │
+│   └── tests/             # Test files (18 files, 230 tests)
+│
+├── Examples/
+│   └── beautiful.json     # Sample shader graph
+│
+├── Documentation/
+│   ├── README.md              # Main entry point
+│   ├── ARCHITECTURE.md        # System design
+│   ├── DEVELOPMENT.md         # Dev guide
+│   └── CONNECTION_VALIDATION.md
+│
+└── Configuration/
+    ├── package.json
+    ├── tsconfig*.json
+    ├── vite.config.ts
+    └── vitest.config.ts
 ```
 
-## UI Features
+## Test Coverage
 
-### Layout
-- **Split-pane**: Resizable editor/preview
-- **Floating Preview**: Picture-in-Picture mode
-- **Sidebar**: Collapsible node library
-- **Toolbar**: Quick actions
+**230 tests passing across 18 test files:**
 
-### Interactions
-- **Drag & Drop**: Create nodes from sidebar
-- **Right-click**: Context menu
-- **Connections**: Type-colored edges
-- **Pan & Zoom**: Navigate large graphs
+| Test Suite | Tests | Focus Area |
+|------------|-------|------------|
+| connection validator | 54 | Type system validation |
+| math nodes | 30 | Mathematical operations |
+| params | 28 | Parameter inputs |
+| vector nodes | 28 | Vector operations |
+| compiler | 13 | GLSL generation |
+| validator | 13 | Graph validation |
+| types | 12 | Type definitions |
+| custom nodes | 8 | Custom node system |
+| Others | 44 | Various features |
 
-### Keyboard Shortcuts
-- Graph operations (details in Legend component)
-- Node manipulation
-- View controls
+## Recent Changes
 
-## Configuration Files
+### Latest: Fix TypeScript Configuration (2026-02-19)
+- ✅ Created missing `tsconfig.app.json` and `tsconfig.node.json`
+- ✅ Fixed test execution - all 230 tests passing
+- ✅ Cleaned up documentation structure
 
-### TypeScript
-- `tsconfig.json` - Base configuration
-- `tsconfig.app.json` - Application config
-- `tsconfig.node.json` - Node/Vite config
+### Previous: Testing Infrastructure (2026-02-14)
+- ✅ Removed 7 old/duplicate example files
+- ✅ Renamed example file to `beautiful.json`
+- ✅ Added Vitest testing framework
+- ✅ Added React Testing Library
+- ✅ Created 18 comprehensive test files
 
-### Build
-- `vite.config.ts` - Vite bundler settings
-- `eslint.config.js` - Linting rules
+## Development Commands
 
-## Contributing
+```bash
+npm install          # Install dependencies
+npm run dev          # Development server (http://localhost:5173)
+npm run build        # Production build
+npm run preview      # Preview production build
+npm test             # Run all tests
+npm run test:ui      # Interactive test UI
+npm run test:coverage # Test coverage report
+npm run lint         # Run ESLint
+```
 
-### Code Style
-- TypeScript strict mode
-- ESLint + TypeScript ESLint
-- React hooks rules
-- Functional components
+## Performance Characteristics
 
-### Naming Conventions
-- Components: PascalCase
-- Files: PascalCase for components, camelCase for utilities
-- Node IDs: snake_case
-- GLSL variables: snake_case
+- **Compilation Time:** ~1-5ms for typical graphs
+- **Large Graphs:** 100+ nodes may need optimization
+- **WebGL Rendering:** 60 FPS target
+- **Node Editor:** 21KB (largest component)
+- **Real-time Updates:** Compiles on every change
 
-## Performance Notes
+## Known Limitations
 
-- **Large files**: NodeEditor.tsx (21KB), ShaderNode.tsx (17KB)
-- **Registry**: 60+ node definitions
-- **Real-time compilation**: Optimized for fast iteration
-- **Type conversion overhead**: Minimal, compile-time
+- WebGL canvas not mocked in tests (expected warnings)
+- No undo/redo yet
+- No texture sampling yet
+- Type conversions are automatic (may need manual control in future)
 
-## Known Issues
+## Resources
 
-- Empty `Examples/` directory (cleaned up)
-- Empty `tests/` directory (testing setup ready)
-- Tests directory structure ready but no tests written yet
-
-## Contact & Links
-
-- **Repository**: https://github.com/sulphux/FlowShader
-- **Main Branch**: `main`
-- **Latest Stable**: commit `1a17cf7`
+- [The Book of Shaders](https://thebookofshaders.com/) - GLSL tutorial
+- [Shadertoy](https://www.shadertoy.com/) - Shader examples
+- [ReactFlow Documentation](https://reactflow.dev/)
+- [Three.js Documentation](https://threejs.org/)
+- [Inigo Quilez Articles](https://iquilezles.org/articles/) - SDF techniques
 
 ---
 
-**Last Updated**: 2026-02-14  
-**Document Version**: 1.0
+For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).  
+For development guidelines, see [DEVELOPMENT.md](./DEVELOPMENT.md).

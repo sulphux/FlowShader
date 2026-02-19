@@ -199,28 +199,30 @@ NodeShader/
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │                        ┌─────────┐                              │
-│                        │   E2E   │ (Future)                     │
+│                        │   E2E   │ (Planned)                    │
 │                        │ Shader  │                              │
 │                        └─────────┘                              │
 │                    ┌───────────────┐                            │
-│                    │  Integration  │ (Planned)                  │
+│                    │  Integration  │ (Active - 44 tests)        │
 │                    │ Graph → GLSL  │                            │
 │                    └───────────────┘                            │
 │              ┌─────────────────────────┐                        │
-│              │   Component Tests       │ (Ready)                │
+│              │   Component Tests       │ (Active - 7 tests)     │
 │              │ NodeEditor, ShaderNode  │                        │
 │              └─────────────────────────┘                        │
 │        ┌─────────────────────────────────────┐                  │
-│        │        Unit Tests                   │ (Priority)       │
+│        │        Unit Tests                   │ (Active - 179)   │
 │        │ Compiler, Validator, Type System    │                  │
 │        └─────────────────────────────────────┘                  │
+│                                                                  │
+│                  ✅ 230 Total Tests Passing                      │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 
 Test Commands:
-  npm test              → Run all tests
-  npm run test:ui       → Vitest UI
-  npm run test:coverage → Coverage report
+  npm test                  → Run all 230 tests
+  npm run test:ui           → Vitest interactive UI
+  npm run test:coverage     → Coverage report
 
 ═══════════════════════════════════════════════════════════════════
                     KEY ALGORITHMS

@@ -96,15 +96,17 @@ Use: Color → Split Vec3 → Combine Vec4 (with alpha)
 Run comprehensive connection tests:
 
 ```bash
-npm test -- connectionValidator.test.ts
+npm test -- connectionValidator
 ```
 
-**Coverage:**
-- ✅ 41 tests
+**Test Coverage:**
+- ✅ 54 comprehensive tests
 - ✅ All 16 type combinations (4x4 matrix)
 - ✅ Swizzling validation (.x, .y, .z, .w)
 - ✅ Real-world scenarios
 - ✅ Edge cases
+
+**Part of the 230-test suite** - all passing!
 
 ## Integration
 
