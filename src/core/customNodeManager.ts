@@ -44,7 +44,17 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
             data: {
               ...node.data,
               // Use fresh definition from registry (has glslTemplate function)
-              definition: freshDef || node.data.definition
+              // BUT preserve detectedType for Custom Input/Output nodes
+              definition: freshDef ? {
+                ...freshDef,
+                // Preserve detected type from saved node data
+                ...(defId === 'custom_input' && node.data.detectedType ? {
+                  outputs: [{ id: 'out', type: node.data.detectedType, label: 'Value' }]
+                } : {}),
+                ...(defId === 'custom_output' && node.data.detectedType ? {
+                  inputs: [{ id: 'in', type: node.data.detectedType, label: 'Value' }]
+                } : {})
+              } : node.data.definition
             }
           };
         })
@@ -74,7 +84,23 @@ export function addCustomNode(customNode: CustomNodeDefinition): void {
   const existing = loadCustomNodes();
   const updated = existing.filter(n => n.id !== customNode.id);
   updated.push(customNode);
+  
+  console.log('💾 Saving custom node to localStorage:', {
+    nodeId: customNode.id,
+    subgraphNodesCount: customNode.subgraph.nodes.length,
+    firstNodeDetectedType: customNode.subgraph.nodes[0]?.data?.detectedType,
+    inputs: customNode.inputs,
+    outputs: customNode.outputs
+  });
+  
   saveCustomNodes(updated);
+  
+  // Verify it was saved correctly
+  const reloaded = loadCustomNodes().find(n => n.id === customNode.id);
+  console.log('✅ Verified reload:', {
+    found: !!reloaded,
+    firstNodeDetectedType: reloaded?.subgraph.nodes[0]?.data?.detectedType
+  });
 }
 
 /**
@@ -117,6 +143,15 @@ export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
     if (isCustomInput) {
       const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Input';
       const detectedType = node.data.detectedType || node.data.definition?.outputs?.[0]?.type || 'auto';
+      
+      console.log('🔍 extractCustomNodePorts - Custom Input:', {
+        nodeId: node.id,
+        portName,
+        detectedTypeFromData: node.data.detectedType,
+        detectedTypeFromDef: node.data.definition?.outputs?.[0]?.type,
+        final: detectedType
+      });
+      
       inputs.push({
         id: node.id,
         label: portName,
@@ -126,6 +161,15 @@ export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
     if (isCustomOutput) {
       const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Output';
       const detectedType = node.data.detectedType || node.data.definition?.inputs?.[0]?.type || 'auto';
+      
+      console.log('🔍 extractCustomNodePorts - Custom Output:', {
+        nodeId: node.id,
+        portName,
+        detectedTypeFromData: node.data.detectedType,
+        detectedTypeFromDef: node.data.definition?.inputs?.[0]?.type,
+        final: detectedType
+      });
+      
       outputs.push({
         id: node.id,
         label: portName,

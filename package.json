@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "clean": "rimraf dist node_modules/.vite",
-    "fresh": "npm run clean && npm run dev"
+    "fresh": "npm run clean && npm run dev",
+    "verify-repairs": "npx tsx src/tests/repair.worker.ts"
   },
   "dependencies": {
     "@types/three": "^0.182.0",

@@ -1,15 +1,20 @@
 import type { ShaderNodeDefinition } from './types';
 import type { CustomNodeDefinition } from './customNodeManager';
+import { generateCustomNodeFunction, autoCast } from './functionGenerator';
 
 export interface GraphNode {
   id: string;
   type: string;
   data: {
     definition: ShaderNodeDefinition;
+    isParameter?: boolean;  // For Custom Input nodes used as function parameters
+    externalInput?: string;  // External input value for Custom Input nodes
+    detectedType?: string;   // Detected type for Custom Input/Output nodes
+    value?: unknown;         // Node value (for controls)
   };
 }
 
-interface GraphEdge {
+export interface GraphEdge {
   source: string;
   target: string;
   sourceHandle?: string | null;
@@ -36,8 +41,176 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
   return sorted;
 };
 
-export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targetNodeId?: string): string => {
+/**
+ * Compile subgraph body (no uniforms/precision/main wrapper)
+ * Used for generating custom node function bodies
+ */
+function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetNodeId: string): string {
   const safeEdges = edges as GraphEdge[];
+  const sortedNodes = sortNodesTopologically(nodes, safeEdges, targetNodeId);
+  
+  let body = '';
+  const nodeVarMap: Record<string, string> = {};
+  
+  sortedNodes.forEach(node => {
+    const def = node.data?.definition;
+    if (!def) return;
+    
+    // Skip Custom Input nodes - they are function parameters
+    if (def.id === 'custom_input') {
+      // Sanitize node ID for use as GLSL identifier (hyphens are not allowed)
+      const glslParamName = node.id.replace(/-/g, '_');
+      nodeVarMap[node.id] = glslParamName;
+      console.log('📌 Custom Input mapped to parameter:', { nodeId: node.id, paramName: glslParamName });
+      return;
+    }
+    
+    // Map inputs
+    const inputs: Record<string, string> = {};
+    def.inputs.forEach(inputDef => {
+      const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
+      if (edge && nodeVarMap[edge.source]) {
+        const sourceVarName = nodeVarMap[edge.source];
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        
+        // Determine source type
+        let sourceRawType = 'float';
+        
+        if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
+          sourceRawType = sourceNode.data.definition.inputs[0].type;
+        } else if (sourceNode?.data.definition.id === 'custom_input') {
+          // For Custom Input, use detectedType
+          sourceRawType = sourceNode.data.detectedType || sourceNode.data.definition.outputs[0]?.type || 'float';
+        } else {
+          sourceRawType = sourceNode?.data.definition.outputs.find(o => o.id === edge.sourceHandle)?.type || 'float';
+        }
+
+        // Handle swizzling
+        const isSwizzled = edge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(edge.sourceHandle);
+        const effectiveSourceType = isSwizzled ? 'float' : sourceRawType;
+        const sourceExpression = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
+
+        // Auto-cast to target type
+        const targetType = inputDef.type;
+        const finalExpr = autoCast(sourceExpression, effectiveSourceType, targetType);
+        
+        inputs[inputDef.id] = finalExpr;
+      }
+    });
+    
+    // Generate GLSL code
+    let glslCode = def.glslTemplate(inputs, node.data);
+    
+    // Determine variable type
+    let nodeType = 'vec3';
+    
+    if (def.id.includes('split')) {
+      if (node.data.definition.inputs.length > 0) {
+        const inputType = node.data.definition.inputs[0].type;
+        nodeType = inputType === 'auto' ? 'vec3' : inputType;
+      }
+    } else if (def.id === 'custom_output') {
+      // Custom Output: prioritize detectedType, then check incoming connection type
+      if (node.data.detectedType && node.data.detectedType !== 'auto') {
+        nodeType = node.data.detectedType;
+      } else {
+        // Check incoming edge to determine type
+        const incomingEdge = safeEdges.find(e => e.target === node.id);
+        if (incomingEdge) {
+          const sourceNode = nodes.find(n => n.id === incomingEdge.source);
+          if (sourceNode) {
+            if (sourceNode.data.definition.id === 'custom_input') {
+              nodeType = sourceNode.data.detectedType || 'vec3';
+            } else {
+              const sourceOutput = sourceNode.data.definition.outputs.find(o => o.id === incomingEdge.sourceHandle);
+              nodeType = sourceOutput?.type === 'auto' ? 'vec3' : (sourceOutput?.type || 'vec3');
+            }
+          }
+        } else if (node.data.definition.inputs.length > 0) {
+          const inputType = node.data.definition.inputs[0].type;
+          nodeType = inputType === 'auto' ? 'vec3' : inputType;
+        }
+      }
+    } else {
+      // Standard: type = first output type
+      if (node.data.definition.outputs.length > 0) {
+        const outputType = node.data.definition.outputs[0].type;
+        nodeType = outputType === 'auto' ? 'vec3' : outputType;
+      }
+    }
+    
+    // Skip nodes with auto type that have no connections
+    if (nodeType === 'auto') {
+      return;
+    }
+    
+    const outputVar = `var_${node.id.replace(/-/g, '_')}`;
+    nodeVarMap[node.id] = outputVar;
+    
+    body += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
+  });
+  
+  return body;
+}
+
+export const compileGraphToGLSL = (
+  nodes: GraphNode[], 
+  edges: GraphEdge[], 
+  targetNodeId?: string,
+  isSubgraph: boolean = false
+): string => {
+  const safeEdges = edges as GraphEdge[];
+  
+  // PASS 1: Generate function declarations for custom nodes (recursive)
+  const customNodeFunctions: string[] = [];
+  const processedCustomNodes = new Set<string>();
+  // Tracks which custom nodes have a valid (non-empty) GLSL function declaration.
+  // Nodes absent from this set are skipped in PASS 2 (compilation guard).
+  const generatedCustomNodeIds = new Set<string>();
+
+  // Recursive function to collect all custom nodes (including nested)
+  const collectCustomNodes = (nodesToScan: GraphNode[]) => {
+    nodesToScan.forEach(node => {
+      const def = node.data?.definition;
+      if (def && 'isCustom' in def && def.isCustom) {
+        const customDef = def as CustomNodeDefinition;
+        
+        // Guard against infinite recursion (e.g. a custom node that contains itself)
+        // Mark as processed BEFORE recursing into subgraph
+        if (processedCustomNodes.has(customDef.id)) return;
+        processedCustomNodes.add(customDef.id);
+        
+        console.log('🔧 Processing custom node for function generation:', customDef.id);
+        
+        // Recursively collect nested custom nodes first (so dependencies appear before callers)
+        if (customDef.subgraph && customDef.subgraph.nodes) {
+          collectCustomNodes(customDef.subgraph.nodes as GraphNode[]);
+        }
+        
+        const funcCode = generateCustomNodeFunction(
+          customDef,
+          (subNodes, subEdges, targetId) => {
+            // Recursive compilation for subgraph body
+            const subMainBody = compileSubgraphMainBody(subNodes, subEdges, targetId);
+            return subMainBody;
+          }
+        );
+        
+        // Only register nodes whose function was successfully generated
+        if (funcCode.trim()) {
+          customNodeFunctions.push(funcCode);
+          generatedCustomNodeIds.add(customDef.id);
+        }
+      }
+    });
+  };
+  
+  // Start collection from root nodes
+  collectCustomNodes(nodes);
+  
+  console.log(`✅ Generated ${customNodeFunctions.length} custom node functions`);
+  
+  // PASS 2: Compile main graph
   const sortedNodes = sortNodesTopologically(nodes, safeEdges, targetNodeId);
   
   let mainBody = '';
@@ -76,30 +249,9 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
         const effectiveSourceType = isSwizzled ? 'float' : sourceRawType;
         const sourceExpression = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
 
-        // 2. JAWNA KONWERSJA (EXPLICIT CASTING)
-        // GLSL nie wybacza. Musimy użyć konstruktorów.
+        // 2. EXPLICIT CASTING — delegate to autoCast() (same logic used in subgraph compiler)
         const targetType = inputDef.type;
-        let finalExpr = sourceExpression;
-
-        if (effectiveSourceType !== targetType) {
-          if (targetType === 'float') {
-            if (['vec2', 'vec3', 'vec4'].includes(effectiveSourceType)) finalExpr = `${sourceExpression}.x`;
-          } 
-          else if (targetType === 'vec2') {
-            if (effectiveSourceType === 'float') finalExpr = `vec2(${sourceExpression})`;
-            else if (effectiveSourceType === 'vec3' || effectiveSourceType === 'vec4') finalExpr = `${sourceExpression}.xy`;
-          } 
-          else if (targetType === 'vec3') {
-            if (effectiveSourceType === 'float') finalExpr = `vec3(${sourceExpression})`;
-            else if (effectiveSourceType === 'vec2') finalExpr = `vec3(${sourceExpression}, 0.0)`;
-            else if (effectiveSourceType === 'vec4') finalExpr = `${sourceExpression}.xyz`;
-          } 
-          else if (targetType === 'vec4') {
-            if (effectiveSourceType === 'float') finalExpr = `vec4(${sourceExpression}, ${sourceExpression}, ${sourceExpression}, 1.0)`;
-            else if (effectiveSourceType === 'vec2') finalExpr = `vec4(${sourceExpression}, 0.0, 1.0)`;
-            else if (effectiveSourceType === 'vec3') finalExpr = `vec4(${sourceExpression}, 1.0)`;
-          }
-        }
+        const finalExpr = autoCast(sourceExpression, effectiveSourceType, targetType);
         inputs[inputDef.id] = finalExpr;
       }
     });
@@ -115,39 +267,27 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
     else if ('isCustom' in def && def.isCustom) {
       const customDef = def as CustomNodeDefinition;
       
-      // Map external inputs to Custom Input nodes in subgraph
-      const subgraphNodes = customDef.subgraph.nodes.map(subNode => ({
-        ...subNode,
-        data: {
-          ...subNode.data,
-          // If this is a Custom Input node, inject the external input value
-          externalInput: subNode.data.definition.id === 'custom_input' ? inputs[subNode.id] : undefined
-        }
-      }));
-      
-      // Find Custom Output nodes in subgraph
-      const outputNodes = customDef.subgraph.nodes.filter(n => n.data.definition.id === 'custom_output');
-      
-      if (outputNodes.length > 0) {
-        // Compile subgraph targeting the first Custom Output node
-        const subgraphCode = compileGraphToGLSL(
-          subgraphNodes as GraphNode[],
-          customDef.subgraph.edges as GraphEdge[],
-          outputNodes[0].id
-        );
-        
-        // Extract the final value from the compiled subgraph
-        // The Custom Output node's compiled variable will be our result
-        const outputVarName = `var_${outputNodes[0].id.replace(/-/g, '_')}`;
-        glslCode = outputVarName;
-        
-        // Inline the subgraph compilation
-        mainBody += `    // === Custom Node: ${def.label} ===\n`;
-        mainBody += subgraphCode.split('\n').filter(line => line.trim() && !line.includes('gl_FragColor')).join('\n') + '\n';
-      } else {
-        // Fallback if no Custom Output nodes
-        glslCode = 'vec3(1.0, 0.0, 1.0)'; // Magenta error color
+      // Compilation guard: skip nodes whose GLSL function wasn't generated (unready subgraph)
+      if (!generatedCustomNodeIds.has(customDef.id)) {
+        console.warn(`⚠️ Skipping unready custom node: ${customDef.id}`);
+        return;
       }
+      
+      // Build parameter list from inputs
+      const callParams = customDef.inputs.map(inp => {
+        if (inputs[inp.id]) return inputs[inp.id];
+        // Default value must match parameter type — '0.0' (float) would fail a vec3 param
+        const t = inp.type === 'auto' ? 'vec3' : inp.type;
+        if (t === 'float') return '0.0';
+        if (t === 'vec2') return 'vec2(0.0)';
+        if (t === 'vec4') return 'vec4(0.0)';
+        return 'vec3(0.0)';
+      }).join(', ');
+      
+      // Function call instead of inline subgraph
+      glslCode = `${customDef.id}(${callParams})`;
+      
+      console.log('🔧 Custom node function call:', { nodeId: node.id, call: glslCode });
     } else {
       // Standard node - use glslTemplate
       glslCode = def.glslTemplate(inputs, node.data);
@@ -167,6 +307,23 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
             const inputType = node.data.definition.inputs[0].type;
             // Auto type fallback - jeśli nie podłączone, użyj vec3
             nodeType = inputType === 'auto' ? 'vec3' : inputType;
+        }
+    } else if (def.id === 'custom_input') {
+        // Custom Input: MUSI używać detectedType (wykrytego z połączenia)!
+        if (node.data.detectedType) {
+            nodeType = node.data.detectedType;
+        } else if (node.data.definition.outputs.length > 0) {
+            const outputType = node.data.definition.outputs[0].type;
+            nodeType = outputType === 'auto' ? 'vec3' : outputType;
+        }
+    } else if (def.id === 'custom_output') {
+        // Custom Output: typ zmiennej = typ WEJŚCIA (co do niego wpływa)
+        if (node.data.definition.inputs.length > 0) {
+            const inputType = node.data.definition.inputs[0].type;
+            nodeType = inputType === 'auto' ? 'vec3' : inputType;
+        } else if (node.data.detectedType) {
+            // Fallback - użyj detectedType jeśli definition nie ma inputs
+            nodeType = node.data.detectedType;
         }
     } else {
         // Dla reszty: typ zmiennej = typ pierwszego wyjścia (standard)
@@ -219,6 +376,14 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
     }
   }
 
+  // If this is a subgraph compilation, return only the mainBody (no uniforms/precision)
+  if (isSubgraph) {
+    return mainBody;
+  }
+
+  // Concatenate custom functions + main
+  const functionsSection = customNodeFunctions.join('\n');
+
   return `
     precision mediump float;
     uniform float iTime;
@@ -231,7 +396,7 @@ export const compileGraphToGLSL = (nodes: GraphNode[], edges: GraphEdge[], targe
         vec3 d = vec3(0.263,0.416,0.557);
         return a + b*cos( 6.28318*(c*t+d) );
     }
-
+${functionsSection}
     void main() {
         vec2 uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;
         vec2 uv0 = uv;
