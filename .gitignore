@@ -33,3 +33,7 @@ coverage
 !package.json
 !tsconfig.json
 !package-lock.json
+
+# Agent session state / temp files
+files/
+test-glsl-output.js
