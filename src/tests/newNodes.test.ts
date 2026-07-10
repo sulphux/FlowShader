@@ -20,6 +20,27 @@ describe('New nodes', () => {
     expect(NODE_REGISTRY.math_atan.glslTemplate({ in: 'x' })).toBe('atan(x)');
   });
 
+  it('color_preview compiles as a target without emitting an empty variable', () => {
+    // Regresja: pusty glslTemplate emitował "vec3 var_x = ;" → błąd składni GLSL
+    // i czarny swatch w Color Preview
+    const nodes: GraphNode[] = [
+      { id: 'col1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#ff007a' } },
+      { id: 'cprev1', type: 'colorPreviewNode', data: { definition: NODE_REGISTRY.color_preview } },
+    ];
+    const edges = [
+      { source: 'col1', sourceHandle: 'rgb', target: 'cprev1', targetHandle: 'in' },
+    ];
+
+    const shader = compileGraphToGLSL(nodes, edges, 'cprev1');
+    expect(shader).not.toMatch(/=\s*;/);
+    expect(shader).toContain('gl_FragColor = vec4(var_col1, 1.0);');
+
+    if (glslangAvailable) {
+      const result = validateWithGlslangValidator(shader, 'frag');
+      expect(result.ok, `glslang rejected:\n${result.output}\n${shader}`).toBe(true);
+    }
+  });
+
   describe('code_glsl', () => {
     const codeDef = NODE_REGISTRY.code_glsl;
 

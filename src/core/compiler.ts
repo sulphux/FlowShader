@@ -371,7 +371,9 @@ export const compileGraphToGLSLWithReport = (
         return; // Skip this node
     }
 
-    if (def.id !== 'output' && def.id !== 'preview') {
+    // Nody czysto wizualne (pusty glslTemplate) nie emitują zmiennej —
+    // emisja dałaby "vec3 var = ;" i błąd składni GLSL
+    if (def.id !== 'output' && def.id !== 'preview' && def.id !== 'color_preview') {
         mainBody += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
     }
   });
