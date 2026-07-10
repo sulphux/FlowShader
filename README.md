@@ -100,3 +100,10 @@ okien podglądu — przydatne na słabszym sprzęcie:
 
 Stack: React 19 + TypeScript + Vite, React Flow (graf), Three.js (rendering),
 Vitest + glslangValidator (testy poprawności GLSL), Supabase (opcjonalna chmura).
+
+## Licencja
+
+[PolyForm Strict 1.0.0](LICENSE) — kod można przeglądać i uruchamiać lokalnie,
+ale nie kopiować, modyfikować ani wykorzystywać w innych projektach bez zgody
+autora. (To dotyczy tego repozytorium — nie mylić z licencjami projektów
+shaderów tworzonych *w* aplikacji, opisanymi wyżej w sekcji Chmura.)
