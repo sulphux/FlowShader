@@ -58,6 +58,37 @@ export const ExpNode: ShaderNodeDefinition = {
   glslTemplate: ({ in: val }) => `exp(${val || '0.0'})`
 };
 
+export const TanNode: ShaderNodeDefinition = {
+  id: 'math_tan', label: 'TAN', compact: true, description: 'Returns tangent of input',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Tan', type: 'float' }],
+  glslTemplate: ({ in: val }) => `tan(${val || '0.0'})`
+};
+
+export const CotNode: ShaderNodeDefinition = {
+  id: 'math_cot', label: 'COT', compact: true, description: 'Returns cotangent of input (cos/sin)',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Cot', type: 'float' }],
+  glslTemplate: ({ in: val }) => {
+    const v = val || '1.0';
+    return `(cos(${v}) / sin(${v}))`;
+  }
+};
+
+export const ATanNode: ShaderNodeDefinition = {
+  id: 'math_atan', label: 'ATAN', compact: true, description: 'Returns arcus tangent of input',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'ATan', type: 'float' }],
+  glslTemplate: ({ in: val }) => `atan(${val || '0.0'})`
+};
+
+export const FractFloatNode: ShaderNodeDefinition = {
+  id: 'math_fract', label: 'FRACT', compact: true, description: 'Returns fractional part of input (x - floor(x))',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Frc', type: 'float' }],
+  glslTemplate: ({ in: val }) => `fract(${val || '0.0'})`
+};
+
 export const PowNode: ShaderNodeDefinition = {
   id: 'math_pow', label: 'POW', compact: true, description: 'Returns Base raised to Exp',
   inputs: [{ id: 'base', label: 'Base', type: 'float' }, { id: 'exp', label: 'Exp', type: 'float' }],
@@ -71,6 +102,13 @@ export const ColorAddNode: ShaderNodeDefinition = {
   inputs: [{ id: 'a', label: 'A', type: 'vec3' }, { id: 'b', label: 'B', type: 'vec3' }],
   outputs: [{ id: 'out', label: 'RGB', type: 'vec3' }],
   glslTemplate: ({ a, b }) => `(${a || 'vec3(0.0)'} + ${b || 'vec3(0.0)'})`
+};
+
+export const MonoNode: ShaderNodeDefinition = {
+  id: 'mono', label: 'Mono (RGB)', compact: true, description: 'Fills R, G and B with a single value (grayscale)',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'RGB', type: 'vec3' }],
+  glslTemplate: ({ in: val }) => `vec3(${val || '0.0'})`
 };
 
 export const ColorMultNode: ShaderNodeDefinition = {

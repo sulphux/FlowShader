@@ -49,7 +49,7 @@ function createAdapterNode(
   position: { x: number; y: number }
 ): Node {
   const nodeType = type; // e.g., 'split_vec3'
-  const definition = NODE_REGISTRY[nodeType];
+  const definition = NODE_REGISTRY[nodeType as keyof typeof NODE_REGISTRY];
 
   if (!definition) {
     throw new Error(`Adapter node type "${nodeType}" not found in NODE_REGISTRY`);
@@ -76,6 +76,22 @@ function getComponentPorts(vecType: 'vec2' | 'vec3' | 'vec4'): string[] {
     vec4: ['x', 'y', 'z', 'w']
   };
   return ports[vecType] || [];
+}
+
+/**
+ * Resolve a multi-type target (e.g. Output's 'float|vec3') to a concrete type.
+ * Preference: exact match > vector→vector (keeps most information) > float.
+ */
+function resolveTargetType(sourceType: DataType, targetType: string): DataType {
+  if (!targetType.includes('|')) return targetType as DataType;
+  const options = targetType.split('|') as DataType[];
+  if (options.includes(sourceType)) return sourceType;
+
+  const vectorTypes = ['vec2', 'vec3', 'vec4'];
+  const vectorOption = options.find(o => vectorTypes.includes(o));
+  if (vectorOption) return vectorOption;
+  if (options.includes('float')) return 'float';
+  return options[0];
 }
 
 /**
@@ -113,8 +129,8 @@ function detectAdapterType(sourceType: DataType, targetType: DataType): AdapterT
  * Example: float → vec3 creates Combine Vec3, connects float to .x input
  */
 function insertCombineNode(
-  nodes: Node[],
-  edges: Edge[],
+  _nodes: Node[],
+  _edges: Edge[],
   sourceNode: Node,
   targetNode: Node,
   targetType: 'vec2' | 'vec3' | 'vec4',
@@ -136,7 +152,7 @@ function insertCombineNode(
   const edge2: Edge = {
     id: `${combineNode.id}_${params.target}`,
     source: combineNode.id,
-    sourceHandle: 'result',
+    sourceHandle: 'out',
     target: params.target,
     targetHandle: params.targetHandle
   };
@@ -152,8 +168,8 @@ function insertCombineNode(
  * Example: vec3 → float creates Split Vec3, connects .x output to target
  */
 function insertSplitNode(
-  nodes: Node[],
-  edges: Edge[],
+  _nodes: Node[],
+  _edges: Edge[],
   sourceNode: Node,
   targetNode: Node,
   sourceType: 'vec2' | 'vec3' | 'vec4',
@@ -191,8 +207,8 @@ function insertSplitNode(
  * Example: vec2 → vec3 creates Split Vec2 and Combine Vec3
  */
 function insertSplitAndCombine(
-  nodes: Node[],
-  edges: Edge[],
+  _nodes: Node[],
+  _edges: Edge[],
   sourceNode: Node,
   targetNode: Node,
   sourceType: 'vec2' | 'vec3' | 'vec4',
@@ -242,7 +258,7 @@ function insertSplitAndCombine(
   newEdges.push({
     id: `${combineNode.id}_${params.target}`,
     source: combineNode.id,
-    sourceHandle: 'result',
+    sourceHandle: 'out',
     target: params.target,
     targetHandle: params.targetHandle
   });
@@ -290,13 +306,16 @@ export function insertAutoAdapter(
     return { newNodes: [], newEdges: [] };
   }
 
+  // Multi-type target (np. 'float|vec3' na wejściu Output) → konkretny typ
+  const resolvedTargetType = resolveTargetType(sourceType, targetType);
+
   // Detect which adapter is needed
-  const adapterType = detectAdapterType(sourceType, targetType);
+  const adapterType = detectAdapterType(sourceType, resolvedTargetType);
 
   if (!adapterType) {
     console.warn('Auto-Adapter: No adapter needed or unsupported conversion', {
       sourceType,
-      targetType
+      targetType: resolvedTargetType
     });
     return { newNodes: [], newEdges: [] };
   }
@@ -309,7 +328,7 @@ export function insertAutoAdapter(
         edges,
         sourceNode,
         targetNode,
-        targetType as 'vec2' | 'vec3' | 'vec4',
+        resolvedTargetType as 'vec2' | 'vec3' | 'vec4',
         params
       );
 
@@ -330,7 +349,7 @@ export function insertAutoAdapter(
         sourceNode,
         targetNode,
         sourceType as 'vec2' | 'vec3' | 'vec4',
-        targetType as 'vec2' | 'vec3' | 'vec4',
+        resolvedTargetType as 'vec2' | 'vec3' | 'vec4',
         params
       );
 

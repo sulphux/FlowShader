@@ -2,15 +2,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import NodeEditor from './components/NodeEditor';
 import ShaderPreview from './components/ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from './core/compiler';
+import { collectRuntimeResources, type ShaderRuntimeResources } from './core/runtimeResources';
 import type { Node, Edge } from 'reactflow';
 
 function App() {
   const [shaderCode, setShaderCode] = useState<string | undefined>(undefined);
+  const [shaderResources, setShaderResources] = useState<ShaderRuntimeResources | undefined>(undefined);
   
   // --- LAYOUT STATE ---
-  const [splitPercent, setSplitPercent] = useState(60); 
+  const [splitPercent, setSplitPercent] = useState(60);
   const [isResizing, setIsResizing] = useState(false);
-  const [isFloating, setIsFloating] = useState(false); 
+  const [isFloating, setIsFloating] = useState(false);
+  const [isPreviewHidden, setIsPreviewHidden] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +26,7 @@ function App() {
 
     const glsl = compileGraphToGLSL(safeNodes, edges);
     setShaderCode(glsl);
+    setShaderResources(collectRuntimeResources(safeNodes));
   }, []);
 
   const startResizing = useCallback(() => setIsResizing(true), []);
@@ -66,21 +70,41 @@ function App() {
         position: 'relative'
       }}>
           {/* Obszar Edytora */}
-          <div style={{ 
-            width: isFloating ? '100%' : `${splitPercent}%`, 
-            height: '100%', 
+          <div style={{
+            width: (isFloating || isPreviewHidden) ? '100%' : `${splitPercent}%`,
+            height: '100%',
             position: 'relative',
             transition: isResizing ? 'none' : 'width 0.3s ease'
           }}>
             <NodeEditor onChange={handleGraphChange} />
           </div>
 
+          {/* Przywracanie schowanego podglądu */}
+          {isPreviewHidden && (
+            <button
+              onClick={() => setIsPreviewHidden(false)}
+              title="Show Preview"
+              style={{
+                position: 'absolute', top: '50%', right: 0, transform: 'translateY(-50%)',
+                zIndex: 2000, background: '#1a1a1a', color: '#fff',
+                border: '1px solid #444', borderRight: 'none',
+                borderRadius: '8px 0 0 8px', width: '22px', height: '64px',
+                cursor: 'pointer', fontSize: '12px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+              }}
+            >
+              ◀
+            </button>
+          )}
+
           {/* 2. SUWAK */}
-          {!isFloating && (
+          {!isFloating && !isPreviewHidden && (
             <div className="resizer" onMouseDown={startResizing} />
           )}
 
           {/* 3. PODGLĄD SHADERA */}
+          {!isPreviewHidden && (
           <div style={
             isFloating ? {
               position: 'absolute', bottom: '20px', right: '20px',
@@ -108,8 +132,22 @@ function App() {
               {isFloating ? '⇲' : '❐'}
             </button>
 
-            <ShaderPreview shaderCode={shaderCode} />
+            <button
+              onClick={() => { setIsPreviewHidden(true); setIsFloating(false); }}
+              title="Hide Preview"
+              style={{
+                position: 'absolute', top: '10px', right: '40px', zIndex: 10,
+                background: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+              }}
+            >
+              ✕
+            </button>
+
+            <ShaderPreview shaderCode={shaderCode} resources={shaderResources} />
           </div>
+          )}
       </div>
     </div>
   );

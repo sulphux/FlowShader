@@ -2,16 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
   addEdge, Background, Controls, useNodesState, useEdgesState, useReactFlow, ReactFlowProvider,
-  type Node, type Edge, type OnConnect, type NodeTypes, applyNodeChanges, getRectOfNodes, type OnConnectStartParams
+  type Node, type Edge, type OnConnect, type NodeTypes, applyNodeChanges, getRectOfNodes, type OnConnectStartParams,
+  type NodeChange, type NodeRemoveChange
 } from 'reactflow';
 import 'reactflow/dist/style.css'; 
 
 import { ShaderNode } from './ShaderNode';
 import { PreviewNode } from './PreviewNode';
 import { MonitorNode } from './MonitorNode';
+import { ColorPreviewNode } from './ColorPreviewNode';
 import ContextMenu from './ContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import CreateCustomNodeDialog from './CreateCustomNodeDialog';
+import SettingsDialog from './SettingsDialog';
+import CloudDialog from './CloudDialog';
 import { addCustomNode, extractCustomNodePorts, loadCustomNodes, type CustomNodeDefinition } from '../core/customNodeManager';
 import type { ShaderNodeDefinition, DataType } from '../core/types';
 import Legend from './Legend';
@@ -23,6 +27,8 @@ import { TYPE_COLORS } from '../core/theme';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { validateConnection } from '../core/connectionValidator';
 import { insertAutoAdapter } from '../core/autoAdapterSystem';
+import { serializeGraph, rehydrateGraph } from '../core/graphRehydration';
+import { saveProjectFile, openProjectFile, supportsFileSystemAccess, type FileHandleLike } from '../core/fileAccess';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -47,6 +53,7 @@ const NODE_TYPES: NodeTypes = {
   shaderNode: ShaderNode,
   previewNode: PreviewNode,
   monitorNode: MonitorNode,
+  colorPreviewNode: ColorPreviewNode,
 };
 
 /**
@@ -74,20 +81,12 @@ function EditorInner({ onChange }: Props) {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const restoredNodes = parsed.nodes.map((n: any) => {
-            const defId = n.data.definition.id;
-            const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
-            let type = 'shaderNode';
-            if (defId === 'preview') type = 'previewNode';
-            if (defId === 'monitor') type = 'monitorNode';
-            return {
-                ...n, type,
-                data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
-            };
-        });
-        return { nodes: restoredNodes, edges: parsed.edges, viewport: parsed.viewport };
+        const restored = rehydrateGraph(JSON.parse(saved));
+        return {
+          nodes: restored.nodes,
+          edges: restored.edges,
+          viewport: restored.viewport ?? { x: 0, y: 0, zoom: 1 },
+        };
       } catch (e) { console.error("Load Error:", e); }
     }
     return { nodes: initialNodesDefault, edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
@@ -104,10 +103,13 @@ function EditorInner({ onChange }: Props) {
   const reactFlowInstance = useReactFlow();
   
   const [menuFilter, setMenuFilter] = useState<string | null>(null);
+  const [menuFilterDirection, setMenuFilterDirection] = useState<'source' | 'target' | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean; type: 'pane' | 'node'; nodeId?: string } | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
   const [showCustomDialog, setShowCustomDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showCloudDialog, setShowCloudDialog] = useState(false);
   
   // Navigation stack for custom nodes
   const [navigationStack, setNavigationStack] = useState<Array<{ name: string; nodes: Node[]; edges: Edge[] }>>([]);
@@ -118,6 +120,8 @@ function EditorInner({ onChange }: Props) {
 
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Uchwyt File System Access — Save nadpisuje ten plik bez pytania
+  const fileHandleRef = useRef<FileHandleLike | null>(null);
   const lastLogicHash = useRef<string>("");
   const mousePos = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
   const isLoadedRef = useRef(false);
@@ -141,16 +145,15 @@ function EditorInner({ onChange }: Props) {
     // Only persist main canvas — never overwrite it with a subgraph view
     if (currentContext !== 'Main') return;
 
-    const dataToSave = {
-      nodes: nodes.map(n => ({
-        ...n,
-        data: { definition: { id: n.data.definition.id }, value: n.data.value, label: n.data.label, min: n.data.min, max: n.data.max }
-      })),
-      edges,
-      viewport: reactFlowInstance.getViewport()
-    };
+    const dataToSave = serializeGraph(nodes, edges, reactFlowInstance.getViewport());
     const jsonString = JSON.stringify(dataToSave);
-    localStorage.setItem(STORAGE_KEY, jsonString);
+    try {
+      localStorage.setItem(STORAGE_KEY, jsonString);
+    } catch (e) {
+      // Quota localStorage (np. duże tekstury w data URL) — auto-zapis pomijamy,
+      // zapis do pliku dalej działa
+      console.warn('Auto-save skipped (localStorage quota?):', e);
+    }
     const currentHash = getLogicHash(nodes, edges);
     if (currentHash !== lastLogicHash.current) {
         if (onChange) onChange(nodes, edges);
@@ -160,130 +163,47 @@ function EditorInner({ onChange }: Props) {
 
   const restoreGraph = useCallback((jsonString: string, filePath?: string) => {
       try {
-        const parsed = JSON.parse(jsonString);
-        const restoredNodes = parsed.nodes.map((n: { data: { definition: { id: string } } }) => {
-            const defId = n.data.definition.id;
-            const def = Object.values(NODE_REGISTRY).find(d => d.id === defId);
-            let type = 'shaderNode';
-            if (defId === 'preview') type = 'previewNode';
-            if (defId === 'monitor') type = 'monitorNode';
-            return {
-                ...n, type,
-                data: { ...n.data, definition: def || NODE_REGISTRY['output'] }
-            };
-        });
-        
-        // Auto-adapt Smart Split and Relay nodes based on existing connections
-        const adaptedNodes = restoredNodes.map((node: Node) => {
-          const def = node.data.definition;
-          
-          // Smart Split - adapt based on input edge
-          if (def.id === 'smart_split') {
-            const inputEdge = parsed.edges.find((e: Edge) => e.target === node.id && e.targetHandle === 'in');
-            if (inputEdge) {
-              const sourceNode = restoredNodes.find((n: Node) => n.id === inputEdge.source);
-              if (sourceNode) {
-                const sourceDef = sourceNode.data.definition;
-                const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === inputEdge.sourceHandle);
-                if (outputDef) {
-                  const type = outputDef.type;
-                  let newOutputs = def.outputs;
-                  let newInputLabel = 'Input';
-                  const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
-                  
-                  if (type === 'vec2') { 
-                    newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
-                    newInputLabel = 'Vec2'; 
-                  } else if (type === 'vec3') { 
-                    newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
-                    newInputLabel = 'Vec3'; 
-                  } else if (type === 'vec4') { 
-                    newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
-                    newInputLabel = 'Vec4'; 
-                  } else if (type === 'float') {
-                    newOutputs = [createOutput('x', 'Value')];
-                    newInputLabel = 'Float';
-                  }
-                  
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      definition: {
-                        ...def,
-                        inputs: [{ id: 'in', label: newInputLabel, type: type }],
-                        outputs: newOutputs
-                      }
-                    }
-                  };
-                }
-              }
-            }
-          }
-          
-          // Relay Auto - adapt based on input edge
-          if (def.id === 'relay_auto') {
-            const inputEdge = parsed.edges.find((e: Edge) => e.target === node.id && e.targetHandle === 'in');
-            if (inputEdge) {
-              const sourceNode = restoredNodes.find((n: Node) => n.id === inputEdge.source);
-              if (sourceNode) {
-                const sourceDef = sourceNode.data.definition;
-                const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === inputEdge.sourceHandle);
-                if (outputDef) {
-                  const sourceType = outputDef.type;
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      definition: {
-                        ...def,
-                        inputs: [{ id: 'in', label: sourceType, type: sourceType }],
-                        outputs: [{ id: 'out', label: sourceType, type: sourceType }]
-                      }
-                    }
-                  };
-                }
-              }
-            }
-          }
-          
-          return node;
-        });
-        
-        setNodes(adaptedNodes);
-        setEdges(parsed.edges);
-        if (parsed.viewport) reactFlowInstance.setViewport(parsed.viewport);
+        const restored = rehydrateGraph(JSON.parse(jsonString));
+        setNodes(restored.nodes);
+        setEdges(restored.edges);
+        if (restored.viewport) reactFlowInstance.setViewport(restored.viewport);
         if (filePath) setCurrentFilePath(filePath);
-      } catch (err) { 
+      } catch (err) {
           console.error("Error loading graph:", err);
       }
   }, [setNodes, setEdges, reactFlowInstance]);
 
   const handleSaveFile = useCallback((saveAs = false) => {
-      const dataToSave = {
-        nodes: nodes.map(n => ({ ...n, data: { definition: { id: n.data.definition.id }, value: n.data.value, label: n.data.label, min: n.data.min, max: n.data.max } })),
-        edges, viewport: reactFlowInstance.getViewport()
-      };
-      const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      let filename = currentFilePath || `shader_graph_${Date.now()}.json`;
-      if (saveAs || !currentFilePath) {
+      const dataToSave = serializeGraph(nodes, edges, reactFlowInstance.getViewport());
+      const json = JSON.stringify(dataToSave, null, 2);
+
+      let suggestedName = currentFilePath || 'shader_graph.json';
+      if (!supportsFileSystemAccess() && (saveAs || !currentFilePath)) {
+        // Fallback bez FSA: nazwa przez prompt (jak dotychczas)
         const baseName = currentFilePath ? currentFilePath.split(/[/\\]/).pop()?.replace('.json', '') : 'shader_graph';
-        filename = prompt('Save as:', baseName || 'shader_graph')?.trim() || filename;
-        if (!filename.endsWith('.json')) filename += '.json';
+        suggestedName = prompt('Save as:', baseName || 'shader_graph')?.trim() || suggestedName;
       }
-      
-      const a = document.createElement('a'); 
-      a.href = url; 
-      a.download = filename; 
-      a.click(); 
-      URL.revokeObjectURL(url);
-      
-      setCurrentFilePath(filename);
+      if (!suggestedName.endsWith('.json')) suggestedName += '.json';
+
+      void saveProjectFile(json, fileHandleRef.current, saveAs, suggestedName).then(result => {
+          if (!result.saved) return; // anulowano picker
+          fileHandleRef.current = result.handle;
+          setCurrentFilePath(result.fileName);
+      }).catch(err => console.error('Save failed:', err));
   }, [nodes, edges, reactFlowInstance, currentFilePath]);
 
-  const handleLoadFileClick = useCallback(() => { fileInputRef.current?.click(); }, []);
+  const handleLoadFileClick = useCallback(() => {
+      if (supportsFileSystemAccess()) {
+          void openProjectFile().then(result => {
+              if (!result) return; // anulowano
+              // Uchwyt zostaje — kolejne Save nadpisze wczytany plik
+              fileHandleRef.current = result.handle;
+              restoreGraph(result.content, result.fileName);
+          });
+          return;
+      }
+      fileInputRef.current?.click();
+  }, [restoreGraph]);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]; if (!file) return;
       const reader = new FileReader(); 
@@ -337,12 +257,13 @@ function EditorInner({ onChange }: Props) {
   }, [history, historyIndex, setNodes, setEdges]);
   
   const handleClear = useCallback(() => {
-      if(window.confirm("Clear all nodes?")) { 
+      if(window.confirm("Clear all nodes?")) {
         saveToHistory();
-        setNodes(initialNodesDefault); 
-        setEdges([]); 
-        localStorage.removeItem(STORAGE_KEY); 
+        setNodes(initialNodesDefault);
+        setEdges([]);
+        localStorage.removeItem(STORAGE_KEY);
         setCurrentFilePath(null);
+        fileHandleRef.current = null;
       }
   }, [setNodes, setEdges, saveToHistory]);
   
@@ -352,6 +273,7 @@ function EditorInner({ onChange }: Props) {
     setNodes(initialNodesDefault);
     setEdges([]);
     setCurrentFilePath(null);
+    fileHandleRef.current = null;
     setNavigationStack([]);
     setCurrentContext('Main');
     localStorage.removeItem(STORAGE_KEY);
@@ -827,11 +749,12 @@ function EditorInner({ onChange }: Props) {
     const isGroup = typeId === 'special_group';
     const isPreview = typeId === 'preview';
     const isMonitor = typeId === 'monitor';
+    const isColorPreview = typeId === 'color_preview';
     const def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY];
     const newLabel = getUniqueLabel(def, nodes);
     const newNode: Node = {
       id: `${typeId}_${Date.now()}`,
-      type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'),
+      type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : (isColorPreview ? 'colorPreviewNode' : 'shaderNode')),
       position,
       data: { definition: def, label: newLabel, value: def.controls?.defaultValue },
       zIndex: isGroup ? -10 : 0,
@@ -841,9 +764,9 @@ function EditorInner({ onChange }: Props) {
   }, [reactFlowInstance, setNodes, nodes]);
 
   const onNodesChange = useCallback(
-    (changes: { type: string; id?: string }[]) => {
+    (changes: NodeChange[]) => {
       // Check if any deletion would remove the last output node
-      const deletions = changes.filter(c => c.type === 'remove');
+      const deletions = changes.filter((c): c is NodeRemoveChange => c.type === 'remove');
       
       if (deletions.length > 0) {
         const remainingNodes = nodes.filter(n => 
@@ -873,6 +796,17 @@ function EditorInner({ onChange }: Props) {
   );
 
   const onConnect: OnConnect = useCallback((params) => {
+        if (!params.source || !params.target || !params.sourceHandle || !params.targetHandle) {
+            console.warn('Auto-Adapter: Incomplete connection params');
+            return;
+        }
+        const connectionParams = {
+            source: params.source,
+            sourceHandle: params.sourceHandle,
+            target: params.target,
+            targetHandle: params.targetHandle,
+        };
+
         // 1. Find source/target nodes
         const sourceNode = nodes.find(n => n.id === params.source);
         const targetNode = nodes.find(n => n.id === params.target);
@@ -907,7 +841,7 @@ function EditorInner({ onChange }: Props) {
         // Smart Split Node - adapts outputs based on input type
         if (targetDef.id === 'smart_split' && inputDef?.type === 'auto') {
             const type = sourceType;
-            let newOutputs = targetDef.outputs;
+            let newOutputs: { id: string; label: string; type: string }[] = targetDef.outputs;
             let newInputLabel = 'Input';
             const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
             
@@ -1055,7 +989,7 @@ function EditorInner({ onChange }: Props) {
         // 4. If invalid + requires adapter → auto-insert
         if (!validation.valid && validation.requiresAdapter) {
             const result = insertAutoAdapter(
-                nodes, edges, params, sourceType, targetType
+                nodes, edges, connectionParams, sourceType, targetType
             );
             
             if (result.newNodes.length > 0) {
@@ -1085,7 +1019,7 @@ function EditorInner({ onChange }: Props) {
     }, [nodes, edges, setNodes, setEdges]);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => { if(ref.current) { const bounds = ref.current.getBoundingClientRect(); mousePos.current = { x: e.clientX - bounds.left, y: e.clientY - bounds.top }; } }, []);
-  const onConnectStart = useCallback((_, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
+  const onConnectStart = useCallback((_: unknown, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
   const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
       const target = event.target as HTMLElement;
       const targetIsPane = target.classList.contains('react-flow__pane');
@@ -1101,8 +1035,12 @@ function EditorInner({ onChange }: Props) {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const inDef = node.data.definition.inputs.find((i: any) => i.id === handleId); if(inDef) type = inDef.type; 
               }
-              const clientX = event.clientX; const clientY = event.clientY;
-              setMenu({ x: clientX, y: clientY, visible: true, type: 'pane' }); setMenuFilter(type); setPendingConnection(connectionStartRef.current);
+              const point = 'changedTouches' in event ? event.changedTouches[0] : event;
+              const clientX = point.clientX; const clientY = point.clientY;
+              setMenu({ x: clientX, y: clientY, visible: true, type: 'pane' });
+              setMenuFilter(type);
+              setMenuFilterDirection(handleType === 'source' || handleType === 'target' ? handleType : null);
+              setPendingConnection(connectionStartRef.current);
           }
       }
       connectionStartRef.current = null;
@@ -1161,17 +1099,19 @@ function EditorInner({ onChange }: Props) {
     event.preventDefault(); 
     // Store mouse position for paste
     mousePos.current = { x: event.clientX, y: event.clientY };
-    setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'pane' }); 
-    setMenuFilter(null); 
-    setPendingConnection(null); 
+    setMenu({ x: event.clientX, y: event.clientY, visible: true, type: 'pane' });
+    setMenuFilter(null);
+    setMenuFilterDirection(null);
+    setPendingConnection(null);
   }, []);
   const onAddNode = useCallback((typeId: string) => { 
     if (!menu) return; 
     const position = reactFlowInstance.screenToFlowPosition({ x: menu.x, y: menu.y }); 
-    const isGroup = typeId === 'special_group'; 
-    const isPreview = typeId === 'preview'; 
-    const isMonitor = typeId === 'monitor'; 
-    let def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY]; 
+    const isGroup = typeId === 'special_group';
+    const isPreview = typeId === 'preview';
+    const isMonitor = typeId === 'monitor';
+    const isColorPreview = typeId === 'color_preview';
+    let def = NODE_REGISTRY[typeId as keyof typeof NODE_REGISTRY];
     const newLabel = getUniqueLabel(def, nodes); 
     const newNodeId = `${typeId}_${Date.now()}`;
     
@@ -1218,37 +1158,65 @@ function EditorInner({ onChange }: Props) {
       }
     }
     
-    const newNode: Node = { 
-      id: newNodeId, 
-      type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : 'shaderNode'), 
-      position, 
+    const newNode: Node = {
+      id: newNodeId,
+      type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : (isColorPreview ? 'colorPreviewNode' : 'shaderNode')),
+      position,
       data: { definition: def, label: newLabel, value: def.controls?.defaultValue }, 
       zIndex: isGroup ? -10 : 0, 
       style: isGroup ? { width: 400, height: 300 } : undefined, 
     }; 
     setNodes((nds) => isGroup ? [newNode, ...nds] : nds.concat(newNode)); 
     
-    if (pendingConnection) { 
-      const { nodeId, handleId, handleType } = pendingConnection; 
-      let newEdge: Edge | null = null; 
-      if (handleType === 'source') { 
-        const input = def.inputs[0]; 
-        if (input) { 
-          newEdge = { id: `e_${nodeId}_${newNodeId}`, source: nodeId, sourceHandle: handleId, target: newNodeId, targetHandle: input.id, style: { stroke: '#fff', strokeWidth: 3 } }; 
-        } 
-      } else { 
-        const output = def.outputs[0]; 
-        if (output) { 
-          newEdge = { id: `e_${newNodeId}_${nodeId}`, source: newNodeId, sourceHandle: output.id, target: nodeId, targetHandle: handleId, style: { stroke: '#fff', strokeWidth: 3 } }; 
-        } 
-      } 
-      if (newEdge) { 
-        setEdges((eds) => addEdge(newEdge!, eds)); 
-      } 
-      setPendingConnection(null); 
-    } 
+    if (pendingConnection && pendingConnection.nodeId) {
+      const { nodeId, handleId, handleType } = pendingConnection as { nodeId: string; handleId: string | null; handleType: string | null };
+      const originNode = nodes.find(n => n.id === nodeId);
+      const originType = getHandleType(originNode, handleId);
+      const worksWith = (src: string, tgt: string) => {
+        const r = validateConnection(src, tgt);
+        return r.valid || Boolean(r.requiresAdapter);
+      };
+
+      // Wybierz port kompatybilny z przeciąganym handle (nie ślepo pierwszy)
+      let connection: { source: string; sourceHandle: string; target: string; targetHandle: string } | null = null;
+      let sourceType = originType as string;
+      let targetType = originType as string;
+      if (handleType === 'source' && handleId) {
+        const input = def.inputs.find(i => worksWith(originType, i.type)) || def.inputs[0];
+        if (input) {
+          connection = { source: nodeId, sourceHandle: handleId, target: newNodeId, targetHandle: input.id };
+          targetType = input.type;
+        }
+      } else if (handleId) {
+        const output = def.outputs.find(o => worksWith(o.type, originType)) || def.outputs[0];
+        if (output) {
+          connection = { source: newNodeId, sourceHandle: output.id, target: nodeId, targetHandle: handleId };
+          sourceType = output.type;
+        }
+      }
+
+      if (connection) {
+        const validation = validateConnection(sourceType, targetType);
+        if (validation.valid) {
+          const edgeColor = TYPE_COLORS[sourceType] || '#fff';
+          const newEdge: Edge = { id: `e_${connection.source}_${connection.target}`, ...connection, style: { stroke: edgeColor, strokeWidth: 3 } };
+          setEdges((eds) => addEdge(newEdge, eds));
+        } else if (validation.requiresAdapter) {
+          // Typy się nie zgadzają — wstaw Split/Combine tak jak przy ręcznym łączeniu
+          const result = insertAutoAdapter(
+            [...nodes, newNode], edges, connection,
+            sourceType as DataType, targetType as DataType
+          );
+          if (result.newNodes.length > 0) {
+            setNodes(nds => [...nds, ...result.newNodes]);
+            setEdges(eds => [...eds, ...result.newEdges]);
+          }
+        }
+      }
+      setPendingConnection(null);
+    }
     setMenu(null);
-  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes, menuFilter]);
+  }, [menu, reactFlowInstance, setNodes, pendingConnection, setEdges, nodes, edges, menuFilter]);
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => { 
     event.preventDefault(); 
     setEdges((eds) => eds.filter((e) => e.id !== edge.id)); 
@@ -1276,6 +1244,8 @@ function EditorInner({ onChange }: Props) {
         onNew={handleNew}
         onFitView={handleFitView}
         onShowCode={handleShowCode}
+        onShowSettings={() => setShowSettingsDialog(true)}
+        onShowCloud={() => setShowCloudDialog(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={historyIndex > 0}
@@ -1310,6 +1280,7 @@ function EditorInner({ onChange }: Props) {
             onClose={() => setMenu(null)} 
             onAddNode={(id) => onAddNode(id)} 
             filterType={menuFilter}
+            filterDirection={menuFilterDirection}
             onPaste={clipboard ? handlePaste : undefined}
             onCreateCustom={() => setShowCustomDialog(true)}
             hasClipboard={!!clipboard}
@@ -1361,11 +1332,23 @@ function EditorInner({ onChange }: Props) {
           document.body 
         )}
         {showCustomDialog && createPortal(
-          <CreateCustomNodeDialog 
+          <CreateCustomNodeDialog
             onClose={() => setShowCustomDialog(false)}
             onCreate={handleCreateCustomNode}
-          />, 
-          document.body 
+          />,
+          document.body
+        )}
+        {showSettingsDialog && createPortal(
+          <SettingsDialog onClose={() => setShowSettingsDialog(false)} />,
+          document.body
+        )}
+        {showCloudDialog && createPortal(
+          <CloudDialog
+            onClose={() => setShowCloudDialog(false)}
+            getProjectJson={() => JSON.stringify(serializeGraph(nodes, edges, reactFlowInstance.getViewport()))}
+            onLoadProject={(json, name) => restoreGraph(json, name)}
+          />,
+          document.body
         )}
         {showCode && createPortal( <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCode(false)}> <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px', border: '1px solid #444', width: '80%', height: '80%', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}> <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#fff', fontWeight: 'bold' }}> <span>GENERATED GLSL</span> <button onClick={() => setShowCode(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✕</button> </div> <textarea readOnly value={currentCode} style={{ flex: 1, background: '#111', color: '#81c784', border: 'none', fontFamily: 'monospace', padding: '10px', resize: 'none' }} /> </div> </div>, document.body )}
       </ReactFlow>

@@ -8,21 +8,24 @@ import { loadCustomNodes, deleteCustomNode } from '../core/customNodeManager';
 interface Props {
     nodes: Node[];
     setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
+    currentContext?: string;
 }
 
-const MENU_STRUCTURE = {
-  "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
+export const MENU_STRUCTURE = {
+  "Output & Inputs": ["output", "time", "param_float", "param_color", "uv", "texture_2d", "audio_input"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
-  "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
+  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
   "Utils": [
-    "special_note", "special_group", 
+    "special_note", "special_group",
     "smart_split",
     "smart_compose",
     "monitor",
-    "preview"
+    "preview",
+    "color_preview",
+    "code_glsl"
   ],
-  "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
+  "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 
 export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Props) {
@@ -58,7 +61,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
   
   // Build menu structure with custom nodes
   const menuStructure = useMemo(() => {
-    const base = { ...MENU_STRUCTURE };
+    const base: Record<string, string[]> = { ...MENU_STRUCTURE };
     
     if (currentContext !== 'Main') {
       // In subgraph - show Custom Input/Output

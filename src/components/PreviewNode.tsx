@@ -2,16 +2,18 @@ import { memo, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'reactflow';
 import ShaderPreview from './ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
+import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
 
 export const PreviewNode = memo(({ id, selected }: NodeProps) => {
   const { getNodes, getEdges } = useReactFlow();
   const [shaderCode, setShaderCode] = useState<string>('');
-  
+  const [resources, setResources] = useState<ShaderRuntimeResources | undefined>(undefined);
+
   useEffect(() => {
       const updatePreview = () => {
           const nodes = getNodes();
           const edges = getEdges();
-          
+
           const safeNodes: GraphNode[] = nodes.map(node => ({
             id: node.id,
             type: node.type || 'shaderNode',
@@ -20,10 +22,15 @@ export const PreviewNode = memo(({ id, selected }: NodeProps) => {
 
           const code = compileGraphToGLSL(safeNodes, edges, id);
           setShaderCode(code);
+          setResources(prev => {
+            const next = collectRuntimeResources(safeNodes);
+            // Nie twórz nowej referencji, gdy zasoby się nie zmieniły (unika rerenderów co 500ms)
+            return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+          });
       };
 
       const interval = setInterval(updatePreview, 500);
-      updatePreview(); 
+      updatePreview();
       return () => clearInterval(interval);
   }, [getNodes, getEdges, id]);
 
@@ -73,7 +80,7 @@ export const PreviewNode = memo(({ id, selected }: NodeProps) => {
                 pointerEvents: 'none', // Kliknięcia przelatują do noda (selekcja)
                 zIndex: 1
             }}>
-                <ShaderPreview shaderCode={shaderCode} />
+                <ShaderPreview shaderCode={shaderCode} resources={resources} />
             </div>
 
             <Handle 

@@ -1,10 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { compileGraphToGLSL } from './compiler';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { compileGraphToGLSL, compileGraphToGLSLWithReport } from './compiler';
 import type { GraphNode } from './compiler';
 import { NODE_REGISTRY } from '../nodes';
 import type { CustomNodeDefinition } from './customNodeManager';
+import { createShaderDebugLogger } from './shaderDebug';
+import { createCompilerDebugReport, buildCompilerDebugSummary } from './compilerDebugReport';
 
 describe('compiler', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('sortNodesTopologically', () => {
     it('should compile a simple float output', () => {
       const nodes: GraphNode[] = [
@@ -30,7 +36,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('precision mediump float');
       expect(glsl).toContain('uniform float iTime');
       expect(glsl).toContain('uniform vec2 iResolution');
@@ -48,7 +54,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, []);
-      
+
       expect(glsl).toContain('gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0)');
     });
 
@@ -83,7 +89,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('var_float_1');
       expect(glsl).toContain('var_float_2');
       expect(glsl).toContain('var_add_1');
@@ -108,7 +114,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       // UV is vec2, so it should be cast to vec4 as vec4(uv, 0.0, 1.0)
       expect(glsl).toContain('gl_FragColor = vec4(var_uv_1, 0.0, 1.0)');
     });
@@ -132,7 +138,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('.x');
     });
 
@@ -167,7 +173,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('vec3(');
     });
 
@@ -196,7 +202,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('vec3 var_split_1');
     });
 
@@ -225,7 +231,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges, 'monitor-1');
-      
+
       expect(glsl).toContain('var_float_1');
       expect(glsl).not.toContain('var_output_1');
     });
@@ -268,7 +274,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('var_time_1');
       expect(glsl).toContain('var_sin_1');
       expect(glsl).toContain('var_cos_1');
@@ -306,7 +312,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       expect(glsl).toContain('vec2(');
     });
 
@@ -335,7 +341,7 @@ describe('compiler', () => {
       ];
 
       const glsl = compileGraphToGLSL(nodes, edges);
-      
+
       // Monitor nodes ARE included in compilation (they have inputs and special handling)
       expect(glsl).toContain('var_monitor_1');
     });
@@ -343,7 +349,6 @@ describe('compiler', () => {
 
   describe('Custom Nodes Compilation', () => {
     it('should compile custom node without glslTemplate error', () => {
-      // Create simple custom node: UV → Custom Output
       const customNodeDef: CustomNodeDefinition = {
         id: 'custom_test',
         label: 'Test Custom',
@@ -362,7 +367,7 @@ describe('compiler', () => {
             {
               id: 'custom-output-1',
               type: 'custom_output',
-              data: { 
+              data: {
                 definition: NODE_REGISTRY.custom_output
               }
             }
@@ -376,7 +381,7 @@ describe('compiler', () => {
             }
           ]
         },
-        glslTemplate: () => 'vec3(1.0, 0.0, 1.0)' // Placeholder - should not be called
+        glslTemplate: () => 'vec3(1.0, 0.0, 1.0)'
       };
 
       const nodes: GraphNode[] = [
@@ -401,20 +406,17 @@ describe('compiler', () => {
         }
       ];
 
-      // Should NOT throw "glslTemplate is not a function"
       expect(() => {
         compileGraphToGLSL(nodes, edges);
       }).not.toThrow();
-      
+
       const glsl = compileGraphToGLSL(nodes, edges);
-      
-      // Should contain UV code from subgraph
+
       expect(glsl).toContain('gl_FragCoord');
       expect(glsl).toContain('iResolution');
     });
 
     it('should handle custom node with inputs via Custom Input injection', () => {
-      // Custom node that processes input
       const customNodeDef: CustomNodeDefinition = {
         id: 'custom_double',
         label: 'Double',
@@ -433,7 +435,7 @@ describe('compiler', () => {
             {
               id: 'mult-1',
               type: 'math_mult',
-              data: { 
+              data: {
                 definition: NODE_REGISTRY.math_mult,
                 value: 2.0
               }
@@ -498,12 +500,100 @@ describe('compiler', () => {
       expect(() => {
         compileGraphToGLSL(nodes, edges);
       }).not.toThrow();
-      
+
       const glsl = compileGraphToGLSL(nodes, edges);
-      
-      // Should contain multiplication from subgraph
+
       expect(glsl).toContain('*');
       expect(glsl).toContain('2.0');
+    });
+
+    it('should not emit debug logs when logger is disabled', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      const logger = createShaderDebugLogger(false);
+
+      logger.log('compiler', 'disabled message');
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+    });
+
+    it('should create compiler debug report summary', () => {
+      const report = createCompilerDebugReport({
+        nodes: [{ id: 'node-1', type: 'output', data: { definition: NODE_REGISTRY.output } }],
+        edges: [],
+        sortedNodes: [{ id: 'node-1', type: 'output', data: { definition: NODE_REGISTRY.output } }],
+        generatedCustomNodeIds: ['custom_a'],
+        skippedNodeIds: ['skip-a', 'skip-b'],
+        targetNodeId: 'node-1',
+        isSubgraph: false,
+        finalLine: 'gl_FragColor = vec4(1.0);',
+        shaderLength: 123,
+      });
+
+      expect(buildCompilerDebugSummary(report)).toContain('target=node-1');
+      expect(buildCompilerDebugSummary(report)).toContain('customFunctions=1');
+      expect(buildCompilerDebugSummary(report)).toContain('skipped=2');
+    });
+
+    it('should return compiler debug report with skipped custom node', () => {
+      const brokenCustomNodeDef: CustomNodeDefinition = {
+        id: 'custom_broken',
+        label: 'Broken Custom',
+        description: 'Missing custom output',
+        compact: false,
+        inputs: [],
+        outputs: [{ id: 'out', label: 'Out', type: 'vec3' }],
+        isCustom: true,
+        subgraph: {
+          nodes: [
+            {
+              id: 'uv-1',
+              type: 'uv',
+              data: { definition: NODE_REGISTRY.uv },
+            },
+          ],
+          edges: [],
+        },
+        glslTemplate: () => 'vec3(0.0)',
+      };
+
+      const nodes: GraphNode[] = [
+        {
+          id: 'broken-custom-1',
+          type: 'shaderNode',
+          data: { definition: brokenCustomNodeDef },
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          data: { definition: NODE_REGISTRY.output },
+        },
+      ];
+
+      const edges = [
+        {
+          source: 'broken-custom-1',
+          target: 'output-1',
+          sourceHandle: 'out',
+          targetHandle: 'color',
+        },
+      ];
+
+      const result = compileGraphToGLSLWithReport(nodes, edges);
+
+      expect(result.shader).toContain('gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0)');
+      expect(result.debugReport.generatedCustomNodeIds).toEqual([]);
+      expect(result.debugReport.skippedNodeIds).toContain('broken-custom-1');
+      expect(result.debugReport.finalLine).toBe('gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);');
+      expect(result.debugReport.sortedNodeIds).toEqual(['broken-custom-1', 'output-1']);
+    });
+
+    it('should emit structured debug logs when logger is enabled', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      const logger = createShaderDebugLogger(true);
+
+      logger.log('compiler', 'compiled shader', { nodes: 2 });
+
+      expect(consoleSpy).toHaveBeenCalledWith('[ShaderDebug:compiler] compiled shader', { nodes: 2 });
     });
   });
 });

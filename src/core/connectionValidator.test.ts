@@ -134,6 +134,25 @@ describe('connectionValidator', () => {
         expect(result.valid).toBe(true);
       });
 
+      it('should prefer a valid pair when multi-type source includes an invalid combination first', () => {
+        const result = validateConnection('vec2|float', 'float');
+        expect(result.valid).toBe(true);
+        expect(result.requiresAdapter).toBeUndefined();
+      });
+
+      it('should prefer a valid pair when multi-type target includes an invalid combination first', () => {
+        const result = validateConnection('float', 'vec3|float');
+        expect(result.valid).toBe(true);
+        expect(result.requiresAdapter).toBeUndefined();
+      });
+
+      it('should return a meaningful adapter error when no multi-type combination matches', () => {
+        const result = validateConnection('vec4|vec3', 'float|vec2');
+        expect(result.valid).toBe(false);
+        expect(result.reason).toBeDefined();
+        expect(result.requiresAdapter).toBe(true);
+      });
+
       it('should allow vec3 → "float|vec3" port', () => {
         const result = validateConnection('vec3', 'float|vec3');
         expect(result.valid).toBe(true);

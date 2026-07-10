@@ -6,6 +6,7 @@ import * as MathNodes from './math';
 import * as VecNodes from './vector';
 import * as Utils from './utils';
 import * as Params from './params';
+import * as Media from './media';
 import { PreviewNodeDef } from './utils';
 import { MonitorNodeDef, SmartSplitNode, SmartComposeNode, RelayAutoNode } from './utils';
 import { CustomInputNode } from './CustomInput';
@@ -52,6 +53,12 @@ export const NODE_REGISTRY = {
   smart_split: SmartSplitNode,
   smart_compose: SmartComposeNode,
   relay_auto: RelayAutoNode,
+  color_preview: Utils.ColorPreviewNodeDef,
+  code_glsl: Utils.CodeNode,
+
+  // Media
+  texture_2d: Media.TextureNode,
+  audio_input: Media.AudioInputNode,
   
   // Utils - Fixed type Split
   split_vec2: Utils.SplitVec2Node,
@@ -74,13 +81,18 @@ export const NODE_REGISTRY = {
   math_div: MathNodes.DivNode,
   math_sin: MathNodes.SinNode,
   math_cos: MathNodes.CosNode,
+  math_tan: MathNodes.TanNode,
+  math_cot: MathNodes.CotNode,
+  math_atan: MathNodes.ATanNode,
   math_abs: MathNodes.AbsNode,
   math_exp: MathNodes.ExpNode,
   math_pow: MathNodes.PowNode,
+  math_fract: MathNodes.FractFloatNode,
 
   // Color
   color_add: MathNodes.ColorAddNode,
   color_mult: MathNodes.ColorMultNode,
+  mono: MathNodes.MonoNode,
 
   // Vector
   uv: VecNodes.UVNode,

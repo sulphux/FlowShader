@@ -2,6 +2,8 @@ import { memo, useEffect, useState, useRef, useMemo } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer, useEdges, useNodes } from 'reactflow';
 import * as THREE from 'three';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
+import { collectRuntimeResources } from '../core/runtimeResources';
+import { buildResourceUniforms, updateAudioUniforms } from '../core/threeResources';
 import { TYPE_COLORS } from '../core/theme';
 
 const Row = ({ label, value, color }: { label: string, value: number, color: string }) => (
@@ -23,7 +25,7 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   const meshRef = useRef<THREE.Mesh | null>(null);
   const bufferRef = useRef<Float32Array>(new Float32Array(4)); 
   
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | undefined>(undefined);
   const lastUpdateRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
@@ -32,10 +34,12 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
       if (!connection) return 'vec4';
       const sourceNode = nodes.find(n => n.id === connection.source);
       if (!sourceNode) return 'vec4';
-      if (sourceNode.data.definition.id.includes('split')) {
-          return sourceNode.data.definition.inputs[0].type;
+      const definition = (sourceNode.data as { definition?: { id: string; inputs: { type: string }[]; outputs: { id: string; type: string }[] } })?.definition;
+      if (!definition) return 'vec4';
+      if (definition.id.includes('split')) {
+          return definition.inputs[0].type;
       }
-      return sourceNode.data.definition.outputs.find((o: { id: string; type: string }) => o.id === connection.sourceHandle)?.type || 'vec4';
+      return definition.outputs.find((o: { id: string; type: string }) => o.id === connection.sourceHandle)?.type || 'vec4';
   }, [edges, nodes, id]);
 
   useEffect(() => {
@@ -83,12 +87,16 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
                 id: node.id, type: node.type || 'shaderNode', data: node.data
               }));
               const code = compileGraphToGLSL(safeNodes, currentEdges, id);
-              
+
               const oldMat = meshRef.current.material as THREE.ShaderMaterial;
               const newMat = new THREE.ShaderMaterial({
                   vertexShader: `void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
                   fragmentShader: code,
-                  uniforms: { iTime: { value: 0 }, iResolution: { value: new THREE.Vector2(1, 1) } }
+                  uniforms: {
+                      iTime: { value: 0 },
+                      iResolution: { value: new THREE.Vector2(1, 1) },
+                      ...buildResourceUniforms(collectRuntimeResources(safeNodes))
+                  }
               });
               meshRef.current.material = newMat;
               oldMat.dispose();
@@ -115,6 +123,7 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
           if(rendererRef.current && sceneRef.current && meshRef.current && targetRef.current) {
               const mat = meshRef.current.material as THREE.ShaderMaterial;
               mat.uniforms.iTime.value = (now - startTime) * 0.001;
+              updateAudioUniforms(mat);
               try {
                   rendererRef.current.setRenderTarget(targetRef.current);
                   rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));

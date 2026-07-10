@@ -179,4 +179,54 @@ describe('autoAdapterSystem', () => {
       expect(result.newEdges).toHaveLength(0);
     });
   });
+
+  describe('insertAutoAdapter - multi-type target (Output "float|vec3")', () => {
+    // Regresja: UV Coord (vec2) → Output nie wstawiał adaptera, bo detectAdapterType
+    // nie rozumiał typu multi 'float|vec3' i zwracał null.
+    const uvNodes: Node[] = [
+      {
+        id: 'uv-1',
+        type: 'shaderNode',
+        position: { x: 0, y: 0 },
+        data: { definition: NODE_REGISTRY.uv }
+      },
+      {
+        id: 'out-1',
+        type: 'shaderNode',
+        position: { x: 400, y: 0 },
+        data: { definition: NODE_REGISTRY.output }
+      }
+    ];
+
+    it('vec2 → "float|vec3" inserts Split Vec2 + Combine Vec3', () => {
+      const result = insertAutoAdapter(
+        uvNodes,
+        [],
+        { source: 'uv-1', sourceHandle: 'out', target: 'out-1', targetHandle: 'color' },
+        'vec2',
+        'float|vec3' as never
+      );
+
+      expect(result.newNodes).toHaveLength(2);
+      expect(result.newNodes.map(n => n.data.definition.id)).toEqual(['split_vec2', 'combine_vec3']);
+
+      // Ostatnia krawędź: combine.out → output.color (handle 'out', nie 'result')
+      const lastEdge = result.newEdges[result.newEdges.length - 1];
+      expect(lastEdge.sourceHandle).toBe('out');
+      expect(lastEdge.target).toBe('out-1');
+      expect(lastEdge.targetHandle).toBe('color');
+    });
+
+    it('float → "float|vec3" resolves to exact match (no adapter needed)', () => {
+      const result = insertAutoAdapter(
+        uvNodes,
+        [],
+        { source: 'uv-1', sourceHandle: 'out', target: 'out-1', targetHandle: 'color' },
+        'float',
+        'float|vec3' as never
+      );
+
+      expect(result.newNodes).toHaveLength(0);
+    });
+  });
 });

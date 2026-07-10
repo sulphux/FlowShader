@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
-import { isValidConnection } from '../core/connectionValidator';
+import { validateConnection } from '../core/connectionValidator';
 
 interface Props {
   x: number;
@@ -10,23 +10,32 @@ interface Props {
   onClose: () => void;
   onAddNode: (typeId: string) => void;
   filterType?: string | null;
+  /** Skąd ciągnięto połączenie: 'source' = z wyjścia (szukamy nodów z pasującym WEJŚCIEM),
+   *  'target' = z wejścia (szukamy nodów z pasującym WYJŚCIEM). */
+  filterDirection?: 'source' | 'target' | null;
   onPaste?: () => void;
   onCreateCustom?: () => void;
   hasClipboard?: boolean;
   hasSelection?: boolean;
 }
 
-const MENU_STRUCTURE = {
-  "Output & Inputs": ["output", "time", "param_float", "param_color", "uv"],
-  "Custom Nodes": ["custom_input", "custom_output"],
-  "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
-  "Math (Trig/Func)": ["math_sin", "math_cos", "math_abs", "math_exp"],
-  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
-  "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview"],
-  "Color & Shapes": ["palette", "color_add", "color_mult", "sdf_circle"]
+/** Połączenie "pasuje", gdy jest poprawne wprost albo auto-adapter je obsłuży. */
+const connectionWorks = (sourceType: string, targetType: string): boolean => {
+  const result = validateConnection(sourceType, targetType);
+  return result.valid || Boolean(result.requiresAdapter);
 };
 
-export default function ContextMenu({ x, y, onClose, onAddNode, filterType, onPaste, onCreateCustom, hasClipboard, hasSelection }: Props) {
+export const MENU_STRUCTURE = {
+  "Output & Inputs": ["output", "time", "param_float", "param_color", "uv", "texture_2d", "audio_input"],
+  "Custom Nodes": ["custom_input", "custom_output"],
+  "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
+  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract"],
+  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
+  "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl"],
+  "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
+};
+
+export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filterDirection, onPaste, onCreateCustom, hasClipboard }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
   const [openLeft, setOpenLeft] = useState(false);
@@ -57,23 +66,16 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, onPa
       if (!filterType) return true;
       const def = NODE_REGISTRY[nodeId as keyof typeof NODE_REGISTRY];
       if (!def) return false;
-      
-      // Check if node has compatible OUTPUT (for source nodes like params)
-      // This is used when dragging FROM an input (target handle)
-      const hasMatchingOutput = def.outputs.some(output => {
-          // Use the same validation logic as connections
-          return isValidConnection(output.type, filterType);
-      });
-      
-      // Check if node has compatible INPUT (for processing nodes)
-      // This is used when dragging FROM an output (source handle)
-      const hasMatchingInput = def.inputs.some(input => {
-          // Use the same validation logic as connections
-          return isValidConnection(filterType, input.type);
-      });
-      
+
+      // Ciągnięto z WYJŚCIA → nowy node musi mieć wejście przyjmujące filterType
+      const hasMatchingInput = def.inputs.some(input => connectionWorks(filterType, input.type));
+      // Ciągnięto z WEJŚCIA → nowy node musi mieć wyjście produkujące filterType
+      const hasMatchingOutput = def.outputs.some(output => connectionWorks(output.type, filterType));
+
+      if (filterDirection === 'source') return hasMatchingInput;
+      if (filterDirection === 'target') return hasMatchingOutput;
       return hasMatchingOutput || hasMatchingInput;
-  }, [filterType]);
+  }, [filterType, filterDirection]);
 
   const filteredStructure = useMemo(() => {
       if (!filterType) return MENU_STRUCTURE;

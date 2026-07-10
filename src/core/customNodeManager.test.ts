@@ -160,4 +160,116 @@ describe('customNodeManager', () => {
       subNode.data.definition.glslTemplate({});
     }).not.toThrow();
   });
+
+  it('should preserve detectedType for custom input nodes when loading', () => {
+    const customNode = {
+      id: 'custom_detected_input',
+      label: 'Detected Input',
+      description: '',
+      compact: false,
+      inputs: [{ id: 'custom_input_1', label: 'Typed In', type: 'float' as const }],
+      outputs: [],
+      isCustom: true as const,
+      subgraph: {
+        nodes: [{
+          id: 'custom_input_1',
+          type: 'shaderNode',
+          data: {
+            definition: { id: 'custom_input' },
+            value: 'Typed In',
+            detectedType: 'float'
+          }
+        }],
+        edges: []
+      },
+      glslTemplate: () => 'test'
+    };
+
+    addCustomNode(customNode);
+    const loaded = loadCustomNodes();
+    const subNode = loaded[0].subgraph.nodes[0];
+
+    expect(subNode.data.detectedType).toBe('float');
+    expect(subNode.data.definition.outputs[0].type).toBe('float');
+    expect(subNode.data.definition.outputs[0].label).toBe('Value');
+  });
+
+  it('should preserve detectedType for custom output nodes when loading', () => {
+    const customNode = {
+      id: 'custom_detected_output',
+      label: 'Detected Output',
+      description: '',
+      compact: false,
+      inputs: [],
+      outputs: [{ id: 'custom_output_1', label: 'Typed Out', type: 'vec4' as const }],
+      isCustom: true as const,
+      subgraph: {
+        nodes: [{
+          id: 'custom_output_1',
+          type: 'shaderNode',
+          data: {
+            definition: { id: 'custom_output' },
+            value: 'Typed Out',
+            detectedType: 'vec4'
+          }
+        }],
+        edges: []
+      },
+      glslTemplate: () => 'test'
+    };
+
+    addCustomNode(customNode);
+    const loaded = loadCustomNodes();
+    const subNode = loaded[0].subgraph.nodes[0];
+
+    expect(subNode.data.detectedType).toBe('vec4');
+    expect(subNode.data.definition.inputs[0].type).toBe('vec4');
+    expect(subNode.data.definition.inputs[0].label).toBe('Value');
+  });
+
+  it('should fall back to default labels and auto types during port extraction', () => {
+    const nodes = [
+      {
+        id: 'custom_input_anon',
+        data: {
+          definition: { id: 'custom_input', outputs: [{ id: 'out', type: 'auto' }] }
+        }
+      },
+      {
+        id: 'custom_output_anon',
+        data: {
+          definition: { id: 'custom_output', inputs: [{ id: 'in', type: 'auto' }] }
+        }
+      }
+    ];
+
+    const ports = extractCustomNodePorts({ nodes: nodes as any[] });
+
+    expect(ports.inputs).toEqual([{ id: 'custom_input_anon', label: 'Input', type: 'auto' }]);
+    expect(ports.outputs).toEqual([{ id: 'custom_output_anon', label: 'Output', type: 'auto' }]);
+  });
+
+  it('should recognize custom ports by node id prefix when definition is missing', () => {
+    const nodes = [
+      {
+        id: 'custom_input_generated_1',
+        data: {
+          value: 'Prefix In',
+          detectedType: 'vec2'
+        }
+      },
+      {
+        id: 'custom_output_generated_1',
+        data: {
+          value: 'Prefix Out',
+          detectedType: 'vec3'
+        }
+      }
+    ];
+
+    const ports = extractCustomNodePorts({ nodes: nodes as any[] });
+
+    expect(ports.inputs).toEqual([{ id: 'custom_input_generated_1', label: 'Prefix In', type: 'vec2' }]);
+    expect(ports.outputs).toEqual([{ id: 'custom_output_generated_1', label: 'Prefix Out', type: 'vec3' }]);
+  });
 });

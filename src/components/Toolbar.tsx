@@ -7,6 +7,8 @@ interface Props {
   onNew: () => void;
   onFitView: () => void;
   onShowCode: () => void;
+  onShowSettings?: () => void;
+  onShowCloud?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -14,7 +16,7 @@ interface Props {
   currentFile?: string | null;
 }
 
-export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onShowCode, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
+export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onShowCode, onShowSettings, onShowCloud, onUndo, onRedo, canUndo, canRedo, currentFile }: Props) {
   const btnStyle: React.CSSProperties = {
     background: '#333',
     border: '1px solid #555',
@@ -26,8 +28,8 @@ export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onS
     fontWeight: 'bold',
     transition: 'background 0.2s',
   };
-  const hoverStyle = (e: React.MouseEvent) => { e.currentTarget.style.background = '#444'; };
-  const leaveStyle = (e: React.MouseEvent) => { e.currentTarget.style.background = '#333'; };
+  const hoverStyle = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = '#444'; };
+  const leaveStyle = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = '#333'; };
 
   return (
     <div style={{
@@ -58,6 +60,11 @@ export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onS
         💾 Save As...
       </button>
       <button onClick={onLoad} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle}>📂 Load</button>
+      {onShowCloud && (
+        <button onClick={onShowCloud} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle} title="Projekty w chmurze (logowanie, udostępnianie)">
+          ☁️
+        </button>
+      )}
       
       <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
       
@@ -86,6 +93,12 @@ export default function Toolbar({ onSave, onLoad, onClear, onNew, onFitView, onS
       </button>
 
       <div style={{ width: '1px', background: '#444', margin: '0 4px' }}></div>
+
+      {onShowSettings && (
+        <button onClick={onShowSettings} style={btnStyle} onMouseEnter={hoverStyle} onMouseLeave={leaveStyle} title="Global Settings (FPS, jakość)">
+          ⚙️
+        </button>
+      )}
 
       <button onClick={onClear} style={{ ...btnStyle, borderColor: '#722', color: '#f88' }} onMouseEnter={(e) => e.currentTarget.style.background = '#411'} onMouseLeave={(e) => e.currentTarget.style.background = '#333'}>
          🗑️ Clear

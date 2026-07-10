@@ -31,13 +31,36 @@ html, body {
 .react-flow__handle:hover {
   /* WAŻNE: Dodajemy translate(0, -50%), żeby utrzymać pin w pionie na środku! */
   transform: translate(0, -50%) scale(1.4) !important;
-  
+
   border-color: #fff !important;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); /* Dodatkowy blask */
   cursor: crosshair;
   z-index: 10; /* Żeby powiększony pin nie chował się pod sąsiadami */
 }
 
+/* Handles układane flexboxem (kompaktowe nody): domyślne top:50% + translateY(-50%)
+   z reactflow przesuwały kropki w dół, bo tutaj position jest relative. */
+.react-flow__handle.handle-inline {
+  top: auto;
+  transform: none;
+}
+.react-flow__handle.handle-inline:hover {
+  transform: scale(1.4) !important;
+}
+
+
+/* --- 1b. INPUTY LICZBOWE ---
+   Jeden mechanizm zmiany wartości (strzałki ◀▶ w nodzie) — natywne
+   spinnery przeglądarki są ukryte, żeby nie dublować kontrolek. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 
 /* --- 2. NAPRAWA KABLI (Edges) --- */
 

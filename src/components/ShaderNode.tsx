@@ -3,12 +3,15 @@ import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'rea
 import type { ShaderNodeDefinition } from '../core/types';
 import { TYPE_COLORS } from '../core/theme';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
+import { loadAudioFile, playAudio, stopAudio, isAudioPlaying } from '../core/audioManager';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const def = data.definition as ShaderNodeDefinition;
   const { setNodes } = useReactFlow();
-  
+
   const [showSettings, setShowSettings] = useState(false);
+  // Wymusza rerender po zmianie stanu odtwarzania audio (stan żyje w audioManager)
+  const [, setAudioRefresh] = useState(0);
 
   const updateNodeData = useCallback((changes: Record<string, unknown>) => {
     setNodes((nds) => nds.map((node) => {
@@ -62,8 +65,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isGroup = def.id === 'special_group';
   const isUV = def.id === 'uv';
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
-  const isSmartCompose = def.id === 'smart_compose';
-  const isCustomNode = 'isCustom' in def && def.isCustom;
+  const isCustomNode = Boolean('isCustom' in def && def.isCustom);
 
   let headerType = def.outputs[0]?.type || 'default';
   if (headerType === 'float' && def.inputs.length > 0) {
@@ -153,6 +155,311 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       );
   }
 
+  // --- SMUKŁE ADAPTERY (Split / Combine) ---
+  // Wąski pionowy node z symbolem zamiast pełnej listy portów;
+  // nazwa i opis w tooltipie (hover), porty podpisane przez title na handle'ach.
+  const isSplitter = def.id.startsWith('split_') || def.id === 'smart_split';
+  const isCombiner = def.id.startsWith('combine_') || def.id === 'smart_compose';
+
+  if (isSplitter || isCombiner) {
+    const mainType = isCombiner ? (def.outputs[0]?.type || 'auto') : (def.inputs[0]?.type || 'auto');
+    const accent = TYPE_COLORS[mainType] || '#888';
+    const badge = mainType === 'vec2' ? '2' : mainType === 'vec3' ? '3' : mainType === 'vec4' ? '4' : mainType === 'float' ? '1' : 'A';
+    const portCount = Math.max(def.inputs.length, def.outputs.length, 1);
+    const slimHeight = Math.max(44, portCount * 16 + 14);
+    const canCycleType = def.id === 'smart_compose';
+    const cycleComposeType = () => {
+      const order: Array<'vec2' | 'vec3' | 'vec4'> = ['vec2', 'vec3', 'vec4'];
+      const current = def.outputs[0]?.type as 'vec2' | 'vec3' | 'vec4';
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      changeComposeType(next);
+    };
+
+    const slimHandleStyle = (type: string, isAuto: boolean, isMultiType: boolean): React.CSSProperties => ({
+      background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[type],
+      width: '10px',
+      height: '10px',
+      border: '2px solid #1a1a1a',
+      position: 'relative',
+      top: 'auto',
+      transform: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden'
+    });
+
+    return (
+      <div
+        title={`${currentLabel}${def.description ? ` — ${def.description}` : ''}`}
+        style={{
+          ...baseStyle,
+          width: '36px',
+          height: `${slimHeight}px`,
+          borderRadius: '10px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '2px',
+          position: 'relative',
+          borderTop: `3px solid ${accent}`
+        }}
+      >
+        {/* Wejścia (lewa krawędź) */}
+        <div style={{ position: 'absolute', left: '-6px', top: 0, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'flex-start' }}>
+          {def.inputs.map((input, i) => {
+            const isAuto = input.type === 'auto';
+            const isMultiType = input.type.includes('|');
+            return (
+              <Handle
+                key={`input-${input.id}-${i}`}
+                type="target"
+                position={Position.Left}
+                id={input.id}
+                title={input.label}
+                className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                style={{ ...slimHandleStyle(input.type, isAuto, isMultiType), left: 0 }}
+              >
+                {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
+              </Handle>
+            );
+          })}
+        </div>
+
+        <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#eee', lineHeight: 1, userSelect: 'none' }}>
+          {isSplitter ? '≺' : '≻'}
+        </span>
+        <span
+          className={canCycleType ? 'nodrag' : undefined}
+          onClick={canCycleType ? cycleComposeType : undefined}
+          title={canCycleType ? 'Klik: zmień typ wyjścia (vec2 → vec3 → vec4)' : undefined}
+          style={{
+            fontSize: '9px', fontWeight: 'bold', color: accent, lineHeight: 1, userSelect: 'none',
+            cursor: canCycleType ? 'pointer' : 'default',
+            border: canCycleType ? `1px solid ${accent}` : 'none',
+            borderRadius: '3px', padding: canCycleType ? '1px 3px' : 0
+          }}
+        >
+          {badge}
+        </span>
+
+        {/* Wyjścia (prawa krawędź) */}
+        <div style={{ position: 'absolute', right: '-6px', top: 0, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'flex-end' }}>
+          {def.outputs.map((output, i) => {
+            const isAuto = output.type === 'auto';
+            const isMultiType = output.type.includes('|');
+            return (
+              <Handle
+                key={`output-${output.id}-${i}`}
+                type="source"
+                position={Position.Right}
+                id={output.id}
+                title={output.label}
+                className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                style={{ ...slimHandleStyle(output.type, isAuto, isMultiType), right: 0 }}
+              >
+                {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
+              </Handle>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // --- TEXTURE (wgrany obraz) ---
+  if (def.id === 'texture_2d') {
+    const imageSrc = typeof currentValue === 'string' ? currentValue : '';
+    const onImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === 'string') {
+          updateNodeData({ value: ev.target.result, label: file.name });
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    };
+
+    return (
+      <div style={{ ...baseStyle, width: '130px', position: 'relative' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS['vec3'], borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '4px 8px', background: '#222', borderBottom: '1px solid #333', fontSize: '10px', fontWeight: 'bold', color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={currentLabel}>
+          🖼️ {currentLabel}
+        </div>
+
+        <div className="nodrag" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+          <label style={{ cursor: 'pointer', width: '100%' }}>
+            <div style={{
+              width: '106px', height: '64px', borderRadius: '4px', border: '1px dashed #555',
+              background: imageSrc ? `url(${imageSrc}) center/cover` : '#111',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#666', fontSize: '10px'
+            }}>
+              {!imageSrc && 'Wgraj obraz…'}
+            </div>
+            <input type="file" accept="image/*" onChange={onImageFile} style={{ display: 'none' }} />
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px 6px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+            <Handle type="target" position={Position.Left} id="uv" title="UV"
+              style={{ background: TYPE_COLORS['vec2'], width: '10px', height: '10px', left: '-13px', border: '2px solid #1a1a1a' }} />
+            <span style={{ fontSize: '10px', color: '#ccc' }}>UV</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+            <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>RGB</span>
+            <Handle type="source" position={Position.Right} id="rgb" title="RGB"
+              style={{ background: TYPE_COLORS['vec3'], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- AUDIO (wgrany dźwięk) ---
+  if (def.id === 'audio_input') {
+    const playing = isAudioPlaying();
+    const hasFile = Boolean(data.audioLoaded);
+    const onAudioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      file.arrayBuffer().then(buffer => loadAudioFile(buffer, file.name)).then(() => {
+        // Dźwięk żyje tylko w pamięci (pliki audio są za duże na zapis w JSON);
+        // w data trzymamy nazwę i flagę, żeby UI wiedziało, że plik jest wgrany.
+        updateNodeData({ label: file.name, audioLoaded: true });
+      });
+      e.target.value = '';
+    };
+    const togglePlay = () => {
+      if (playing) stopAudio(); else playAudio();
+      setAudioRefresh(t => t + 1);
+    };
+
+    return (
+      <div style={{ ...baseStyle, width: '150px', position: 'relative' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS['float'], borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '4px 8px', background: '#222', borderBottom: '1px solid #333', fontSize: '10px', fontWeight: 'bold', color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={currentLabel}>
+          🎵 {currentLabel}
+        </div>
+
+        <div className="nodrag" style={{ padding: '6px 8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <label style={{ cursor: 'pointer', flex: 1 }}>
+            <div style={{ border: '1px dashed #555', borderRadius: '4px', padding: '4px', textAlign: 'center', color: '#888', fontSize: '10px', background: '#111' }}>
+              {hasFile ? 'Zmień plik…' : 'Wgraj dźwięk…'}
+            </div>
+            <input type="file" accept="audio/*" onChange={onAudioFile} style={{ display: 'none' }} />
+          </label>
+          <button
+            onClick={togglePlay}
+            disabled={!hasFile}
+            title={playing ? 'Pause' : 'Play'}
+            style={{
+              width: '26px', height: '26px', borderRadius: '50%', cursor: hasFile ? 'pointer' : 'not-allowed',
+              background: playing ? '#ff007a' : '#333', color: '#fff', border: '1px solid #555',
+              fontSize: '11px', opacity: hasFile ? 1 : 0.4
+            }}
+          >
+            {playing ? '⏸' : '▶'}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', padding: '2px 8px 8px 8px' }}>
+          {def.outputs.map(output => (
+            <div key={output.id} style={{ display: 'flex', alignItems: 'center', height: '14px', position: 'relative' }}>
+              <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>{output.label}</span>
+              <Handle type="source" position={Position.Right} id={output.id} title={output.label}
+                style={{ background: TYPE_COLORS['float'], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // --- MINI EDYTOR KODU (Code GLSL) ---
+  if (def.id === 'code_glsl') {
+    const outType = def.outputs[0]?.type || 'float';
+    const setOutType = (t: string) => {
+      updateNodeData({ definition: { ...def, outputs: [{ id: 'out', label: 'Out', type: t }] } });
+    };
+
+    return (
+      <div style={{ ...baseStyle, width: '220px', position: 'relative' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS[outType] || '#555', borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '4px 8px', background: '#222', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '11px' }}>📝</span>
+          <input
+            className="nodrag title-input" value={currentLabel} onChange={(e) => updateNodeData({ label: e.target.value })} spellCheck={false} autoComplete="off"
+            style={{ background: 'transparent', border: 'none', color: '#eee', fontWeight: 'bold', fontSize: '12px', width: '100%', outline: 'none' }}
+            onFocus={handleTitleFocus} onMouseDown={preventDrag}
+          />
+        </div>
+
+        <textarea
+          className="nodrag"
+          value={currentValue ?? ''}
+          onChange={(e) => updateNodeData({ value: e.target.value })}
+          spellCheck={false}
+          placeholder="np. sin(a * 6.28) + b"
+          style={{
+            width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical',
+            background: '#111', border: 'none', borderBottom: '1px solid #333',
+            color: '#9cdcfe', fontFamily: 'monospace', fontSize: '11px',
+            padding: '6px 8px', outline: 'none'
+          }}
+          onMouseDown={preventDrag}
+        />
+
+        <div className="nodrag" style={{ display: 'flex', gap: '4px', padding: '4px 8px', justifyContent: 'center', background: '#1d1d1d' }}>
+          {['float', 'vec2', 'vec3', 'vec4'].map(t => (
+            <button
+              key={t}
+              onClick={() => setOutType(t)}
+              title={`Typ wyjścia: ${t}`}
+              style={{
+                fontSize: '9px', padding: '2px 4px', cursor: 'pointer',
+                background: outType === t ? (TYPE_COLORS[t] || '#ff007a') : '#333',
+                border: '1px solid #444', color: outType === t ? '#000' : '#fff',
+                fontWeight: 'bold', borderRadius: '4px'
+              }}
+            >
+              {t.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: '6px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
+            {def.inputs.map((input) => (
+              <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '14px', position: 'relative' }}>
+                <Handle
+                  type="target" position={Position.Left} id={input.id}
+                  style={{ background: TYPE_COLORS[input.type], width: '10px', height: '10px', left: '-13px', border: '2px solid #1a1a1a' }}
+                />
+                <span style={{ fontSize: '10px', color: '#ccc', fontFamily: 'monospace' }}>{input.id}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative', padding: '0 8px' }}>
+            <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>Out</span>
+            <Handle
+              type="source" position={Position.Right} id="out"
+              style={{ background: TYPE_COLORS[outType], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (def.compact) {
     return (
       <div 
@@ -174,25 +481,27 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  const isAuto = input.type === 'auto';
                  const isMultiType = input.type.includes('|');
                  
-                 return <Handle 
+                 return <Handle
                    key={`input-${input.id}-${i}`}
-                   type="target" 
-                   position={Position.Left} 
-                   id={input.id} 
+                   type="target"
+                   position={Position.Left}
+                   id={input.id}
                    title={input.label}
-                   className={isAuto ? 'port-auto' : ''}
-                   style={{ 
+                   className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                   style={{
                      background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
-                     width: '10px', 
-                     height: '10px', 
-                     border: '2px solid #1a1a1a', 
+                     width: '10px',
+                     height: '10px',
+                     border: '2px solid #1a1a1a',
                      position: 'relative',
                      left: 0,
+                     top: 'auto',
+                     transform: 'none',
                      display: 'flex',
                      alignItems: 'center',
                      justifyContent: 'center',
                      overflow: 'hidden'
-                   }} 
+                   }}
                  >
                    {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
                  </Handle>
@@ -217,25 +526,27 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 
-                return <Handle 
+                return <Handle
                   key={`output-${output.id}-${i}`}
-                  type="source" 
-                  position={Position.Right} 
-                  id={output.id} 
+                  type="source"
+                  position={Position.Right}
+                  id={output.id}
                   title={output.label}
-                  className={isAuto ? 'port-auto' : ''}
-                  style={{ 
+                  className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                  style={{
                     background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
-                    width: '10px', 
-                    height: '10px', 
-                    border: '2px solid #1a1a1a', 
+                    width: '10px',
+                    height: '10px',
+                    border: '2px solid #1a1a1a',
                     position: 'relative',
                     right: 0,
+                    top: 'auto',
+                    transform: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden'
-                  }} 
+                  }}
                 >
                   {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
                 </Handle>
@@ -261,10 +572,20 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                      <div onClick={() => setShowSettings(!showSettings)} style={{ cursor: 'pointer', fontSize: '12px', color: showSettings ? '#ff007a' : '#666', padding: '2px', lineHeight: 1 }}>⚙️</div>
-                     <div className="nodrag" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <div onClick={() => updateNodeData({ value: Math.max(currentMin, parseFloat(currentValue) - currentStep).toFixed(2) })} style={{ cursor: 'pointer', color: '#666', fontSize: '10px', userSelect: 'none' }}>◀</div>
+                     <div className="nodrag" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <div
+                          onClick={() => updateNodeData({ value: Math.max(currentMin, parseFloat(currentValue) - currentStep).toFixed(2) })}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ff007a'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
+                          style={{ cursor: 'pointer', color: '#666', fontSize: '11px', userSelect: 'none', padding: '4px 3px', lineHeight: 1, transition: 'color 0.15s' }}
+                        >◀</div>
                         <input type="number" value={currentValue} onChange={(e) => updateNodeData({ value: e.target.value })} style={{ background: 'transparent', border: 'none', color: '#ff007a', fontSize: '16px', fontWeight: 'bold', width: dynamicWidth, minWidth: '40px', textAlign: 'center', outline: 'none', padding: 0, margin: 0 }} onMouseDown={preventDrag} />
-                        <div onClick={() => updateNodeData({ value: Math.min(currentMax, parseFloat(currentValue) + currentStep).toFixed(2) })} style={{ cursor: 'pointer', color: '#666', fontSize: '10px', userSelect: 'none' }}>▶</div>
+                        <div
+                          onClick={() => updateNodeData({ value: Math.min(currentMax, parseFloat(currentValue) + currentStep).toFixed(2) })}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ff007a'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
+                          style={{ cursor: 'pointer', color: '#666', fontSize: '11px', userSelect: 'none', padding: '4px 3px', lineHeight: 1, transition: 'color 0.15s' }}
+                        >▶</div>
                      </div>
                  </div>
                  <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative', paddingLeft: '8px' }}>
@@ -318,25 +639,6 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         />
       </div>
       
-      {isSmartCompose && (
-            <div className="nodrag" style={{ display: 'flex', gap: '4px', padding: '4px 8px', justifyContent: 'center', background: '#222' }}>
-                {['vec2', 'vec3', 'vec4'].map(t => (
-                    <button 
-                        key={t}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        onClick={() => changeComposeType(t as any)}
-                        style={{ 
-                            fontSize: '9px', padding: '2px 4px', cursor: 'pointer',
-                            background: def.outputs[0].type === t ? '#ff007a' : '#333',
-                            border: '1px solid #444', color: '#fff', borderRadius: '4px'
-                        }}
-                    >
-                        {t.toUpperCase()}
-                    </button>
-                ))}
-            </div>
-      )}
-
       <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

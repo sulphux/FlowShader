@@ -467,35 +467,128 @@ describe('GLSL Compiler - Custom Nodes Fix', () => {
     });
   });
   
-  describe('ERROR CASES: What should fail if NOT fixed', () => {
-    
-    it('EXAMPLE: What broken code looks like (for documentation)', () => {
-      // This test documents what the BROKEN behavior looks like
-      // It should PASS if the fix is NOT applied (counter-intuitive but educational)
-      
-      const brokenGLSL = `
-        precision mediump float;
-        uniform float iTime;
-        
-        void main() {
-          precision mediump float;  // ❌ DUPLICATE!
-          uniform float iTime;       // ❌ INSIDE FUNCTION!
-          vec3 result = vec3(1.0);
-        }
-      `;
-      
-      // Count duplicates in broken example
-      const precisionCount = (brokenGLSL.match(/precision mediump float/g) || []).length;
-      const uniformCount = (brokenGLSL.match(/uniform float iTime/g) || []).length;
-      
-      // Broken code has duplicates
-      expect(precisionCount).toBeGreaterThan(1);
-      expect(uniformCount).toBeGreaterThan(1);
-      
-      // This is what the fix prevents!
-      console.log('📚 Educational: This shows BROKEN behavior (duplicates)');
-      console.log('   precision count:', precisionCount, '(should be 1 after fix)');
-      console.log('   uniform count:', uniformCount, '(should be 1 after fix)');
+  describe('PRIORITY 5: AI regression cases', () => {
+    it('should cast vec3 custom output to float when parent output expects float', () => {
+      const customNode: CustomNodeDefinition = {
+        id: 'custom_vec3_to_float',
+        label: 'Vec3 to Float',
+        description: 'AI regression cast test',
+        compact: false,
+        isCustom: true,
+        inputs: [{ id: 'input_1', label: 'Input', type: 'vec3' }],
+        outputs: [{ id: 'output_1', label: 'Output', type: 'float' }],
+        subgraph: {
+          nodes: [
+            {
+              id: 'custom_input_1',
+              type: 'shaderNode',
+              position: { x: 0, y: 0 },
+              data: {
+                definition: {
+                  ...NODE_REGISTRY['custom_input'],
+                  outputs: [{ id: 'out', type: 'vec3', label: 'Value' }],
+                },
+                detectedType: 'vec3',
+              },
+            },
+            {
+              id: 'custom_output_1',
+              type: 'shaderNode',
+              position: { x: 200, y: 0 },
+              data: {
+                definition: {
+                  ...NODE_REGISTRY['custom_output'],
+                  inputs: [{ id: 'in', type: 'float', label: 'Value' }],
+                },
+                detectedType: 'float',
+              },
+            },
+          ],
+          edges: [
+            { source: 'custom_input_1', target: 'custom_output_1', sourceHandle: 'out', targetHandle: 'in' },
+          ],
+        },
+        glslTemplate: () => '0.0',
+      };
+
+      const nodes: GraphNode[] = [
+        { id: 'uv1', type: 'shaderNode', data: { definition: NODE_REGISTRY['uv'] } },
+        { id: 'custom1', type: 'shaderNode', data: { definition: customNode } },
+        { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY['output'] } },
+      ];
+
+      const edges = [
+        { source: 'uv1', target: 'custom1', sourceHandle: 'out', targetHandle: 'input_1' },
+        { source: 'custom1', target: 'out1', sourceHandle: 'output_1', targetHandle: 'color' },
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+
+      expect(glsl).toContain('float custom_vec3_to_float(vec3 input_1)');
+      expect(glsl).toContain('float var_custom_output_1 = (custom_input_1).x;');
+      expect(glsl).not.toMatch(/float\s+var_custom_output_1\s*=\s*custom_input_1\s*;/);
+    });
+
+    it('should sanitize hyphenated custom input ids in generated function signatures and calls', () => {
+      const customNode: CustomNodeDefinition = {
+        id: 'custom_hyphen_case',
+        label: 'Hyphen Case',
+        description: 'AI regression identifier test',
+        compact: false,
+        isCustom: true,
+        inputs: [{ id: 'input-port', label: 'Input', type: 'float' }],
+        outputs: [{ id: 'output-port', label: 'Output', type: 'float' }],
+        subgraph: {
+          nodes: [
+            {
+              id: 'custom-input-1',
+              type: 'shaderNode',
+              position: { x: 0, y: 0 },
+              data: {
+                definition: {
+                  ...NODE_REGISTRY['custom_input'],
+                  outputs: [{ id: 'out', type: 'float', label: 'Value' }],
+                },
+                detectedType: 'float',
+              },
+            },
+            {
+              id: 'custom-output-1',
+              type: 'shaderNode',
+              position: { x: 200, y: 0 },
+              data: {
+                definition: {
+                  ...NODE_REGISTRY['custom_output'],
+                  inputs: [{ id: 'in', type: 'float', label: 'Value' }],
+                },
+                detectedType: 'float',
+              },
+            },
+          ],
+          edges: [
+            { source: 'custom-input-1', target: 'custom-output-1', sourceHandle: 'out', targetHandle: 'in' },
+          ],
+        },
+        glslTemplate: () => '0.0',
+      };
+
+      const nodes: GraphNode[] = [
+        { id: 'float1', type: 'shaderNode', data: { definition: NODE_REGISTRY['param_float'], value: 0.5 } },
+        { id: 'custom1', type: 'shaderNode', data: { definition: customNode } },
+        { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY['output'] } },
+      ];
+
+      const edges = [
+        { source: 'float1', target: 'custom1', sourceHandle: 'value', targetHandle: 'input-port' },
+        { source: 'custom1', target: 'out1', sourceHandle: 'output-port', targetHandle: 'color' },
+      ];
+
+      const glsl = compileGraphToGLSL(nodes, edges);
+
+      expect(glsl).toContain('float custom_hyphen_case(float input_port)');
+      expect(glsl).toContain('float var_custom_output_1 = custom_input_1;');
+      expect(glsl).not.toContain('custom-input-1');
+      expect(glsl).not.toContain('custom-output-1');
     });
   });
 });

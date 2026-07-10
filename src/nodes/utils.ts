@@ -99,6 +99,43 @@ export const PreviewNodeDef: ShaderNodeDefinition = {
   glslTemplate: () => ''
 };
 
+export const ColorPreviewNodeDef: ShaderNodeDefinition = {
+  id: 'color_preview',
+  label: 'Color Preview',
+  inputs: [{ id: 'in', label: 'In', type: 'vec3' }],
+  outputs: [],
+  glslTemplate: () => '',
+  description: 'Shows a color swatch of the incoming signal.'
+};
+
+/**
+ * Mini edytor kodu: wyrażenie GLSL z wejściami a, b, c, d (float).
+ * Identyfikatory a-d w kodzie są podstawiane skompilowanymi wyrażeniami wejść.
+ * Typ wyjścia przełączany na nodzie (float/vec2/vec3/vec4) — wyrażenie musi go zwracać.
+ */
+export const CodeNode: ShaderNodeDefinition = {
+  id: 'code_glsl',
+  label: 'Code (GLSL)',
+  inputs: [
+    { id: 'a', label: 'A', type: 'float' },
+    { id: 'b', label: 'B', type: 'float' },
+    { id: 'c', label: 'C', type: 'float' },
+    { id: 'd', label: 'D', type: 'float' }
+  ],
+  outputs: [{ id: 'out', label: 'Out', type: 'float' }],
+  controls: { type: 'text', defaultValue: 'a + b' },
+  glslTemplate: (inputs, data) => {
+    const raw = typeof data?.value === 'string' ? data.value.trim() : '';
+    const outputType = (data?.definition as { outputs?: { type?: string }[] } | undefined)?.outputs?.[0]?.type || 'float';
+    const fallback = outputType === 'float' ? '0.0' : `${outputType}(0.0)`;
+    if (!raw) return fallback;
+    // Podstaw a/b/c/d (całe słowa) wyrażeniami z podłączonych wejść
+    const substituted = raw.replace(/\b([abcd])\b/g, (match) => inputs[match] || '0.0');
+    return `(${substituted})`;
+  },
+  description: 'GLSL expression with inputs a, b, c, d. Example: sin(a * 6.28) + b'
+};
+
 export const MonitorNodeDef: ShaderNodeDefinition = {
   id: 'monitor', label: 'Value Watcher',
   inputs: [{ id: 'in', label: 'In', type: 'vec4' }], // Zmieniono na vec4
@@ -118,8 +155,8 @@ export const SmartSplitNode: ShaderNodeDefinition = {
 };
 
 export const SmartComposeNode: ShaderNodeDefinition = {
-  id: 'smart_compose', 
-  label: 'Compose (Auto)',
+  id: 'smart_compose',
+  label: 'Combine (Auto)',
   compact: false,
   inputs: [
       { id: 'x', label: 'X', type: 'float' },
@@ -129,7 +166,7 @@ export const SmartComposeNode: ShaderNodeDefinition = {
   ],
   outputs: [{ id: 'out', label: 'Vec3', type: 'vec3' }], // Default: vec3
   glslTemplate: (inputs, data) => {
-      const outputType = data?.definition?.outputs?.[0]?.type || 'vec3';
+      const outputType = (data?.definition as { outputs?: { type?: string }[] } | undefined)?.outputs?.[0]?.type || 'vec3';
       
       const x = inputs.x || '0.0';
       const y = inputs.y || '0.0';
@@ -140,5 +177,5 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       if (outputType === 'vec4') return `vec4(${x}, ${y}, ${z}, ${w})`;
       return `vec3(${x}, ${y}, ${z})`;
   },
-  description: 'Combines floats into a vector. Click buttons on node to change output type.'
+  description: 'Combines floats into a vector. Click the number badge to cycle output type (vec2 → vec3 → vec4).'
 };

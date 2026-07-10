@@ -1,5 +1,6 @@
 import type { CustomNodeDefinition } from './customNodeManager';
 import type { GraphNode, GraphEdge } from './compiler';
+import { shaderDebug } from './shaderDebug';
 
 /**
  * Generate GLSL function declaration for custom node
@@ -14,10 +15,10 @@ export function generateCustomNodeFunction(
   const inputs = customDef.inputs;
   const outputs = customDef.outputs;
   
-  console.log('🔧 generateCustomNodeFunction:', {
+  shaderDebug.log('compiler', 'Generating custom node function', {
     nodeId: customDef.id,
     inputs: inputs.map(i => ({ id: i.id, type: i.type })),
-    outputs: outputs.map(o => ({ id: o.id, type: o.type }))
+    outputs: outputs.map(o => ({ id: o.id, type: o.type })),
   });
   
   // 'auto' is not a valid GLSL type — fall back to vec3 when type is not yet determined
@@ -43,7 +44,7 @@ export function generateCustomNodeFunction(
   const outputNode = customDef.subgraph.nodes.find(n => n.data.definition.id === 'custom_output');
   
   if (!outputNode) {
-    console.error('❌ No Custom Output node found in subgraph!');
+    shaderDebug.error('compiler', 'No Custom Output node found in subgraph', { customNodeId: customDef.id });
     return '';
   }
   
@@ -58,8 +59,14 @@ ${body}    return ${outputVar};
 }
 `;
   
-  console.log('✅ Generated function:', functionCode);
-  
+  shaderDebug.log('compiler', 'Generated custom node function', {
+    customNodeId: customDef.id,
+    returnType,
+    parameterCount: inputs.length,
+    bodyLength: body.length,
+    functionLength: functionCode.length,
+  });
+
   return functionCode;
 }
 
@@ -100,7 +107,17 @@ export function autoCast(expr: string, fromType: string, toType: string): string
   if (fromType === 'vec3' && toType === 'vec4') {
     return `vec4(${expr}, 1.0)`;
   }
-  
+
+  // vec2 → vec4
+  if (fromType === 'vec2' && toType === 'vec4') {
+    return `vec4(${expr}, 0.0, 1.0)`;
+  }
+
+  // vec4 → vec2
+  if (fromType === 'vec4' && toType === 'vec2') {
+    return `(${expr}).xy`;
+  }
+
   // Default: no conversion
   return expr;
 }

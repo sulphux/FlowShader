@@ -39,5 +39,5 @@ export const ColorNode: ShaderNodeDefinition = {
     type: 'color',
     defaultValue: '#ff007a',
   },
-  glslTemplate: (_, data) => hexToVec3(data?.value ?? '#ff007a')
+  glslTemplate: (_, data) => hexToVec3(typeof data?.value === 'string' ? data.value : '#ff007a')
 };
