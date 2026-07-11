@@ -4,6 +4,13 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  // vitest.config.ts is a separate Vite config from vite.config.ts and does not
+  // inherit its `define` block — src/core/version.ts needs these to exist.
+  define: {
+    __APP_VERSION__: JSON.stringify('test'),
+    __BUILD_HASH__: JSON.stringify('test'),
+    __BUILD_DATE__: JSON.stringify('1970-01-01T00:00:00.000Z'),
+  },
   test: {
     globals: true,
     environment: 'jsdom',

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getGlobalSettings, updateGlobalSettings, type GlobalSettings } from '../core/globalSettings';
+import { VERSION_LABEL, BUILD_DATE } from '../core/version';
 
 interface Props {
   onClose: () => void;
@@ -65,6 +66,11 @@ export default function SettingsDialog({ onClose }: Props) {
 
         <div style={{ fontSize: '10px', color: '#666', borderTop: '1px solid #333', paddingTop: '8px' }}>
           Ustawienia dotyczą wszystkich okien podglądu i są zapamiętywane w przeglądarce.
+        </div>
+
+        <div style={{ fontSize: '10px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
+          <span>FlowShader {VERSION_LABEL}</span>
+          <span>{new Date(BUILD_DATE).toLocaleDateString()}</span>
         </div>
       </div>
     </div>

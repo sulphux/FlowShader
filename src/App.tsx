@@ -3,6 +3,7 @@ import NodeEditor from './components/NodeEditor';
 import ShaderPreview from './components/ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from './core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from './core/runtimeResources';
+import { VERSION_LABEL, versionTooltip } from './core/version';
 import type { Node, Edge } from 'reactflow';
 
 function App() {
@@ -148,6 +149,20 @@ function App() {
             <ShaderPreview shaderCode={shaderCode} resources={shaderResources} />
           </div>
           )}
+      </div>
+
+      {/* Wersja builda — zawsze widoczna, przydatna do sprawdzenia czy hosting
+          serwuje aktualną wersję po deployu. Prawy dolny róg: puste miejsce
+          pod panelem podglądu, z dala od Sidebar (lewo) i Legend (canvas). */}
+      <div
+        title={versionTooltip()}
+        style={{
+          position: 'absolute', bottom: '4px', right: '4px', zIndex: 10,
+          fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace',
+          userSelect: 'none', cursor: 'default'
+        }}
+      >
+        {VERSION_LABEL}
       </div>
     </div>
   );
