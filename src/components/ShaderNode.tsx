@@ -4,6 +4,7 @@ import type { ShaderNodeDefinition } from '../core/types';
 import { TYPE_COLORS } from '../core/theme';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
 import { loadAudioFile, playAudio, stopAudio, isAudioPlaying } from '../core/audioManager';
+import { computeSmartSplitPorts, SMART_SPLIT_TYPE_CYCLE } from '../core/smartSplitAdapter';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const def = data.definition as ShaderNodeDefinition;
@@ -66,6 +67,22 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isUV = def.id === 'uv';
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
   const isCustomNode = Boolean('isCustom' in def && def.isCustom);
+  const isCustomPort = def.id === 'custom_input' || def.id === 'custom_output';
+
+  // Custom Input/Output: force a fixed type instead of relying on auto-detection
+  // from whatever gets connected. Forced type wins over detectedType everywhere
+  // it's read (extractCustomNodePorts, customNodeManager rehydration).
+  const forcedType = data.forcedType as string | undefined;
+  const forcePortType = (type: string | undefined) => {
+    const portId = def.id === 'custom_input' ? 'out' : 'in';
+    const label = 'Value';
+    updateNodeData({
+      forcedType: type,
+      definition: def.id === 'custom_input'
+        ? { ...def, outputs: [{ id: portId, type: type || data.detectedType || 'auto', label }] }
+        : { ...def, inputs: [{ id: portId, type: type || data.detectedType || 'auto', label }] }
+    });
+  };
 
   let headerType = def.outputs[0]?.type || 'default';
   if (headerType === 'float' && def.inputs.length > 0) {
@@ -167,13 +184,28 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     const badge = mainType === 'vec2' ? '2' : mainType === 'vec3' ? '3' : mainType === 'vec4' ? '4' : mainType === 'float' ? '1' : 'A';
     const portCount = Math.max(def.inputs.length, def.outputs.length, 1);
     const slimHeight = Math.max(44, portCount * 16 + 14);
-    const canCycleType = def.id === 'smart_compose';
+    const canCycleType = def.id === 'smart_compose' || def.id === 'smart_split';
     const cycleComposeType = () => {
       const order: Array<'vec2' | 'vec3' | 'vec4'> = ['vec2', 'vec3', 'vec4'];
       const current = def.outputs[0]?.type as 'vec2' | 'vec3' | 'vec4';
       const next = order[(order.indexOf(current) + 1) % order.length];
       changeComposeType(next);
     };
+    // Split (Auto): wymuszenie typu wejścia klikiem w badge (analogicznie do Combine).
+    // Raz wymuszony typ nie jest już nadpisywany przez auto-detekcję z podłączonego
+    // kabla — logika adaptacji w NodeEditor/graphRehydration działa tylko dopóki
+    // typ jest 'auto', więc ustawienie konkretnego typu tutaj samo w sobie "blokuje" wybór.
+    const cycleSplitType = () => {
+      const current = def.inputs[0]?.type;
+      const currentIndex = SMART_SPLIT_TYPE_CYCLE.indexOf(current as typeof SMART_SPLIT_TYPE_CYCLE[number]);
+      const next = SMART_SPLIT_TYPE_CYCLE[(currentIndex + 1) % SMART_SPLIT_TYPE_CYCLE.length];
+      const adapted = computeSmartSplitPorts(next);
+      updateNodeData({
+        forcedType: next,
+        definition: { ...def, inputs: [{ id: 'in', label: adapted.inputLabel, type: next }], outputs: adapted.outputs }
+      });
+    };
+    const cycleType = def.id === 'smart_split' ? cycleSplitType : cycleComposeType;
 
     const slimHandleStyle = (type: string, isAuto: boolean, isMultiType: boolean): React.CSSProperties => ({
       background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[type],
@@ -232,8 +264,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         </span>
         <span
           className={canCycleType ? 'nodrag' : undefined}
-          onClick={canCycleType ? cycleComposeType : undefined}
-          title={canCycleType ? 'Klik: zmień typ wyjścia (vec2 → vec3 → vec4)' : undefined}
+          onClick={canCycleType ? cycleType : undefined}
+          title={canCycleType ? (isSplitter ? 'Click: force input type (float → vec2 → vec3 → vec4)' : 'Click: pick output type (vec2 → vec3 → vec4)') : undefined}
           style={{
             fontSize: '9px', fontWeight: 'bold', color: accent, lineHeight: 1, userSelect: 'none',
             cursor: canCycleType ? 'pointer' : 'default',
@@ -709,6 +741,41 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                 {def.controls.type === 'color' && (
                     <div className="nodrag"><input type="color" value={currentValue} onChange={(e) => updateNodeData({ value: e.target.value })} style={{ width: '100%', height: '20px', border: 'none', background: 'transparent', cursor: 'pointer' }} onMouseDown={preventDrag} /></div>
                 )}
+            </div>
+        )}
+        {isCustomPort && (
+            <div className="nodrag" style={{ padding: '2px 8px 6px 8px' }}>
+                <div style={{ fontSize: '8px', color: '#666', marginBottom: '3px' }}>FORCE TYPE</div>
+                <div style={{ display: 'flex', gap: '3px' }}>
+                    {['float', 'vec2', 'vec3', 'vec4'].map(t => (
+                        <button
+                            key={t}
+                            onClick={() => forcePortType(t)}
+                            title={`Force this port to ${t}, ignoring what's connected`}
+                            style={{
+                                flex: 1, fontSize: '8px', padding: '2px 0', cursor: 'pointer',
+                                background: forcedType === t ? (TYPE_COLORS[t] || '#ff007a') : '#333',
+                                border: '1px solid #444', color: forcedType === t ? '#000' : '#fff',
+                                fontWeight: 'bold', borderRadius: '3px'
+                            }}
+                        >
+                            {t === 'float' ? '1' : t.slice(-1)}
+                        </button>
+                    ))}
+                    {forcedType && (
+                        <button
+                            onClick={() => forcePortType(undefined)}
+                            title="Clear forced type (go back to auto-detecting from the connection)"
+                            style={{
+                                flex: 1, fontSize: '8px', padding: '2px 0', cursor: 'pointer',
+                                background: '#333', border: '1px solid #9c27b0', color: '#9c27b0',
+                                fontWeight: 'bold', borderRadius: '3px'
+                            }}
+                        >
+                            AUTO
+                        </button>
+                    )}
+                </div>
             </div>
         )}
       </div>

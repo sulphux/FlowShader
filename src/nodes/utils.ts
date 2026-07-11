@@ -164,10 +164,12 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       { id: 'z', label: 'Z', type: 'float' },
       { id: 'w', label: 'W', type: 'float' }
   ],
-  outputs: [{ id: 'out', label: 'Vec3', type: 'vec3' }], // Default: vec3
+  // Nierozstrzygnięty do czasu kliknięcia badge (spójne z Split (Auto), które
+  // też startuje jako 'auto' — tęczowy port zamiast od razu narzuconego vec3)
+  outputs: [{ id: 'out', label: 'Auto', type: 'auto' }],
   glslTemplate: (inputs, data) => {
       const outputType = (data?.definition as { outputs?: { type?: string }[] } | undefined)?.outputs?.[0]?.type || 'vec3';
-      
+
       const x = inputs.x || '0.0';
       const y = inputs.y || '0.0';
       const z = inputs.z || '0.0';
@@ -177,5 +179,5 @@ export const SmartComposeNode: ShaderNodeDefinition = {
       if (outputType === 'vec4') return `vec4(${x}, ${y}, ${z}, ${w})`;
       return `vec3(${x}, ${y}, ${z})`;
   },
-  description: 'Combines floats into a vector. Click the number badge to cycle output type (vec2 → vec3 → vec4).'
+  description: 'Combines floats into a vector. Click the badge to pick the output type (vec2 / vec3 / vec4).'
 };

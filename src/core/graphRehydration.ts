@@ -2,6 +2,7 @@ import type { Node, Edge, Viewport } from 'reactflow';
 import { NODE_REGISTRY } from '../nodes';
 import { loadCustomNodes } from './customNodeManager';
 import type { ShaderNodeDefinition } from './types';
+import { computeSmartSplitPorts } from './smartSplitAdapter';
 
 /**
  * Wspólna serializacja/rehydracja grafu.
@@ -96,22 +97,29 @@ const migrateLegacyEdges = (nodes: SerializedNode[], edges: Edge[]): Edge[] => {
   });
 };
 
-const createFloatOutput = (id: string, label: string): SerializedPort => ({ id, label, type: 'float' });
-
-/** Adaptacja portów smart_split / relay_auto na podstawie istniejących połączeń. */
+/**
+ * Adaptacja portów smart_split / relay_auto na podstawie istniejących połączeń.
+ * Pomijana, gdy użytkownik ręcznie wymusił typ (data.forcedType) — wtedy ten
+ * typ wygrywa niezależnie od tego, co akurat jest podłączone.
+ */
 const adaptAutoNode = (node: Node, nodes: Node[], edges: Edge[]): Node => {
   const def = node.data.definition as ShaderNodeDefinition;
   if (def.id !== 'smart_split' && def.id !== 'relay_auto') return node;
 
-  const inputEdge = edges.find(e => e.target === node.id && e.targetHandle === 'in');
-  if (!inputEdge) return node;
-  const sourceNode = nodes.find(n => n.id === inputEdge.source);
-  if (!sourceNode) return node;
+  const forcedType = node.data.forcedType as string | undefined;
+  let type = forcedType;
 
-  const sourceDef = sourceNode.data.definition as ShaderNodeDefinition;
-  const outputDef = sourceDef.outputs.find(o => o.id === inputEdge.sourceHandle) || sourceDef.outputs[0];
-  if (!outputDef) return node;
-  const type = outputDef.type;
+  if (!type) {
+    const inputEdge = edges.find(e => e.target === node.id && e.targetHandle === 'in');
+    if (!inputEdge) return node;
+    const sourceNode = nodes.find(n => n.id === inputEdge.source);
+    if (!sourceNode) return node;
+
+    const sourceDef = sourceNode.data.definition as ShaderNodeDefinition;
+    const outputDef = sourceDef.outputs.find(o => o.id === inputEdge.sourceHandle) || sourceDef.outputs[0];
+    if (!outputDef) return node;
+    type = outputDef.type;
+  }
 
   if (def.id === 'relay_auto') {
     return {
@@ -128,30 +136,15 @@ const adaptAutoNode = (node: Node, nodes: Node[], edges: Edge[]): Node => {
   }
 
   // smart_split
-  let newOutputs = def.outputs;
-  let newInputLabel = 'Input';
-  if (type === 'vec2') {
-    newOutputs = [createFloatOutput('x', 'X'), createFloatOutput('y', 'Y')];
-    newInputLabel = 'Vec2';
-  } else if (type === 'vec3') {
-    newOutputs = [createFloatOutput('x', 'R'), createFloatOutput('y', 'G'), createFloatOutput('z', 'B')];
-    newInputLabel = 'Vec3';
-  } else if (type === 'vec4') {
-    newOutputs = [createFloatOutput('x', 'R'), createFloatOutput('y', 'G'), createFloatOutput('z', 'B'), createFloatOutput('w', 'A')];
-    newInputLabel = 'Vec4';
-  } else if (type === 'float') {
-    newOutputs = [createFloatOutput('x', 'Value')];
-    newInputLabel = 'Float';
-  }
-
+  const adapted = computeSmartSplitPorts(type);
   return {
     ...node,
     data: {
       ...node.data,
       definition: {
         ...def,
-        inputs: [{ id: 'in', label: newInputLabel, type }],
-        outputs: newOutputs,
+        inputs: [{ id: 'in', label: adapted.inputLabel, type }],
+        outputs: adapted.outputs,
       },
     },
   };

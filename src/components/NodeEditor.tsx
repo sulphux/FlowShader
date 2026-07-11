@@ -29,6 +29,7 @@ import { validateConnection } from '../core/connectionValidator';
 import { insertAutoAdapter } from '../core/autoAdapterSystem';
 import { serializeGraph, rehydrateGraph } from '../core/graphRehydration';
 import { saveProjectFile, openProjectFile, supportsFileSystemAccess, type FileHandleLike } from '../core/fileAccess';
+import { computeSmartSplitPorts } from '../core/smartSplitAdapter';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -39,6 +40,9 @@ interface Props {
 }
 
 const STORAGE_KEY = 'shader-nodes-save-v1';
+// Drill-down path into custom nodes (array of custom node labels, Main excluded),
+// so a page refresh can restore "where you were" instead of always landing on Main.
+const NAV_PATH_KEY = 'shader-nodes-nav-path-v1';
 
 const getLogicHash = (nodes: Node[], edges: Edge[]) => {
   const logicData = {
@@ -133,6 +137,59 @@ function EditorInner({ onChange }: Props) {
       (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNode.id] = customNode;
     });
   }, []);
+
+  // Restore navigation depth after a page refresh: replay the persisted path
+  // of custom node labels, one level at a time. Stops (and truncates the
+  // stale path) at the first label that can no longer be resolved — e.g. the
+  // custom node was renamed or deleted since the path was saved.
+  useEffect(() => {
+    let path: string[];
+    try {
+      path = JSON.parse(localStorage.getItem(NAV_PATH_KEY) || '[]');
+    } catch {
+      path = [];
+    }
+    if (!Array.isArray(path) || path.length === 0) return;
+
+    const builtStack: Array<{ name: string; nodes: Node[]; edges: Edge[] }> = [];
+    let levelNodes = initialData.nodes;
+    let levelEdges: Edge[] = initialData.edges;
+    let levelName = 'Main';
+    let reachedLabels: string[] = [];
+
+    for (const label of path) {
+      const customDef = Object.values(NODE_REGISTRY).find(d => d.label === label && 'isCustom' in d) as CustomNodeDefinition | undefined;
+      if (!customDef) break;
+
+      builtStack.push({ name: levelName, nodes: levelNodes, edges: levelEdges });
+      const subgraph = loadCustomNodeSubgraph(customDef);
+      levelNodes = subgraph.nodes;
+      levelEdges = subgraph.edges;
+      levelName = label;
+      reachedLabels = [...reachedLabels, label];
+    }
+
+    if (reachedLabels.length === 0) return;
+
+    setNavigationStack(builtStack);
+    setCurrentContext(levelName);
+    setNodes(refreshNodesFromRegistry(levelNodes));
+    setEdges(levelEdges);
+    if (reachedLabels.length !== path.length) {
+      localStorage.setItem(NAV_PATH_KEY, JSON.stringify(reachedLabels));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the current drill-down path on every navigation change
+  useEffect(() => {
+    const path = [...navigationStack.map(s => s.name), currentContext].filter(name => name !== 'Main');
+    if (path.length === 0) {
+      localStorage.removeItem(NAV_PATH_KEY);
+    } else {
+      localStorage.setItem(NAV_PATH_KEY, JSON.stringify(path));
+    }
+  }, [navigationStack, currentContext]);
 
   useEffect(() => {
     if (!isLoadedRef.current && initialData.viewport) {
@@ -371,273 +428,121 @@ function EditorInner({ onChange }: Props) {
     // setEdges((eds) => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
   }, [nodes, edges, reactFlowInstance, setNodes]);
   
+  /**
+   * Refresh a list of nodes against the current NODE_REGISTRY / customNodeManager
+   * state: custom node instances pick up their latest definition, and
+   * custom_input/custom_output ports reflect their forced/detected type.
+   * Used whenever we (re)display a graph level we've already visited —
+   * was duplicated 3x (navigateBack, navigateToLevel x2), independently
+   * editable and prone to drifting out of sync.
+   */
+  const refreshNodesFromRegistry = useCallback((nodesToRefresh: Node[]): Node[] => {
+    return nodesToRefresh.map(node => {
+      const def = node.data?.definition;
+
+      if (def && 'isCustom' in def && def.isCustom) {
+        const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
+        if (freshDef) {
+          return { ...node, data: { ...node.data, definition: freshDef } };
+        }
+      }
+
+      const portType = node.data?.forcedType || node.data?.detectedType;
+      if (def?.id === 'custom_input' && portType) {
+        return {
+          ...node,
+          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_input'], outputs: [{ id: 'out', type: portType, label: 'Value' }] } }
+        };
+      }
+      if (def?.id === 'custom_output' && portType) {
+        return {
+          ...node,
+          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_output'], inputs: [{ id: 'in', type: portType, label: 'Value' }] } }
+        };
+      }
+
+      return node;
+    });
+  }, []);
+
+  /** Default Custom Input/Output pair used to seed a brand-new (empty) custom node subgraph. */
+  const defaultCustomSubgraphNodes = useCallback((): Node[] => [
+    { id: 'custom_input_default', type: 'shaderNode', position: { x: 100, y: 200 }, data: { definition: NODE_REGISTRY['custom_input'], value: undefined } },
+    { id: 'custom_output_default', type: 'shaderNode', position: { x: 400, y: 200 }, data: { definition: NODE_REGISTRY['custom_output'], value: 'Output' } },
+  ], []);
+
+  /** Loads a custom node's subgraph (fresh from storage), or seeds defaults if it's empty. */
+  const loadCustomNodeSubgraph = useCallback((customDef: CustomNodeDefinition): { nodes: Node[]; edges: Edge[] } => {
+    if (customDef.subgraph.nodes.length === 0) {
+      return { nodes: defaultCustomSubgraphNodes(), edges: [] };
+    }
+    const freshCustomDef = loadCustomNodes().find(cn => cn.id === customDef.id);
+    const subgraph = freshCustomDef ? freshCustomDef.subgraph : customDef.subgraph;
+    return { nodes: subgraph.nodes, edges: subgraph.edges };
+  }, [defaultCustomSubgraphNodes]);
+
+  /** Persists the subgraph currently on canvas back into its custom node definition + registry. */
+  const persistCurrentSubgraph = useCallback((contextLabel: string, currentNodes: Node[], currentEdges: Edge[]) => {
+    if (contextLabel === 'Main') return;
+    const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
+      const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
+      return def.label === contextLabel && 'isCustom' in def;
+    });
+    if (!customNodeId) return;
+
+    const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
+    const ports = extractCustomNodePorts({ nodes: currentNodes });
+    const updatedCustomNode: CustomNodeDefinition = {
+      ...customDef,
+      inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
+      outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
+      subgraph: { nodes: currentNodes, edges: currentEdges },
+    };
+    addCustomNode(updatedCustomNode);
+    (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
+  }, []);
+
   const enterCustomNode = useCallback((nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
-    
+
     const def = node.data.definition;
     if (!('isCustom' in def) || !def.isCustom) return;
-    
+
     const customDef = def as CustomNodeDefinition;
-    
-    // Save current state to navigation stack
     setNavigationStack(prev => [...prev, { name: currentContext, nodes, edges }]);
-    
-    // If subgraph is empty, add default nodes
-    if (customDef.subgraph.nodes.length === 0) {
-      const defaultNodes: Node[] = [
-        {
-          id: `custom_input_default`,
-          type: 'shaderNode',
-          position: { x: 100, y: 200 },
-          data: {
-            definition: NODE_REGISTRY['custom_input'],
-            value: undefined,
-          }
-        },
-        {
-          id: `custom_output_default`,
-          type: 'shaderNode',
-          position: { x: 400, y: 200 },
-          data: {
-            definition: NODE_REGISTRY['custom_output'],
-            value: 'Output',
-          }
-        }
-      ];
-      
-      setNodes(defaultNodes);
-      setEdges([]);
-    } else {
-      // Reload from localStorage to get fresh detectedType values
-      const freshCustomNodes = loadCustomNodes();
-      const freshCustomDef = freshCustomNodes.find(cn => cn.id === customDef.id);
-      const subgraphToLoad = freshCustomDef ? freshCustomDef.subgraph : customDef.subgraph;
-      
-      console.log('🔄 Entered custom node:', {
-        customNodeId: customDef.id,
-        usedFreshData: !!freshCustomDef,
-        nodesCount: subgraphToLoad.nodes.length,
-        nodesWithDetectedType: subgraphToLoad.nodes.filter(n => n.data?.detectedType).length
-      });
-      
-      setNodes(subgraphToLoad.nodes);
-      setEdges(subgraphToLoad.edges);
-    }
-    
+
+    const subgraph = loadCustomNodeSubgraph(customDef);
+    setNodes(subgraph.nodes);
+    setEdges(subgraph.edges);
     setCurrentContext(def.label);
-  }, [nodes, edges, currentContext, setNodes, setEdges]);
-  
+  }, [nodes, edges, currentContext, setNodes, setEdges, loadCustomNodeSubgraph]);
+
   const navigateBack = useCallback(() => {
     if (navigationStack.length === 0) return;
-    
+
     const previous = navigationStack[navigationStack.length - 1];
-    
+
     // Use functional state update to ensure we read LATEST state
     setNodes((currentNodes) => {
       setEdges((currentEdges) => {
-        // If we're leaving a custom node, save its updated subgraph
-        if (currentContext !== 'Main') {
-          const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
-            const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
-            return def.label === currentContext && 'isCustom' in def;
-          });
-          
-          if (customNodeId) {
-            const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
-            
-            // Extract updated ports from CURRENT state (guaranteed fresh!)
-            const ports = extractCustomNodePorts({ nodes: currentNodes });
-            
-            console.log('🔍 navigateBack extracting ports from CURRENT state:', {
-              nodesCount: currentNodes.length,
-              detectedTypes: currentNodes.map(n => ({ id: n.id, detectedType: n.data?.detectedType })),
-              extractedPorts: ports
-            });
-            
-            // Update custom node with new subgraph + ports
-            const updatedCustomNode: CustomNodeDefinition = {
-              ...customDef,
-              inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
-              outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
-              subgraph: {
-                nodes: currentNodes,
-                edges: currentEdges
-              }
-            };
-            
-            // Save to library
-            addCustomNode(updatedCustomNode);
-            
-            // Update registry
-            (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
-            
-            console.log('✅ Saved custom node:', customNodeId, 'with ports:', ports);
-          }
-        }
-        
+        persistCurrentSubgraph(currentContext, currentNodes, currentEdges);
         return previous.edges;
       });
-      
-      // Restore nodes but refresh custom node definitions from library
-      const refreshedNodes = previous.nodes.map(node => {
-        const def = node.data?.definition;
-        
-        // Refresh custom node instances
-        if (def && 'isCustom' in def && def.isCustom) {
-          // This is a custom node instance - reload definition from library
-          const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
-          if (freshDef) {
-            console.log('🔄 Refreshing custom node instance:', {
-              nodeId: node.id,
-              oldInputs: def.inputs,
-              newInputs: freshDef.inputs
-            });
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                definition: freshDef
-              }
-            };
-          }
-        }
-        
-        // Refresh custom_input with detectedType
-        if (def?.id === 'custom_input' && node.data?.detectedType) {
-          const freshDef = NODE_REGISTRY['custom_input'];
-          console.log('🔄 Refreshed custom_input on navigateBack:', {
-            nodeId: node.id,
-            detectedType: node.data.detectedType
-          });
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              definition: {
-                ...freshDef,
-                outputs: [{ id: 'out', type: node.data.detectedType, label: 'Value' }]
-              }
-            }
-          };
-        }
-        
-        // Refresh custom_output with detectedType
-        if (def?.id === 'custom_output' && node.data?.detectedType) {
-          const freshDef = NODE_REGISTRY['custom_output'];
-          console.log('🔄 Refreshed custom_output on navigateBack:', {
-            nodeId: node.id,
-            detectedType: node.data.detectedType
-          });
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              definition: {
-                ...freshDef,
-                inputs: [{ id: 'in', type: node.data.detectedType, label: 'Value' }]
-              }
-            }
-          };
-        }
-        
-        return node;
-      });
-      
-      return refreshedNodes;
+      return refreshNodesFromRegistry(previous.nodes);
     });
-    
+
     setNavigationStack(prev => prev.slice(0, -1));
     setCurrentContext(previous.name);
-  }, [navigationStack, currentContext]);
+  }, [navigationStack, currentContext, persistCurrentSubgraph, refreshNodesFromRegistry]);
 
   const navigateToLevel = useCallback((levelIndex: number) => {
-    // Save current context before navigating away (if in a custom node)
-    if (currentContext !== 'Main') {
-      const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
-        const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
-        return def.label === currentContext && 'isCustom' in def;
-      });
-      
-      if (customNodeId) {
-        const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
-        const ports = extractCustomNodePorts({ nodes });
-        const updatedCustomNode: CustomNodeDefinition = {
-          ...customDef,
-          inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
-          outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
-          subgraph: { nodes, edges }
-        };
-        addCustomNode(updatedCustomNode);
-        (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
-        
-        console.log('✅ Subgraph saved on navigateToLevel:', {
-          customNodeId,
-          nodeCount: nodes.length,
-          edgeCount: edges.length,
-          inputs: ports.inputs.length,
-          outputs: ports.outputs.length
-        });
-      }
-    }
-    
+    persistCurrentSubgraph(currentContext, nodes, edges);
+
     if (levelIndex === 0) {
-      // Jump to Main - restore from first stack entry (bottom of stack)
       if (navigationStack.length > 0) {
         const mainState = navigationStack[0];
-        
-        // Refresh custom node definitions
-        const refreshedNodes = mainState.nodes.map(node => {
-          const def = node.data?.definition;
-          
-          // Refresh custom node instances
-          if (def && 'isCustom' in def && def.isCustom) {
-            const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
-            if (freshDef) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  definition: freshDef
-                }
-              };
-            }
-          }
-          
-          // Refresh custom_input with detectedType
-          if (def?.id === 'custom_input' && node.data?.detectedType) {
-            const freshDef = NODE_REGISTRY['custom_input'];
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                definition: {
-                  ...freshDef,
-                  outputs: [{ id: 'out', type: node.data.detectedType, label: 'Value' }]
-                }
-              }
-            };
-          }
-          
-          // Refresh custom_output with detectedType
-          if (def?.id === 'custom_output' && node.data?.detectedType) {
-            const freshDef = NODE_REGISTRY['custom_output'];
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                definition: {
-                  ...freshDef,
-                  inputs: [{ id: 'in', type: node.data.detectedType, label: 'Value' }]
-                }
-              }
-            };
-          }
-          
-          return node;
-        });
-        
-        setNodes(refreshedNodes);
+        setNodes(refreshNodesFromRegistry(mainState.nodes));
         setEdges(mainState.edges);
       } else {
         // No stack - use default (shouldn't happen in normal flow)
@@ -647,66 +552,13 @@ function EditorInner({ onChange }: Props) {
       setNavigationStack([]);
       setCurrentContext('Main');
     } else {
-      // Jump to intermediate level
       const targetLevel = navigationStack[levelIndex - 1];
       setNavigationStack(prev => prev.slice(0, levelIndex));
       setCurrentContext(targetLevel.name);
-      
-      // Refresh custom node definitions
-      const refreshedNodes = targetLevel.nodes.map(node => {
-        const def = node.data?.definition;
-        
-        // Refresh custom node instances
-        if (def && 'isCustom' in def && def.isCustom) {
-          const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
-          if (freshDef) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                definition: freshDef
-              }
-            };
-          }
-        }
-        
-        // Refresh custom_input with detectedType
-        if (def?.id === 'custom_input' && node.data?.detectedType) {
-          const freshDef = NODE_REGISTRY['custom_input'];
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              definition: {
-                ...freshDef,
-                outputs: [{ id: 'out', type: node.data.detectedType, label: 'Value' }]
-              }
-            }
-          };
-        }
-        
-        // Refresh custom_output with detectedType
-        if (def?.id === 'custom_output' && node.data?.detectedType) {
-          const freshDef = NODE_REGISTRY['custom_output'];
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              definition: {
-                ...freshDef,
-                inputs: [{ id: 'in', type: node.data.detectedType, label: 'Value' }]
-              }
-            }
-          };
-        }
-        
-        return node;
-      });
-      
-      setNodes(refreshedNodes);
+      setNodes(refreshNodesFromRegistry(targetLevel.nodes));
       setEdges(targetLevel.edges);
     }
-  }, [navigationStack, setNodes, setEdges, currentContext, nodes, edges]);
+  }, [navigationStack, setNodes, setEdges, currentContext, nodes, edges, persistCurrentSubgraph, refreshNodesFromRegistry]);
 
   const navigateToMain = useCallback(() => {
     navigateToLevel(0);
@@ -839,44 +691,23 @@ function EditorInner({ onChange }: Props) {
         // === AUTO TYPE ADAPTATION (Smart Split + Relay) ===
         
         // Smart Split Node - adapts outputs based on input type
-        if (targetDef.id === 'smart_split' && inputDef?.type === 'auto') {
+        // (skipped once the user has forced a type via the badge — see ShaderNode.tsx)
+        if (targetDef.id === 'smart_split' && inputDef?.type === 'auto' && !targetNode.data.forcedType) {
             const type = sourceType;
-            let newOutputs: { id: string; label: string; type: string }[] = targetDef.outputs;
-            let newInputLabel = 'Input';
-            const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
-            
-            if (type === 'vec2') { 
-                newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
-                newInputLabel = 'Vec2'; 
-            } else if (type === 'vec3') { 
-                newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
-                newInputLabel = 'Vec3'; 
-            } else if (type === 'vec4') { 
-                newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
-                newInputLabel = 'Vec4'; 
-            } else if (type === 'float') {
-                newOutputs = [createOutput('x', 'Value')];
-                newInputLabel = 'Float';
-            }
-            
+            const adapted = computeSmartSplitPorts(type);
+
             setNodes(nds => nds.map(n => {
                 if (n.id === targetNode.id) {
-                    console.log('✅ Smart Split adapted:', {
-                        nodeId: n.id,
-                        from: n.data.definition.outputs.map((o: {id: string}) => o.id),
-                        to: newOutputs.map(o => o.id),
-                        inputType: type
-                    });
-                    return { 
-                        ...n, 
-                        data: { 
-                            ...n.data, 
-                            definition: { 
-                                ...n.data.definition, 
-                                inputs: [{ id: 'in', label: newInputLabel, type: type }], 
-                                outputs: newOutputs 
-                            } 
-                        } 
+                    return {
+                        ...n,
+                        data: {
+                            ...n.data,
+                            definition: {
+                                ...n.data.definition,
+                                inputs: [{ id: 'in', label: adapted.inputLabel, type: type }],
+                                outputs: adapted.outputs
+                            }
+                        }
                     }
                 }
                 return n;
@@ -926,18 +757,15 @@ function EditorInner({ onChange }: Props) {
         }
 
         // === CUSTOM INPUT/OUTPUT AUTO-TYPE DETECTION ===
-        
+        // Skipped when the user has forced a type manually (ShaderNode.tsx's
+        // FORCE TYPE buttons) — forced type always wins over auto-detection.
+
         // Custom Input - infer type from the node it feeds into
         // (custom_input has no input ports, so we detect from its downstream target)
-        if (sourceDef.id === 'custom_input' && inputDef?.type && inputDef.type !== 'auto') {
+        if (sourceDef.id === 'custom_input' && inputDef?.type && inputDef.type !== 'auto' && !sourceNode.data.forcedType) {
             const inferredType = inputDef.type;
             setNodes(nds => nds.map(n => {
                 if (n.id === sourceNode.id) {
-                    console.log('✅ Custom Input type inferred from downstream:', {
-                        nodeId: n.id,
-                        inferredType,
-                        targetInput: inputDef.id
-                    });
                     return {
                         ...n,
                         data: {
@@ -953,18 +781,13 @@ function EditorInner({ onChange }: Props) {
                 return n;
             }));
         }
-        
+
         // Custom Output - detect type from INCOMING connection (what connects TO it)
-        if (targetDef.id === 'custom_output') {
+        if (targetDef.id === 'custom_output' && !targetNode.data.forcedType) {
             // Custom Output is TARGET here - detect from SOURCE type (what feeds into it)
             const detectedType = sourceType;  // What connects TO Custom Output
             setNodes(nds => nds.map(n => {
                 if (n.id === targetNode.id) {  // targetNode is Custom Output!
-                    console.log('✅ Custom Output type detected (INCOMING):', {
-                        nodeId: n.id,
-                        detectedType,
-                        label: n.data.value || 'Output'
-                    });
                     return {
                         ...n,
                         data: {
@@ -1132,28 +955,11 @@ function EditorInner({ onChange }: Props) {
       // Adapt smart_split
       if (typeId === 'smart_split' && handleType === 'source') {
         const type = menuFilter;
-        let newOutputs = def.outputs;
-        let newInputLabel = 'Input';
-        const createOutput = (id: string, label: string) => ({ id, label, type: 'float' as const });
-        
-        if (type === 'vec2') { 
-          newOutputs = [createOutput('x', 'X'), createOutput('y', 'Y')]; 
-          newInputLabel = 'Vec2'; 
-        } else if (type === 'vec3') { 
-          newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B')]; 
-          newInputLabel = 'Vec3'; 
-        } else if (type === 'vec4') { 
-          newOutputs = [createOutput('x', 'R'), createOutput('y', 'G'), createOutput('z', 'B'), createOutput('w', 'A')]; 
-          newInputLabel = 'Vec4'; 
-        } else if (type === 'float') {
-          newOutputs = [createOutput('x', 'Value')];
-          newInputLabel = 'Float';
-        }
-        
+        const adapted = computeSmartSplitPorts(type);
         def = {
           ...def,
-          inputs: [{ id: 'in', label: newInputLabel, type: type as DataType }],
-          outputs: newOutputs
+          inputs: [{ id: 'in', label: adapted.inputLabel, type: type as DataType }],
+          outputs: adapted.outputs
         };
       }
     }

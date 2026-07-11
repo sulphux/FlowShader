@@ -81,20 +81,26 @@ describe('Slim Combine/Split adapters', () => {
     expect(root.textContent).toContain('A');
   });
 
-  it('smart_compose badge cycles output type on click (vec3 → vec4 → vec2)', async () => {
+  it('smart_compose starts undetermined (auto) and cycles vec2 → vec3 → vec4 on click', async () => {
+    // Regression: Combine (Auto) used to default straight to a concrete vec3
+    // (flat yellow port), unlike Split (Auto) which starts as 'auto' (rainbow)
+    // until adapted/chosen — inconsistent and misleading. Both now start 'auto'.
     const { container } = renderNode(NODE_REGISTRY.smart_compose);
     await waitFor(() => expect(getSlimRoot(container)).toBeTruthy());
 
     const badge = () => [...container.querySelectorAll('span')]
-      .find(s => /^[234]$/.test(s.textContent || '')) as HTMLElement;
+      .find(s => /^[234A]$/.test(s.textContent || '')) as HTMLElement;
 
-    expect(badge().textContent).toBe('3'); // domyślnie vec3
-
-    fireEvent.click(badge());
-    await waitFor(() => expect(badge().textContent).toBe('4'));
+    expect(badge().textContent).toBe('A'); // niewybrany, jak Split (Auto)
 
     fireEvent.click(badge());
     await waitFor(() => expect(badge().textContent).toBe('2'));
+
+    fireEvent.click(badge());
+    await waitFor(() => expect(badge().textContent).toBe('3'));
+
+    fireEvent.click(badge());
+    await waitFor(() => expect(badge().textContent).toBe('4'));
   });
 
   it('smart_compose is user-facing labeled "Combine (Auto)" (naming audit)', () => {

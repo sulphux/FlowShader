@@ -47,12 +47,12 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
               // BUT preserve detectedType for Custom Input/Output nodes
               definition: freshDef ? {
                 ...freshDef,
-                // Preserve detected type from saved node data
-                ...(defId === 'custom_input' && node.data.detectedType ? {
-                  outputs: [{ id: 'out', type: node.data.detectedType, label: 'Value' }]
+                // forcedType (manually chosen by the user) wins over auto-detectedType
+                ...(defId === 'custom_input' && (node.data.forcedType || node.data.detectedType) ? {
+                  outputs: [{ id: 'out', type: node.data.forcedType || node.data.detectedType, label: 'Value' }]
                 } : {}),
-                ...(defId === 'custom_output' && node.data.detectedType ? {
-                  inputs: [{ id: 'in', type: node.data.detectedType, label: 'Value' }]
+                ...(defId === 'custom_output' && (node.data.forcedType || node.data.detectedType) ? {
+                  inputs: [{ id: 'in', type: node.data.forcedType || node.data.detectedType, label: 'Value' }]
                 } : {})
               } : node.data.definition
             }
@@ -121,62 +121,52 @@ export function getCustomNode(nodeId: string): CustomNodeDefinition | null {
 }
 
 /**
- * Extract inputs and outputs from Custom Input/Output nodes in subgraph
+ * Extract inputs and outputs from Custom Input/Output nodes in subgraph.
+ *
+ * Port order follows the nodes' vertical (Y) position on the canvas, top to
+ * bottom — drag a Custom Input/Output node up or down to reorder the ports
+ * shown on the outer custom node instance.
  */
 export function extractCustomNodePorts(subgraph: { nodes: Node[] }): {
   inputs: Array<{ id: string; label: string; type: string }>;
   outputs: Array<{ id: string; label: string; type: string }>;
 } {
-  const inputs: Array<{ id: string; label: string; type: string }> = [];
-  const outputs: Array<{ id: string; label: string; type: string }> = [];
+  const inputEntries: Array<{ y: number; port: { id: string; label: string; type: string } }> = [];
+  const outputEntries: Array<{ y: number; port: { id: string; label: string; type: string } }> = [];
 
   subgraph.nodes.forEach(node => {
     // Defensive: Check if node.data exists
     if (!node.data) {
       return;
     }
-    
+
     // Check for Custom Input - by definition.id OR by node.id prefix (fallback)
     const isCustomInput = node.data.definition?.id === 'custom_input' || node.id.startsWith('custom_input');
     const isCustomOutput = node.data.definition?.id === 'custom_output' || node.id.startsWith('custom_output');
-    
+    const y = node.position?.y ?? 0;
+
     if (isCustomInput) {
-      const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Input';
-      const detectedType = node.data.detectedType || node.data.definition?.outputs?.[0]?.type || 'auto';
-      
-      console.log('🔍 extractCustomNodePorts - Custom Input:', {
-        nodeId: node.id,
-        portName,
-        detectedTypeFromData: node.data.detectedType,
-        detectedTypeFromDef: node.data.definition?.outputs?.[0]?.type,
-        final: detectedType
-      });
-      
-      inputs.push({
-        id: node.id,
-        label: portName,
-        type: detectedType
-      });
+      // The node's name is set via the standard title-input header, which
+      // writes to data.label (NOT data.value — data.value is reserved for
+      // this node's text CONTROL, which custom_input/custom_output don't
+      // render). Reading .value here used to silently ignore every rename.
+      const portName = node.data.label || node.data.value || node.data.definition?.controls?.defaultValue || 'Input';
+      const type = node.data.forcedType || node.data.detectedType || node.data.definition?.outputs?.[0]?.type || 'auto';
+
+      inputEntries.push({ y, port: { id: node.id, label: portName, type } });
     }
     if (isCustomOutput) {
-      const portName = node.data.value || node.data.definition?.controls?.defaultValue || 'Output';
-      const detectedType = node.data.detectedType || node.data.definition?.inputs?.[0]?.type || 'auto';
-      
-      console.log('🔍 extractCustomNodePorts - Custom Output:', {
-        nodeId: node.id,
-        portName,
-        detectedTypeFromData: node.data.detectedType,
-        detectedTypeFromDef: node.data.definition?.inputs?.[0]?.type,
-        final: detectedType
-      });
-      
-      outputs.push({
-        id: node.id,
-        label: portName,
-        type: detectedType
-      });
+      const portName = node.data.label || node.data.value || node.data.definition?.controls?.defaultValue || 'Output';
+      const type = node.data.forcedType || node.data.detectedType || node.data.definition?.inputs?.[0]?.type || 'auto';
+
+      outputEntries.push({ y, port: { id: node.id, label: portName, type } });
     }
   });
 
-  return { inputs, outputs };
+  const byPosition = (a: { y: number }, b: { y: number }) => a.y - b.y;
+
+  return {
+    inputs: inputEntries.sort(byPosition).map(e => e.port),
+    outputs: outputEntries.sort(byPosition).map(e => e.port),
+  };
 }

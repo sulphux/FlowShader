@@ -93,37 +93,85 @@ describe('Custom Node Regression Coverage', () => {
     ]);
   });
 
-  it('should extract stable port ordering from subgraph node order', () => {
+  it('should order ports by canvas Y position, not array/insertion order', () => {
+    // custom_input_2 comes FIRST in the array but sits BELOW custom_input_1 on
+    // the canvas (y=100 vs y=0) — port order must follow position (drag a
+    // Custom Input/Output node up or down to reorder), not array order.
     const nodes: Node[] = [
       {
         id: 'custom_input_2',
         type: 'shaderNode',
         position: { x: 0, y: 100 },
-        data: { definition: NODE_REGISTRY['custom_input'], value: 'Second', detectedType: 'vec2' }
+        data: { definition: NODE_REGISTRY['custom_input'], label: 'Second', detectedType: 'vec2' }
       },
       {
         id: 'custom_output_1',
         type: 'shaderNode',
         position: { x: 400, y: 0 },
-        data: { definition: NODE_REGISTRY['custom_output'], value: 'Result', detectedType: 'vec4' }
+        data: { definition: NODE_REGISTRY['custom_output'], label: 'Result', detectedType: 'vec4' }
       },
       {
         id: 'custom_input_1',
         type: 'shaderNode',
         position: { x: 0, y: 0 },
-        data: { definition: NODE_REGISTRY['custom_input'], value: 'First', detectedType: 'float' }
+        data: { definition: NODE_REGISTRY['custom_input'], label: 'First', detectedType: 'float' }
       }
     ];
 
     const ports = extractCustomNodePorts({ nodes });
 
     expect(ports.inputs).toEqual([
-      { id: 'custom_input_2', label: 'Second', type: 'vec2' },
       { id: 'custom_input_1', label: 'First', type: 'float' },
+      { id: 'custom_input_2', label: 'Second', type: 'vec2' },
     ]);
     expect(ports.outputs).toEqual([
       { id: 'custom_output_1', label: 'Result', type: 'vec4' },
     ]);
+  });
+
+  it('renaming a Custom Input/Output via the title header (data.label) propagates to the outer port name', () => {
+    // Regression: extractCustomNodePorts used to read node.data.value, but the
+    // only rename UI these nodes have is the standard title-input header,
+    // which writes node.data.label — renames were silently ignored.
+    //
+    // Node ids are prefixed "custom_input"/"custom_output" so detection works
+    // via the id-prefix fallback in extractCustomNodePorts — this file's
+    // beforeEach wipes every "custom_"-prefixed registry entry (including the
+    // built-in custom_input/custom_output definitions), so we can't rely on
+    // NODE_REGISTRY['custom_input'] being populated here.
+    const nodes: Node[] = [
+      {
+        id: 'custom_input_1',
+        type: 'shaderNode',
+        position: { x: 0, y: 0 },
+        data: { definition: { id: 'custom_input' }, label: 'Renamed Input', detectedType: 'float' }
+      },
+      {
+        id: 'custom_output_1',
+        type: 'shaderNode',
+        position: { x: 100, y: 0 },
+        data: { definition: { id: 'custom_output' }, label: 'Renamed Output', detectedType: 'vec3' }
+      }
+    ];
+
+    const ports = extractCustomNodePorts({ nodes });
+
+    expect(ports.inputs[0].label).toBe('Renamed Input');
+    expect(ports.outputs[0].label).toBe('Renamed Output');
+  });
+
+  it('a forced type overrides the auto-detected type when extracting ports', () => {
+    const nodes: Node[] = [
+      {
+        id: 'custom_input_1',
+        type: 'shaderNode',
+        position: { x: 0, y: 0 },
+        data: { definition: { id: 'custom_input' }, label: 'In', detectedType: 'float', forcedType: 'vec3' }
+      }
+    ];
+
+    const ports = extractCustomNodePorts({ nodes });
+    expect(ports.inputs[0].type).toBe('vec3');
   });
 
   it('should preserve sequential subgraph edits across multiple save cycles', () => {
