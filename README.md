@@ -1,109 +1,119 @@
+🇬🇧 **English** · [🇵🇱 Polski](README.pl.md)
+
 # FlowShader
 
-**Wizualny edytor shaderów GLSL** — budujesz efekty graficzne łącząc klocki (nody)
-przeciągane na kanwę, a wynik renderuje się na żywo obok. Zero pisania boilerplate'u
-GLSL: graf jest kompilowany do fragment shadera automatycznie przy każdej zmianie.
+**A visual GLSL shader editor** — build graphics effects by wiring together
+node blocks on a canvas, with the result rendering live right next to it.
+No GLSL boilerplate to write: the graph compiles to a fragment shader
+automatically on every change.
 
-![Edytor FlowShader — graf nodów i podgląd na żywo](docs/img/01-editor.png)
+![FlowShader editor — node graph and live preview](docs/img/01-editor.png)
 
-Powyżej: klasyczne animowane pierścienie — `UV → Length → + Time → Cosine Palette → Output`.
-Sześć klocków, zero linijek kodu.
+Above: the classic animated rings effect — `UV → Length → + Time → Cosine Palette → Output`.
+Six blocks, zero lines of code.
 
-## Szybki start
+## Quick start
 
 ```bash
 npm install
-npm run dev        # edytor na http://localhost:5173
-npm test           # ~630 testów (kompilator, nody, UI)
+npm run dev        # editor at http://localhost:5173
+npm test           # ~630 tests (compiler, nodes, UI)
 ```
 
-## Do czego to służy
+## What it's for
 
-- **Nauka shaderów** — widzisz na żywo, co robi każda operacja; podgląd `< > Code`
-  pokazuje wygenerowany GLSL, więc graf działa jak interaktywny podręcznik.
-- **Prototypowanie efektów** — tła, wizualizacje audio, generatywne wzory; szybciej
-  niż ręczne pisanie i przeładowywanie shaderów.
-- **Kreatywne zabawy** — parametry (suwaki, kolory) zmieniasz w trakcie animacji.
+- **Learning shaders** — see live what each operation does; the `< > Code`
+  panel shows the generated GLSL, so the graph doubles as an interactive
+  textbook.
+- **Prototyping effects** — backgrounds, audio visualizations, generative
+  patterns; faster than hand-writing and reloading shaders.
+- **Creative play** — tweak parameters (sliders, colors) while the animation
+  is running.
 
-## Podstawowe możliwości
+## Core features
 
-### Graf nodów z systemem typów
+### Typed node graph with auto-adapters
 
-Porty mają typy (`float`, `vec2`, `vec3`, `vec4`) oznaczone kolorami. Niezgodne
-połączenia nie przechodzą "po cichu" — **auto-adapter** sam wstawia smukłe nody
-Split (≺) / Combine (≻), które rozkładają i składają wektory:
+Ports are typed (`float`, `vec2`, `vec3`, `vec4`) and color-coded. Incompatible
+connections don't silently pass through — the **auto-adapter** inserts slim
+Split (≺) / Combine (≻) nodes automatically to decompose and recompose
+vectors:
 
-![Przegląd nodów: edytor kodu, monitor wartości, split/combine, color preview](docs/img/03-nodes.png)
+![Node overview: code editor, value monitor, split/combine, color preview](docs/img/03-nodes.png)
 
-Na zrzucie m.in.:
-- **Code (GLSL)** — mini-edytor: piszesz wyrażenie z wejściami `a b c d`
-  (np. `vec3(sin(a*2.0)*0.5+0.5, cos(a)*0.5+0.5, 0.8)`) i wybierasz typ wyjścia,
-- **Value Watcher** — podgląd liczbowy sygnału (X/Y/Z/W na żywo),
-- **Color Preview** — próbka koloru z kodem hex,
-- smukłe **Split ≺ / Combine ≻** z badge'em rozmiaru wektora,
-- **Float Param** — nazwany parametr ze strzałkami i suwakiem (zakładka PARAMS
-  w bibliotece zbiera wszystkie parametry projektu w jedno miejsce).
+Shown above:
+- **Code (GLSL)** — a mini code editor: write an expression using inputs
+  `a b c d` (e.g. `vec3(sin(a*2.0)*0.5+0.5, cos(a)*0.5+0.5, 0.8)`) and pick the
+  output type,
+- **Value Watcher** — live numeric readout of a signal (X/Y/Z/W),
+- **Color Preview** — a color swatch with its hex code,
+- slim **Split ≺ / Combine ≻** nodes with a vector-size badge,
+- **Float Param** — a named parameter with arrows and a slider (the PARAMS
+  tab in the library collects every parameter in the project in one place).
 
-### Szybkie dodawanie nodów
+### Quick-add menu
 
-Przeciągnij kabel na puste pole albo kliknij prawym przyciskiem — menu pokazuje
-**tylko nody pasujące do typu**, który ciągniesz. Zaznaczone nody można też
-zapisać jako własny node (Create Custom Node) i używać jak zwykłego klocka:
+Drag a wire onto empty canvas, or right-click — the menu shows **only nodes
+that match the type** you're dragging. Selected nodes can also be saved as a
+custom node (Create Custom Node) and reused like any other block:
 
-![Menu szybkiego dodawania](docs/img/02-quick-add.png)
+![Quick-add menu](docs/img/02-quick-add.png)
 
-### Tekstury i audio
+### Textures and audio
 
-Node **Texture** wgrywa obraz z dysku (miniatura na nodzie, opcjonalne wejście UV),
-a **Audio** analizuje plik dźwiękowy na żywo i wystawia poziomy
-Level / Bass / Mid / High — gotowe do sterowania animacją w rytm muzyki:
+The **Texture** node uploads an image from disk (with a thumbnail on the
+node, plus an optional UV input), and **Audio** analyzes a sound file live
+and exposes Level / Bass / Mid / High levels — ready to drive an animation
+in time with music:
 
-![Nody Texture i Audio](docs/img/04-media.png)
+![Texture and Audio nodes](docs/img/04-media.png)
 
-### Ustawienia globalne
+### Global settings
 
-Limit FPS (bez limitu / 30 / 60) i jakość renderowania (50–100%) dla wszystkich
-okien podglądu — przydatne na słabszym sprzęcie:
+FPS limit (unlimited / 30 / 60) and render quality (50–100%) for every
+preview window — useful on lower-end hardware:
 
-![Ustawienia globalne](docs/img/05-settings.png)
+![Global settings](docs/img/05-settings.png)
 
-### Zapis projektów
+### Saving projects
 
-- **Plik**: `Save` nadpisuje otwarty plik bez pytania (jak w normalnym edytorze),
-  `Save As…` wybiera nowy, `Load` podpina wczytany plik pod kolejne zapisy.
-  Projekt to zwykły JSON — łatwo wersjonować w gicie.
-- **Chmura** (opcjonalnie, przycisk ☁️): logowanie, projekty online z limitem
-  miejsca na użytkownika oraz **udostępnianie z licencją** — projekt może być
-  prywatny, "z linkiem" albo publiczny, na licencji ARR / CC BY / CC BY-NC / CC0.
-  Konfiguracja backendu (darmowy Supabase): [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+- **File**: `Save` overwrites the open file without prompting (like a
+  regular editor), `Save As…` picks a new file, `Load` attaches the loaded
+  file for subsequent saves. A project is plain JSON — easy to version in
+  git.
+- **Cloud** (optional, ☁️ button): sign-in, online projects with a per-user
+  storage quota, and **sharing with a license** — a project can be private,
+  "unlisted", or public, under ARR / CC BY / CC BY-NC / CC0. Backend setup
+  (free Supabase tier): [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
-![Panel projektów w chmurze](docs/img/06-cloud.png)
+![Cloud projects panel](docs/img/06-cloud.png)
 
-## Biblioteka nodów (skrót)
+## Node library (overview)
 
-| Kategoria | Nody |
+| Category | Nodes |
 |---|---|
-| Wejścia | Output (Screen), Time, Float/Color Param, UV Coord, **Texture**, **Audio** |
-| Matematyka | `+ − × ÷`, Negate, POW, SIN/COS/TAN/COT/ATAN, ABS, EXP, FRACT |
-| Wektory | UV Scale/Shift, Length, Fract (Vec2), Mix (Lerp), Relay |
-| Narzędzia | Split/Combine (Auto), Value Watcher, Preview, Color Preview, **Code (GLSL)**, Comment, Group |
-| Kolor i kształty | Cosine Palette, Add/Scale (Color), Mono (RGB), Circle SDF |
-| Własne | Create Custom Node — zamknij fragment grafu w reużywalny klocek z podgrafem |
+| Inputs | Output (Screen), Time, Float/Color Param, UV Coord, **Texture**, **Audio** |
+| Math | `+ − × ÷`, Negate, POW, SIN/COS/TAN/COT/ATAN, ABS, EXP, FRACT |
+| Vector | UV Scale/Shift, Length, Fract (Vec2), Mix (Lerp), Relay |
+| Utility | Split/Combine (Auto), Value Watcher, Preview, Color Preview, **Code (GLSL)**, Comment, Group |
+| Color & shapes | Cosine Palette, Add/Scale (Color), Mono (RGB), Circle SDF |
+| Custom | Create Custom Node — wrap a piece of the graph into a reusable block with its own subgraph |
 
-## Więcej
+## More
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — jak działa kompilator grafu → GLSL
-- [DEVELOPMENT.md](DEVELOPMENT.md) — praca nad kodem
-- [CLOUD_SYNC_DESIGN.md](CLOUD_SYNC_DESIGN.md) — architektura części chmurowej
-- Zrzuty w tym README generuje `node scripts/docs-screenshots.mjs`
-  (wymaga uruchomionego dev servera na porcie 5199)
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how the graph → GLSL compiler works
+- [DEVELOPMENT.md](DEVELOPMENT.md) — working on the codebase
+- [CLOUD_SYNC_DESIGN.md](CLOUD_SYNC_DESIGN.md) — cloud backend architecture
+- Screenshots in this README are generated by `node scripts/docs-screenshots.mjs`
+  (requires a dev server running on port 5199)
 
-Stack: React 19 + TypeScript + Vite, React Flow (graf), Three.js (rendering),
-Vitest + glslangValidator (testy poprawności GLSL), Supabase (opcjonalna chmura).
+Stack: React 19 + TypeScript + Vite, React Flow (graph), Three.js (rendering),
+Vitest + glslangValidator (GLSL correctness tests), Supabase (optional cloud).
 
-## Licencja
+## License
 
-[PolyForm Strict 1.0.0](LICENSE) — kod można przeglądać i uruchamiać lokalnie,
-ale nie kopiować, modyfikować ani wykorzystywać w innych projektach bez zgody
-autora. (To dotyczy tego repozytorium — nie mylić z licencjami projektów
-shaderów tworzonych *w* aplikacji, opisanymi wyżej w sekcji Chmura.)
+[PolyForm Strict 1.0.0](LICENSE) — the code can be viewed and run locally,
+but not copied, modified, or reused in other projects without the author's
+permission. (This applies to this repository — not to be confused with the
+licenses users can attach to shader projects created *inside* the app,
+described above in the Cloud section.)
