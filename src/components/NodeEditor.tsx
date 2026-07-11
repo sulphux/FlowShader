@@ -565,8 +565,19 @@ function EditorInner({ onChange }: Props) {
   }, [navigateToLevel]);
 
   const deleteSelected = useCallback(() => {
-      setNodes((nds) => nds.filter((n) => !n.selected || n.data.definition.id === 'output'));
-      setEdges((eds) => eds.filter((e) => !e.selected));
+      // Track which node ids are actually being removed (keeping the last
+      // Output node alive), so their edges get removed too — deleting a node
+      // used to leave any edges connected to it dangling (source/target
+      // pointing at a node that no longer exists), corrupting the saved
+      // graph. See also rehydrateGraph()'s dropOrphanedEdges, which cleans up
+      // graphs already saved with this corruption.
+      setNodes((nds) => {
+        const removedIds = new Set(
+          nds.filter(n => n.selected && n.data.definition.id !== 'output').map(n => n.id)
+        );
+        setEdges((eds) => eds.filter((e) => !e.selected && !removedIds.has(e.source) && !removedIds.has(e.target)));
+        return nds.filter((n) => !n.selected || n.data.definition.id === 'output');
+      });
   }, [setNodes, setEdges]);
 
   const handleShowCode = useCallback(() => {

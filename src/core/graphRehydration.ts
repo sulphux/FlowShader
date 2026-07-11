@@ -150,8 +150,22 @@ const adaptAutoNode = (node: Node, nodes: Node[], edges: Edge[]): Node => {
   };
 };
 
+/**
+ * Drops edges whose source or target node doesn't exist in the graph.
+ * These can appear in older saves from before deleteSelected() (NodeEditor.tsx)
+ * cleaned up edges connected to a deleted node — the node was removed but its
+ * edges weren't, leaving dangling references. Harmless to the compiler
+ * (missing sources are just skipped) but they're dead weight and confusing
+ * when inspecting a saved file, so we clean them up on load.
+ */
+const dropOrphanedEdges = (nodes: SerializedNode[], edges: Edge[]): Edge[] => {
+  const nodeIds = new Set(nodes.map(n => n.id));
+  return edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+};
+
 export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges: Edge[]; viewport?: Viewport } {
-  const edges = migrateLegacyEdges(parsed.nodes || [], parsed.edges || []);
+  const migratedEdges = migrateLegacyEdges(parsed.nodes || [], parsed.edges || []);
+  const edges = dropOrphanedEdges(parsed.nodes || [], migratedEdges);
   const nodesWithSavedPorts = new Set<string>();
 
   const restoredNodes: Node[] = (parsed.nodes || []).map(n => {
