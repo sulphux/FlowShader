@@ -73,7 +73,9 @@ describe('rehydrateGraph handles an unresolvable node definition', () => {
     const parsed = JSON.parse(readFileSync(path, 'utf8'));
     const { nodes, edges } = rehydrateGraph(parsed);
 
-    const beauty = nodes.find(n => n.id === 'custom_beautynode_1783802235991');
+    // Instance id carries a Date.now() suffix that changes every time the
+    // user re-saves this file from the app — match by prefix, not exact id.
+    const beauty = nodes.find(n => n.id.startsWith('custom_beautynode_'));
     expect(beauty).toBeDefined();
     expect(beauty!.data.definition.id).toBe('__missing__');
 

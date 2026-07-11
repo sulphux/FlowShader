@@ -401,6 +401,10 @@ export const compileGraphToGLSLWithReport = (
 
       const isSwizzled = lastEdge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(lastEdge.sourceHandle);
       if (isSwizzled) srcType = 'float';
+      // Unresolved custom-node port (e.g. its Custom Output was never wired
+      // inside the subgraph) — same vec3 fallback as everywhere else here,
+      // otherwise this silently drops the result and renders solid black.
+      if (srcType === 'auto') srcType = 'vec3';
 
       let varName = nodeVarMap[lastEdge.source];
       if (isSwizzled) varName += `.${lastEdge.sourceHandle}`;

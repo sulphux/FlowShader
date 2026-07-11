@@ -74,6 +74,14 @@ ${body}    return ${outputVar};
  * Auto-cast expression to target type
  */
 export function autoCast(expr: string, fromType: string, toType: string): string {
+  // 'auto' isn't a real GLSL type. A custom node's input port stays 'auto'
+  // when its Custom Input was never wired to anything INSIDE the subgraph
+  // (detection only happens there) — but toGLSLType() above still has to put
+  // *some* type in the generated function signature, and falls back to vec3.
+  // Casts here must agree, or a raw vec2/float gets passed into a vec3
+  // parameter and the shader fails to compile ("no matching overloaded
+  // function found").
+  if (toType === 'auto') toType = 'vec3';
   if (fromType === toType) return expr;
   
   // float → vecN
