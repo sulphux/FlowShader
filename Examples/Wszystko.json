@@ -1,0 +1,1670 @@
+{
+  "nodes": [
+    {
+      "id": "note1",
+      "type": "shaderNode",
+      "position": {
+        "x": -260,
+        "y": -140
+      },
+      "data": {
+        "definition": {
+          "id": "special_note"
+        },
+        "value": "WSZYSTKO — przykład demonstracyjny.\nKażdy typ nodu z palety jest tu użyty co najmniej raz i podłączony do finalnego koloru.\nTexture/Audio są puste (bez wgranych plików) — będą czarne, ale się kompilują."
+      },
+      "width": 320,
+      "height": 150
+    },
+    {
+      "id": "p_a",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.6"
+      }
+    },
+    {
+      "id": "p_b",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 90
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.35"
+      }
+    },
+    {
+      "id": "add1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 0
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      }
+    },
+    {
+      "id": "sub1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 90
+      },
+      "data": {
+        "definition": {
+          "id": "math_sub"
+        }
+      }
+    },
+    {
+      "id": "mul1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 180
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      }
+    },
+    {
+      "id": "div1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 270
+      },
+      "data": {
+        "definition": {
+          "id": "math_div"
+        }
+      }
+    },
+    {
+      "id": "pow1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 360
+      },
+      "data": {
+        "definition": {
+          "id": "math_pow"
+        }
+      }
+    },
+    {
+      "id": "neg1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 450
+      },
+      "data": {
+        "definition": {
+          "id": "math_negate"
+        }
+      }
+    },
+    {
+      "id": "combine_basic",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 90
+      },
+      "data": {
+        "definition": {
+          "id": "smart_compose",
+          "inputs": [
+            {
+              "id": "x",
+              "label": "X",
+              "type": "float"
+            },
+            {
+              "id": "y",
+              "label": "Y",
+              "type": "float"
+            },
+            {
+              "id": "z",
+              "label": "Z",
+              "type": "float"
+            },
+            {
+              "id": "w",
+              "label": "W",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out",
+              "label": "Vec3",
+              "type": "vec3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "monitor_basic",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 0
+      },
+      "data": {
+        "definition": {
+          "id": "monitor"
+        }
+      }
+    },
+    {
+      "id": "time1",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 170
+      },
+      "data": {
+        "definition": {
+          "id": "time"
+        }
+      }
+    },
+    {
+      "id": "p_speed",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 260
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.35"
+      }
+    },
+    {
+      "id": "p_cotoff",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 350
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.2"
+      }
+    },
+    {
+      "id": "p_fractspeed",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 440
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.15"
+      }
+    },
+    {
+      "id": "p_expscale",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 530
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.3"
+      }
+    },
+    {
+      "id": "sin1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 170
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      }
+    },
+    {
+      "id": "cos1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 260
+      },
+      "data": {
+        "definition": {
+          "id": "math_cos"
+        }
+      }
+    },
+    {
+      "id": "mul_t",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 350
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      }
+    },
+    {
+      "id": "tan1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 350
+      },
+      "data": {
+        "definition": {
+          "id": "math_tan"
+        }
+      }
+    },
+    {
+      "id": "add_offset",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 440
+      },
+      "data": {
+        "definition": {
+          "id": "math_add"
+        }
+      }
+    },
+    {
+      "id": "cot1",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 440
+      },
+      "data": {
+        "definition": {
+          "id": "math_cot"
+        }
+      }
+    },
+    {
+      "id": "atan1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 170
+      },
+      "data": {
+        "definition": {
+          "id": "math_atan"
+        }
+      }
+    },
+    {
+      "id": "abs1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 260
+      },
+      "data": {
+        "definition": {
+          "id": "math_abs"
+        }
+      }
+    },
+    {
+      "id": "fract_speed",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 530
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      }
+    },
+    {
+      "id": "fract1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 530
+      },
+      "data": {
+        "definition": {
+          "id": "math_fract"
+        }
+      }
+    },
+    {
+      "id": "exp_in",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 620
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      }
+    },
+    {
+      "id": "exp1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 620
+      },
+      "data": {
+        "definition": {
+          "id": "math_exp"
+        }
+      }
+    },
+    {
+      "id": "code1",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 530
+      },
+      "data": {
+        "definition": {
+          "id": "code_glsl"
+        },
+        "value": "sin(a * 6.2831) * 0.5 + 0.5"
+      }
+    },
+    {
+      "id": "monitor_trig",
+      "type": "shaderNode",
+      "position": {
+        "x": 840,
+        "y": 440
+      },
+      "data": {
+        "definition": {
+          "id": "monitor"
+        }
+      }
+    },
+    {
+      "id": "uv1",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "uv"
+        }
+      }
+    },
+    {
+      "id": "p_tile",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 430
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "6.0"
+      }
+    },
+    {
+      "id": "uvscale1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "uv_scale"
+        }
+      }
+    },
+    {
+      "id": "uvfract1",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "vec_fract"
+        }
+      }
+    },
+    {
+      "id": "uvcenter1",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "uv_shift"
+        }
+      }
+    },
+    {
+      "id": "p_half",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 430
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.5"
+      }
+    },
+    {
+      "id": "dist1",
+      "type": "shaderNode",
+      "position": {
+        "x": 840,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "vec_length"
+        }
+      }
+    },
+    {
+      "id": "relay1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1050,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "relay_auto"
+        }
+      }
+    },
+    {
+      "id": "monitor_dist",
+      "type": "shaderNode",
+      "position": {
+        "x": 1260,
+        "y": 340
+      },
+      "data": {
+        "definition": {
+          "id": "monitor"
+        }
+      }
+    },
+    {
+      "id": "p_radius",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.6"
+      }
+    },
+    {
+      "id": "p_ringfreq",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 600
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "18.0"
+      }
+    },
+    {
+      "id": "p_tint",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 690
+      },
+      "data": {
+        "definition": {
+          "id": "param_color"
+        },
+        "value": "#33ccff"
+      }
+    },
+    {
+      "id": "sdf1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "sdf_circle"
+        }
+      }
+    },
+    {
+      "id": "ringmul",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        }
+      }
+    },
+    {
+      "id": "ringsin",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "math_sin"
+        }
+      }
+    },
+    {
+      "id": "code_ring",
+      "type": "shaderNode",
+      "position": {
+        "x": 840,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "code_glsl"
+        },
+        "value": "(a + 1.0) * 0.5"
+      }
+    },
+    {
+      "id": "palette1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1050,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "palette"
+        }
+      }
+    },
+    {
+      "id": "colorpreview1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1260,
+        "y": 420
+      },
+      "data": {
+        "definition": {
+          "id": "color_preview"
+        }
+      }
+    },
+    {
+      "id": "splitpal",
+      "type": "shaderNode",
+      "position": {
+        "x": 1260,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "smart_split"
+        }
+      }
+    },
+    {
+      "id": "composeswap",
+      "type": "shaderNode",
+      "position": {
+        "x": 1470,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "smart_compose",
+          "inputs": [
+            {
+              "id": "x",
+              "label": "X",
+              "type": "float"
+            },
+            {
+              "id": "y",
+              "label": "Y",
+              "type": "float"
+            },
+            {
+              "id": "z",
+              "label": "Z",
+              "type": "float"
+            },
+            {
+              "id": "w",
+              "label": "W",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out",
+              "label": "Vec3",
+              "type": "vec3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "colormult1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1680,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      }
+    },
+    {
+      "id": "colormult_tint",
+      "type": "shaderNode",
+      "position": {
+        "x": 1680,
+        "y": 600
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      }
+    },
+    {
+      "id": "p_tintfac",
+      "type": "shaderNode",
+      "position": {
+        "x": 1470,
+        "y": 690
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.15"
+      }
+    },
+    {
+      "id": "coloradd1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1890,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      }
+    },
+    {
+      "id": "mono1",
+      "type": "shaderNode",
+      "position": {
+        "x": 1050,
+        "y": 690
+      },
+      "data": {
+        "definition": {
+          "id": "mono"
+        }
+      }
+    },
+    {
+      "id": "colormult_mono",
+      "type": "shaderNode",
+      "position": {
+        "x": 1260,
+        "y": 690
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      }
+    },
+    {
+      "id": "p_monofac",
+      "type": "shaderNode",
+      "position": {
+        "x": 1050,
+        "y": 780
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.12"
+      }
+    },
+    {
+      "id": "coloradd2",
+      "type": "shaderNode",
+      "position": {
+        "x": 2100,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      }
+    },
+    {
+      "id": "mix1",
+      "type": "shaderNode",
+      "position": {
+        "x": 2310,
+        "y": 510
+      },
+      "data": {
+        "definition": {
+          "id": "math_mix"
+        }
+      }
+    },
+    {
+      "id": "monitor_final",
+      "type": "shaderNode",
+      "position": {
+        "x": 2520,
+        "y": 420
+      },
+      "data": {
+        "definition": {
+          "id": "monitor"
+        }
+      }
+    },
+    {
+      "id": "preview_final",
+      "type": "shaderNode",
+      "position": {
+        "x": 2520,
+        "y": 600
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        }
+      }
+    },
+    {
+      "id": "group1",
+      "type": "shaderNode",
+      "position": {
+        "x": 170,
+        "y": 450
+      },
+      "data": {
+        "definition": {
+          "id": "special_group"
+        },
+        "value": "Kolor i SDF"
+      },
+      "width": 1760,
+      "height": 420
+    },
+    {
+      "id": "tex1",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 680
+      },
+      "data": {
+        "definition": {
+          "id": "texture_2d"
+        }
+      }
+    },
+    {
+      "id": "audio1",
+      "type": "shaderNode",
+      "position": {
+        "x": 0,
+        "y": 770
+      },
+      "data": {
+        "definition": {
+          "id": "audio_input"
+        }
+      }
+    },
+    {
+      "id": "audiocolor",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 770
+      },
+      "data": {
+        "definition": {
+          "id": "smart_compose",
+          "inputs": [
+            {
+              "id": "x",
+              "label": "X",
+              "type": "float"
+            },
+            {
+              "id": "y",
+              "label": "Y",
+              "type": "float"
+            },
+            {
+              "id": "z",
+              "label": "Z",
+              "type": "float"
+            },
+            {
+              "id": "w",
+              "label": "W",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out",
+              "label": "Vec3",
+              "type": "vec3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "texcolormult",
+      "type": "shaderNode",
+      "position": {
+        "x": 420,
+        "y": 680
+      },
+      "data": {
+        "definition": {
+          "id": "color_mult"
+        }
+      }
+    },
+    {
+      "id": "p_texfac",
+      "type": "shaderNode",
+      "position": {
+        "x": 210,
+        "y": 590
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.6"
+      }
+    },
+    {
+      "id": "media_combined",
+      "type": "shaderNode",
+      "position": {
+        "x": 630,
+        "y": 725
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      }
+    },
+    {
+      "id": "final_color",
+      "type": "shaderNode",
+      "position": {
+        "x": 2730,
+        "y": 555
+      },
+      "data": {
+        "definition": {
+          "id": "color_add"
+        }
+      }
+    },
+    {
+      "id": "output1",
+      "type": "shaderNode",
+      "position": {
+        "x": 2940,
+        "y": 555
+      },
+      "data": {
+        "definition": {
+          "id": "output"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "add1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e2",
+      "source": "p_b",
+      "sourceHandle": "out",
+      "target": "add1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e3",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "sub1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e4",
+      "source": "p_b",
+      "sourceHandle": "out",
+      "target": "sub1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e5",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "mul1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e6",
+      "source": "p_b",
+      "sourceHandle": "out",
+      "target": "mul1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e7",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "div1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e8",
+      "source": "p_b",
+      "sourceHandle": "out",
+      "target": "div1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e9",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "pow1",
+      "targetHandle": "base",
+      "type": "default"
+    },
+    {
+      "id": "e10",
+      "source": "p_b",
+      "sourceHandle": "out",
+      "target": "pow1",
+      "targetHandle": "exp",
+      "type": "default"
+    },
+    {
+      "id": "e11",
+      "source": "p_a",
+      "sourceHandle": "out",
+      "target": "neg1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e12",
+      "source": "add1",
+      "sourceHandle": "out",
+      "target": "combine_basic",
+      "targetHandle": "x",
+      "type": "default"
+    },
+    {
+      "id": "e13",
+      "source": "div1",
+      "sourceHandle": "out",
+      "target": "combine_basic",
+      "targetHandle": "y",
+      "type": "default"
+    },
+    {
+      "id": "e14",
+      "source": "pow1",
+      "sourceHandle": "out",
+      "target": "combine_basic",
+      "targetHandle": "z",
+      "type": "default"
+    },
+    {
+      "id": "e15",
+      "source": "add1",
+      "sourceHandle": "out",
+      "target": "monitor_basic",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e16",
+      "source": "time1",
+      "sourceHandle": "t",
+      "target": "sin1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e17",
+      "source": "time1",
+      "sourceHandle": "t",
+      "target": "cos1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e18",
+      "source": "time1",
+      "sourceHandle": "t",
+      "target": "mul_t",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e19",
+      "source": "p_speed",
+      "sourceHandle": "out",
+      "target": "mul_t",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e20",
+      "source": "mul_t",
+      "sourceHandle": "out",
+      "target": "tan1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e21",
+      "source": "mul_t",
+      "sourceHandle": "out",
+      "target": "add_offset",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e22",
+      "source": "p_cotoff",
+      "sourceHandle": "out",
+      "target": "add_offset",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e23",
+      "source": "add_offset",
+      "sourceHandle": "out",
+      "target": "cot1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e24",
+      "source": "sin1",
+      "sourceHandle": "out",
+      "target": "atan1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e25",
+      "source": "sin1",
+      "sourceHandle": "out",
+      "target": "abs1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e26",
+      "source": "time1",
+      "sourceHandle": "t",
+      "target": "fract_speed",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e27",
+      "source": "p_fractspeed",
+      "sourceHandle": "out",
+      "target": "fract_speed",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e28",
+      "source": "fract_speed",
+      "sourceHandle": "out",
+      "target": "fract1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e29",
+      "source": "cos1",
+      "sourceHandle": "out",
+      "target": "exp_in",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e30",
+      "source": "p_expscale",
+      "sourceHandle": "out",
+      "target": "exp_in",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e31",
+      "source": "exp_in",
+      "sourceHandle": "out",
+      "target": "exp1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e32",
+      "source": "fract1",
+      "sourceHandle": "out",
+      "target": "code1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e33",
+      "source": "cot1",
+      "sourceHandle": "out",
+      "target": "monitor_trig",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e34",
+      "source": "uv1",
+      "sourceHandle": "out",
+      "target": "uvscale1",
+      "targetHandle": "uv",
+      "type": "default"
+    },
+    {
+      "id": "e35",
+      "source": "p_tile",
+      "sourceHandle": "out",
+      "target": "uvscale1",
+      "targetHandle": "scale",
+      "type": "default"
+    },
+    {
+      "id": "e36",
+      "source": "uvscale1",
+      "sourceHandle": "out",
+      "target": "uvfract1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e37",
+      "source": "uvfract1",
+      "sourceHandle": "out",
+      "target": "uvcenter1",
+      "targetHandle": "uv",
+      "type": "default"
+    },
+    {
+      "id": "e38",
+      "source": "p_half",
+      "sourceHandle": "out",
+      "target": "uvcenter1",
+      "targetHandle": "shift",
+      "type": "default"
+    },
+    {
+      "id": "e39",
+      "source": "uvcenter1",
+      "sourceHandle": "out",
+      "target": "dist1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e40",
+      "source": "dist1",
+      "sourceHandle": "out",
+      "target": "relay1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e41",
+      "source": "dist1",
+      "sourceHandle": "out",
+      "target": "monitor_dist",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e42",
+      "source": "uv1",
+      "sourceHandle": "out",
+      "target": "sdf1",
+      "targetHandle": "uv",
+      "type": "default"
+    },
+    {
+      "id": "e43",
+      "source": "p_radius",
+      "sourceHandle": "out",
+      "target": "sdf1",
+      "targetHandle": "radius",
+      "type": "default"
+    },
+    {
+      "id": "e44",
+      "source": "sdf1",
+      "sourceHandle": "out",
+      "target": "ringmul",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e45",
+      "source": "p_ringfreq",
+      "sourceHandle": "out",
+      "target": "ringmul",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e46",
+      "source": "ringmul",
+      "sourceHandle": "out",
+      "target": "ringsin",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e47",
+      "source": "ringsin",
+      "sourceHandle": "out",
+      "target": "code_ring",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e48",
+      "source": "code_ring",
+      "sourceHandle": "out",
+      "target": "palette1",
+      "targetHandle": "t",
+      "type": "default"
+    },
+    {
+      "id": "e49",
+      "source": "palette1",
+      "sourceHandle": "color",
+      "target": "colorpreview1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e50",
+      "source": "palette1",
+      "sourceHandle": "color",
+      "target": "splitpal",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e51",
+      "source": "splitpal",
+      "sourceHandle": "z",
+      "target": "composeswap",
+      "targetHandle": "x",
+      "type": "default"
+    },
+    {
+      "id": "e52",
+      "source": "splitpal",
+      "sourceHandle": "x",
+      "target": "composeswap",
+      "targetHandle": "y",
+      "type": "default"
+    },
+    {
+      "id": "e53",
+      "source": "splitpal",
+      "sourceHandle": "y",
+      "target": "composeswap",
+      "targetHandle": "z",
+      "type": "default"
+    },
+    {
+      "id": "e54",
+      "source": "composeswap",
+      "sourceHandle": "out",
+      "target": "colormult1",
+      "targetHandle": "col",
+      "type": "default"
+    },
+    {
+      "id": "e55",
+      "source": "relay1",
+      "sourceHandle": "out",
+      "target": "colormult1",
+      "targetHandle": "fac",
+      "type": "default"
+    },
+    {
+      "id": "e56",
+      "source": "p_tint",
+      "sourceHandle": "rgb",
+      "target": "colormult_tint",
+      "targetHandle": "col",
+      "type": "default"
+    },
+    {
+      "id": "e57",
+      "source": "p_tintfac",
+      "sourceHandle": "out",
+      "target": "colormult_tint",
+      "targetHandle": "fac",
+      "type": "default"
+    },
+    {
+      "id": "e58",
+      "source": "colormult1",
+      "sourceHandle": "out",
+      "target": "coloradd1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e59",
+      "source": "colormult_tint",
+      "sourceHandle": "out",
+      "target": "coloradd1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e60",
+      "source": "code1",
+      "sourceHandle": "out",
+      "target": "mono1",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e61",
+      "source": "mono1",
+      "sourceHandle": "out",
+      "target": "colormult_mono",
+      "targetHandle": "col",
+      "type": "default"
+    },
+    {
+      "id": "e62",
+      "source": "p_monofac",
+      "sourceHandle": "out",
+      "target": "colormult_mono",
+      "targetHandle": "fac",
+      "type": "default"
+    },
+    {
+      "id": "e63",
+      "source": "coloradd1",
+      "sourceHandle": "out",
+      "target": "coloradd2",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e64",
+      "source": "colormult_mono",
+      "sourceHandle": "out",
+      "target": "coloradd2",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e65",
+      "source": "coloradd2",
+      "sourceHandle": "out",
+      "target": "mix1",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e66",
+      "source": "p_tint",
+      "sourceHandle": "rgb",
+      "target": "mix1",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e67",
+      "source": "dist1",
+      "sourceHandle": "out",
+      "target": "mix1",
+      "targetHandle": "t",
+      "type": "default"
+    },
+    {
+      "id": "e68",
+      "source": "mix1",
+      "sourceHandle": "out",
+      "target": "monitor_final",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e69",
+      "source": "mix1",
+      "sourceHandle": "out",
+      "target": "preview_final",
+      "targetHandle": "in",
+      "type": "default"
+    },
+    {
+      "id": "e70",
+      "source": "uv1",
+      "sourceHandle": "out",
+      "target": "tex1",
+      "targetHandle": "uv",
+      "type": "default"
+    },
+    {
+      "id": "e71",
+      "source": "audio1",
+      "sourceHandle": "y",
+      "target": "audiocolor",
+      "targetHandle": "x",
+      "type": "default"
+    },
+    {
+      "id": "e72",
+      "source": "audio1",
+      "sourceHandle": "z",
+      "target": "audiocolor",
+      "targetHandle": "y",
+      "type": "default"
+    },
+    {
+      "id": "e73",
+      "source": "audio1",
+      "sourceHandle": "w",
+      "target": "audiocolor",
+      "targetHandle": "z",
+      "type": "default"
+    },
+    {
+      "id": "e74",
+      "source": "tex1",
+      "sourceHandle": "rgb",
+      "target": "texcolormult",
+      "targetHandle": "col",
+      "type": "default"
+    },
+    {
+      "id": "e75",
+      "source": "p_texfac",
+      "sourceHandle": "out",
+      "target": "texcolormult",
+      "targetHandle": "fac",
+      "type": "default"
+    },
+    {
+      "id": "e76",
+      "source": "texcolormult",
+      "sourceHandle": "out",
+      "target": "media_combined",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e77",
+      "source": "audiocolor",
+      "sourceHandle": "out",
+      "target": "media_combined",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e78",
+      "source": "mix1",
+      "sourceHandle": "out",
+      "target": "final_color",
+      "targetHandle": "a",
+      "type": "default"
+    },
+    {
+      "id": "e79",
+      "source": "media_combined",
+      "sourceHandle": "out",
+      "target": "final_color",
+      "targetHandle": "b",
+      "type": "default"
+    },
+    {
+      "id": "e80",
+      "source": "final_color",
+      "sourceHandle": "out",
+      "target": "output1",
+      "targetHandle": "color",
+      "type": "default"
+    }
+  ],
+  "viewport": {
+    "x": 400,
+    "y": 300,
+    "zoom": 0.35
+  }
+}
