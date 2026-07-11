@@ -37,3 +37,6 @@ coverage
 # Agent session state / temp files
 files/
 test-glsl-output.js
+
+# FTP deploy credentials (see .env.deploy.example)
+.env.deploy
