@@ -51,6 +51,25 @@ const findDefinition = (defId: string): ShaderNodeDefinition | undefined => {
   return loadCustomNodes().find(d => d.id === defId);
 };
 
+/**
+ * Placeholder dla nodu, którego definicji nie da się odtworzyć — najczęściej
+ * custom node zapisany w innej przeglądarce/profilu (biblioteka custom nodów
+ * żyje w localStorage, nie w pliku zapisu). Wcześniej brakująca definicja
+ * cicho fallbackowała na NODE_REGISTRY['output'], więc taki node wyglądał
+ * i zachowywał się jak prawdziwy Output — mylące i ryzykowne (drugi node
+ * z id 'output' w grafie). Placeholder ma 0 portów, więc kompilator go
+ * pomija (jak każdy node bez wyjść, który nie jest celem kompilacji).
+ */
+const buildMissingDefinition = (defId: string): ShaderNodeDefinition => ({
+  id: '__missing__',
+  label: `Missing: ${defId}`,
+  inputs: [],
+  outputs: [],
+  glslTemplate: () => 'vec3(0.0)',
+  description: `Node type "${defId}" wasn't found — likely a custom node saved in a different browser/profile, or since deleted from the library.`,
+  missingOriginalId: defId,
+});
+
 const portsDiffer = (def: ShaderNodeDefinition, registryDef: ShaderNodeDefinition): boolean => {
   const key = (d: ShaderNodeDefinition) => JSON.stringify({ i: d.inputs, o: d.outputs });
   return key(def) !== key(registryDef);
@@ -170,7 +189,7 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
 
   const restoredNodes: Node[] = (parsed.nodes || []).map(n => {
     const savedDef = n.data.definition;
-    const baseDef = findDefinition(savedDef.id) || NODE_REGISTRY['output'];
+    const baseDef = findDefinition(savedDef.id) || buildMissingDefinition(savedDef.id);
 
     let type = 'shaderNode';
     if (savedDef.id === 'preview') type = 'previewNode';

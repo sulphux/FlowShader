@@ -30,4 +30,12 @@ export interface ShaderNodeDefinition {
     max?: number;
     step?: number;
   };
+
+  /**
+   * Set when this definition is a stand-in for a node type that couldn't be
+   * resolved on load (e.g. a custom node saved in a different browser
+   * profile, or one that was since deleted from the library). Holds the
+   * original definition id so the UI can point at what's actually missing.
+   */
+  missingOriginalId?: string;
 }

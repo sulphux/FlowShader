@@ -64,6 +64,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
   const isNote = def.id === 'special_note';
   const isGroup = def.id === 'special_group';
+  const isMissing = def.id === '__missing__';
   const isUV = def.id === 'uv';
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
   const isCustomNode = Boolean('isCustom' in def && def.isCustom);
@@ -157,6 +158,23 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       );
   }
   
+  if (isMissing) {
+      return (
+        <div
+          title={def.description}
+          style={{
+            background: '#2a1414', border: selected ? '2px solid #ff5252' : '1px dashed #ff5252',
+            borderRadius: '8px', padding: '10px 14px', minWidth: '180px', fontFamily: 'sans-serif',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.5)', cursor: 'help',
+          }}
+        >
+          <div style={{ color: '#ff5252', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>⚠ Missing node</div>
+          <div style={{ color: '#eee', fontSize: '12px' }}>{currentLabel}</div>
+          <div style={{ color: '#999', fontSize: '10px', marginTop: '4px', fontFamily: 'monospace' }}>{def.missingOriginalId}</div>
+        </div>
+      );
+  }
+
   if (isGroup) {
       const groupColor = data.value || 'rgba(255, 255, 255, 0.05)';
       return (

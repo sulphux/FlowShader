@@ -198,9 +198,38 @@ function EditorInner({ onChange }: Props) {
     }
   }, [reactFlowInstance, initialData.viewport]);
 
+  /** Persists the subgraph currently on canvas back into its custom node definition + registry. */
+  const persistCurrentSubgraph = useCallback((contextLabel: string, currentNodes: Node[], currentEdges: Edge[]) => {
+    if (contextLabel === 'Main') return;
+    const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
+      const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
+      return def.label === contextLabel && 'isCustom' in def;
+    });
+    if (!customNodeId) return;
+
+    const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
+    const ports = extractCustomNodePorts({ nodes: currentNodes });
+    const updatedCustomNode: CustomNodeDefinition = {
+      ...customDef,
+      inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
+      outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
+      subgraph: { nodes: currentNodes, edges: currentEdges },
+    };
+    addCustomNode(updatedCustomNode);
+    (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
+  }, []);
+
   useEffect(() => {
-    // Only persist main canvas — never overwrite it with a subgraph view
-    if (currentContext !== 'Main') return;
+    // Inside a custom node's subgraph: persist into ITS definition (not the
+    // main canvas key), same auto-save cadence as Main. Previously this only
+    // happened on navigateBack/navigateToLevel, so refreshing the page while
+    // still inside a subgraph (without backing out first) silently lost
+    // whatever was added — nav-path restore replayed the pre-edit subgraph
+    // from custom_nodes_library, since the edit was never written there.
+    if (currentContext !== 'Main') {
+      persistCurrentSubgraph(currentContext, nodes, edges);
+      return;
+    }
 
     const dataToSave = serializeGraph(nodes, edges, reactFlowInstance.getViewport());
     const jsonString = JSON.stringify(dataToSave);
@@ -216,7 +245,7 @@ function EditorInner({ onChange }: Props) {
         if (onChange) onChange(nodes, edges);
         lastLogicHash.current = currentHash;
     }
-  }, [nodes, edges, currentContext, onChange, reactFlowInstance]);
+  }, [nodes, edges, currentContext, onChange, reactFlowInstance, persistCurrentSubgraph]);
 
   const restoreGraph = useCallback((jsonString: string, filePath?: string) => {
       try {
@@ -480,27 +509,6 @@ function EditorInner({ onChange }: Props) {
     const subgraph = freshCustomDef ? freshCustomDef.subgraph : customDef.subgraph;
     return { nodes: subgraph.nodes, edges: subgraph.edges };
   }, [defaultCustomSubgraphNodes]);
-
-  /** Persists the subgraph currently on canvas back into its custom node definition + registry. */
-  const persistCurrentSubgraph = useCallback((contextLabel: string, currentNodes: Node[], currentEdges: Edge[]) => {
-    if (contextLabel === 'Main') return;
-    const customNodeId = Object.keys(NODE_REGISTRY).find(key => {
-      const def = NODE_REGISTRY[key as keyof typeof NODE_REGISTRY];
-      return def.label === contextLabel && 'isCustom' in def;
-    });
-    if (!customNodeId) return;
-
-    const customDef = NODE_REGISTRY[customNodeId as keyof typeof NODE_REGISTRY] as CustomNodeDefinition;
-    const ports = extractCustomNodePorts({ nodes: currentNodes });
-    const updatedCustomNode: CustomNodeDefinition = {
-      ...customDef,
-      inputs: ports.inputs.length > 0 ? ports.inputs : customDef.inputs,
-      outputs: ports.outputs.length > 0 ? ports.outputs : customDef.outputs,
-      subgraph: { nodes: currentNodes, edges: currentEdges },
-    };
-    addCustomNode(updatedCustomNode);
-    (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[customNodeId] = updatedCustomNode;
-  }, []);
 
   const enterCustomNode = useCallback((nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
