@@ -29,32 +29,37 @@
 │                        CORE ENGINE                               │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │  Compiler    │ ←→ │  Validator   │ ←→ │    Types     │     │
-│  │              │    │              │    │              │     │
-│  │ • Topo Sort  │    │ • Cycles     │    │ • DataType   │     │
-│  │ • GLSL Gen   │    │ • Type Check │    │ • PortDef    │     │
-│  │ • Type Cast  │    │ • Conn Valid │    │ • NodeDef    │     │
-│  └──────────────┘    └──────────────┘    └──────────────┘     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  Compiler    │←→│  Validator   │←→│    Types     │          │
+│  │              │  │              │  │              │          │
+│  │ • Topo Sort  │  │ • Cycles     │  │ • DataType   │          │
+│  │ • GLSL Gen   │  │ • Type Check │  │ • PortDef    │          │
+│  │ • Type Cast  │  │ • Conn Valid │  │ • NodeDef    │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ AutoAdapter  │  │RuntimeRes.   │  │ProjectStorage│          │
+│  │              │  │              │  │              │          │
+│  │ • Split/Comb │  │ • Textures   │  │ • Local      │          │
+│  │   node insert│  │ • Audio      │  │ • Supabase   │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                       NODE REGISTRY                              │
+│                       NODE REGISTRY (50 nodes)                   │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  │
-│  │ Math │  │Vector│  │ Color│  │ SDF  │  │Params│  │Utils │  │
-│  ├──────┤  ├──────┤  ├──────┤  ├──────┤  ├──────┤  ├──────┤  │
-│  │ Add  │  │  UV  │  │C.Add │  │Circle│  │Float │  │Split │  │
-│  │ Sub  │  │Scale │  │C.Mult│  │ ...  │  │Color │  │Relay │  │
-│  │ Mult │  │Shift │  │ ...  │  └──────┘  │ ...  │  │Mix   │  │
-│  │ Sin  │  │Length│  └──────┘             └──────┘  │ ...  │  │
-│  │ ...  │  │ ...  │                                 └──────┘  │
-│  └──────┘  └──────┘                                           │
-│                                                                  │
-│              60+ Nodes with GLSL Templates                      │
-│                                                                  │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌─────┐│
+│  │ Math │ │Vector│ │ Color│ │Media │ │Params│ │Utils │ │Custom││
+│  ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├─────┤│
+│  │+ − × ÷│ │ UV   │ │Palette│ │Texture│ │Float │ │Split/│ │Input││
+│  │Sin/Cos│ │Scale │ │C.Add │ │Audio │ │Color │ │Combine│ │Output││
+│  │Tan/Cot│ │Shift │ │C.Mult│ └──────┘ │Time  │ │(Auto)│ │(sub- ││
+│  │Pow/Abs│ │Length│ │Mono  │          └──────┘ │Code  │ │graph)││
+│  │Exp/Frc│ │Fract │ │SDF   │                   │Monitor│ └─────┘│
+│  └──────┘ └──────┘ └──────┘                   │Preview│         │
+│                                                 └──────┘         │
 └─────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════
@@ -63,59 +68,69 @@
 
  User Action (Add/Connect Node)
           ↓
- NodeEditor (React State: nodes[], edges[])
+ NodeEditor (React state: nodes[], edges[]) ──→ localStorage (auto-save)
           ↓
  onChange callback → compileGraphToGLSL()
           ↓
-┌─────────────────────────────────────────┐
-│        COMPILATION PIPELINE             │
-├─────────────────────────────────────────┤
-│  1. Topological Sort (dependency order) │
-│  2. For each node:                      │
-│     a. Resolve inputs from edges        │
-│     b. Auto type conversion             │
-│     c. Call glslTemplate()              │
-│     d. Store variable                   │
-│  3. Assemble final shader code          │
-└─────────────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│           COMPILATION PIPELINE             │
+├───────────────────────────────────────────┤
+│  1. Collect + generate custom-node         │
+│     GLSL functions (recursive)             │
+│  2. Topological sort (dependency order)    │
+│  3. For each node:                         │
+│     a. Resolve inputs from edges           │
+│     b. autoCast() source expr → target type│
+│     c. Call glslTemplate(inputs, data)     │
+│     d. Store `${type} var_id = expr;`      │
+│  4. Collect runtime resources               │
+│     (textures/audio → uniform decls)       │
+│  5. Assemble final shader string           │
+└───────────────────────────────────────────┘
           ↓
  GLSL Fragment Shader Code (string)
           ↓
- ShaderPreview Component
+ ShaderPreview / PreviewNode / MonitorNode / ColorPreviewNode
           ↓
- Three.js ShaderMaterial
+ Three.js ShaderMaterial (+ resource uniforms bound)
           ↓
- WebGL Rendering (Canvas)
-          ↓
- User sees result in real-time!
+ WebGL Rendering (Canvas) — 60fps by default, capped by Global Settings
 
 ═══════════════════════════════════════════════════════════════════
                       TYPE SYSTEM
 ═══════════════════════════════════════════════════════════════════
 
+Connections are STRICT (like Unreal Engine Blueprints) — there is no
+silent implicit casting at connect time. `connectionValidator.ts`
+allows only:
+
+  • same type → same type                (float→float, vec3→vec3, ...)
+  • 'auto' type → anything, anything → 'auto'   (adapts dynamically)
+  • multi-type ports (e.g. `float|vec3`) → any of the listed types
+
+Everything else is BLOCKED at connect time and, where a conversion is
+possible, `autoAdapterSystem.ts` automatically inserts the right node(s)
+instead of connecting directly:
+
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Automatic Type Conversion                     │
+│                    Auto-Adapter Insertion                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│   float ────┬───→ vec2(f)                                       │
-│             ├───→ vec3(f)                                       │
-│             └───→ vec4(f, f, f, 1.0)                            │
+│   float → vecN   ⇒  insert Combine vecN (float feeds .x)         │
+│   vecN → float   ⇒  insert Split vecN (target reads .x)          │
+│   vecA → vecB    ⇒  insert Split vecA + Combine vecB,            │
+│                      matching components (x→x, y→y, ...)         │
 │                                                                  │
-│   vec2 ─────┬───→ vec3(v.xy, 0.0)                               │
-│             ├───→ vec4(v.xy, 0.0, 1.0)                          │
-│             └───→ v.x (float)                                   │
-│                                                                  │
-│   vec3 ─────┬───→ vec4(v.xyz, 1.0)                              │
-│             ├───→ v.xy (vec2)                                   │
-│             └───→ v.x (float)                                   │
-│                                                                  │
-│   vec4 ─────┬───→ v.xyz (vec3)                                  │
-│             ├───→ v.xy (vec2)                                   │
-│             └───→ v.x (float)                                   │
-│                                                                  │
-│   Swizzling Support: .x .y .z .w / .r .g .b .a                  │
+│   Multi-type targets (e.g. Output's `float|vec3`) resolve to     │
+│   the best concrete type before the rules above apply.           │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
+
+Once a graph is valid, the compiler's `autoCast()` (functionGenerator.ts)
+does the low-level string casting for already-compatible expressions —
+e.g. producing `vec4(x, 1.0)` for a vec3 driving `gl_FragColor`, or
+casting a custom node's subgraph output to its declared port type.
+Swizzling (`.x .y .z .w` / `.r .g .b .a`) is supported throughout.
 
 ═══════════════════════════════════════════════════════════════════
                     COMPONENT HIERARCHY
@@ -124,103 +139,90 @@
 App
  │
  ├─ Sidebar (Portal) ─→ #sidebar-root
- │   └─ Node Library (drag & drop)
+ │   └─ Node Library (drag & drop, PARAMS tab)
  │
  ├─ NodeEditor (ReactFlow)
  │   │
  │   ├─ ReactFlow
- │   │   │
- │   │   ├─ ShaderNode (60+ instances)
- │   │   │   ├─ Input Handles
- │   │   │   ├─ Controls (sliders, colors)
- │   │   │   └─ Output Handles
- │   │   │
- │   │   ├─ MonitorNode (debugging)
- │   │   ├─ PreviewNode (mini preview)
+ │   │   ├─ ShaderNode        (standard nodes: math, vector, color, media, custom)
+ │   │   ├─ MonitorNode       (live numeric readout, THREE renderer)
+ │   │   ├─ PreviewNode       (mini live preview, embeds ShaderPreview)
+ │   │   ├─ ColorPreviewNode  (color swatch readout)
  │   │   └─ Edges (connections)
  │   │
- │   ├─ Toolbar (save/load/clear)
- │   ├─ Legend (shortcuts)
- │   └─ ContextMenu (right-click)
+ │   ├─ Toolbar (new/save/save-as/load/cloud/fit/undo/redo/code/settings/clear)
+ │   ├─ ContextMenu (quick-add, direction-aware type filtering)
+ │   ├─ NodeContextMenu, CreateCustomNodeDialog, SettingsDialog, CloudDialog
+ │   ├─ NavigationPanel (breadcrumbs into custom-node subgraphs)
+ │   └─ Legend
  │
- └─ ShaderPreview (Three.js)
-     ├─ Canvas
-     ├─ Scene
-     ├─ Camera
-     └─ Mesh + ShaderMaterial
+ └─ ShaderPreview (Three.js) — also used standalone as the main preview pane
+     ├─ Canvas / Scene / Camera / Mesh + ShaderMaterial
+     └─ Resource uniforms (textures, audio levels) bound per frame
 
 ═══════════════════════════════════════════════════════════════════
                       FILE STRUCTURE
 ═══════════════════════════════════════════════════════════════════
 
 NodeShader/
-├── Examples/
-│   └── beautiful.json ← Sample shader graph
+├── Examples/                 ← sample .json shader graphs
+├── supabase/schema.sql       ← cloud storage schema (optional backend)
+├── scripts/docs-screenshots.mjs
 │
-├── PROJECT_SUMMARY.md ← Overview & documentation
-├── DEVELOPMENT.md ← Developer guide
+├── README.md · ARCHITECTURE.md · DEVELOPMENT.md · AGENTS.md
+├── CLOUD_SYNC_DESIGN.md · SUPABASE_SETUP.md
 │
-└── shader-nodes/
-    ├── src/
-    │   ├── components/ ← UI components (9 files)
-    │   │   ├── NodeEditor.tsx (21KB) ← Main editor
-    │   │   ├── ShaderNode.tsx (17KB) ← Node rendering
-    │   │   └── ...
-    │   │
-    │   ├── core/ ← Engine (4 files)
-    │   │   ├── compiler.ts ← GLSL generation
-    │   │   ├── types.ts ← Type definitions
-    │   │   ├── validator.ts ← Graph validation
-    │   │   └── theme.ts ← UI colors
-    │   │
-    │   ├── nodes/ ← Node definitions (10 files)
-    │   │   ├── index.ts ← Registry (60+ nodes)
-    │   │   ├── math.ts
-    │   │   ├── vector.ts
-    │   │   ├── utils.ts
-    │   │   └── ...
-    │   │
-    │   ├── tests/ ← Test setup
-    │   │   └── setup.ts
-    │   │
-    │   ├── App.tsx ← Root component
-    │   └── main.tsx ← Entry point
+└── src/
+    ├── components/    ← UI (editor, dialogs, node renderers)
+    │   ├── NodeEditor.tsx     ← main editor: graph state, history, connect logic
+    │   ├── ShaderNode.tsx     ← renders every node's on-canvas UI
+    │   ├── ShaderPreview.tsx  ← WebGL preview (shared by all preview windows)
+    │   ├── MonitorNode.tsx / PreviewNode.tsx / ColorPreviewNode.tsx
+    │   ├── CloudDialog.tsx / SettingsDialog.tsx / CreateCustomNodeDialog.tsx
+    │   └── Toolbar.tsx / Sidebar.tsx / ContextMenu.tsx / NodeContextMenu.tsx / ...
     │
-    ├── vitest.config.ts ← Test configuration
-    ├── package.json ← Dependencies & scripts
-    └── ...
+    ├── core/          ← engine, no UI
+    │   ├── compiler.ts            ← graph → GLSL
+    │   ├── functionGenerator.ts   ← custom-node GLSL functions, autoCast()
+    │   ├── connectionValidator.ts ← strict type rules
+    │   ├── autoAdapterSystem.ts   ← Split/Combine auto-insertion
+    │   ├── validator.ts / glslangValidation.ts ← shader correctness checks
+    │   ├── runtimeResources.ts / threeResources.ts ← texture/audio uniforms
+    │   ├── audioManager.ts        ← Web Audio analyser (level/bass/mid/high)
+    │   ├── graphRehydration.ts    ← save/load graph (de)serialization
+    │   ├── fileAccess.ts          ← File System Access save/load
+    │   ├── globalSettings.ts      ← FPS limit, render quality
+    │   ├── projectStorage.ts / supabaseStorage.ts ← local/cloud project storage
+    │   ├── customNodeManager.ts   ← custom node persistence
+    │   └── types.ts / theme.ts
+    │
+    ├── nodes/         ← node definitions (registered in index.ts)
+    │   ├── index.ts   ← NODE_REGISTRY (50 nodes)
+    │   ├── math.ts / vector.ts / utils.ts / params.ts / media.ts
+    │   ├── OutputNode.ts / TimeNode.ts / PaletteNode.ts / SDFCircle.ts
+    │   └── CustomInput.ts / CustomOutput.ts
+    │
+    ├── tests/         ← integration/regression tests + test setup
+    ├── App.tsx        ← layout (editor + preview split, resizer, hide toggle)
+    └── main.tsx        ← entry point
 
 ═══════════════════════════════════════════════════════════════════
                      TESTING STRATEGY
 ═══════════════════════════════════════════════════════════════════
 
-┌─────────────────────────────────────────────────────────────────┐
-│                       Test Pyramid                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                        ┌─────────┐                              │
-│                        │   E2E   │ (Future)                     │
-│                        │ Shader  │                              │
-│                        └─────────┘                              │
-│                    ┌───────────────┐                            │
-│                    │  Integration  │ (Planned)                  │
-│                    │ Graph → GLSL  │                            │
-│                    └───────────────┘                            │
-│              ┌─────────────────────────┐                        │
-│              │   Component Tests       │ (Ready)                │
-│              │ NodeEditor, ShaderNode  │                        │
-│              └─────────────────────────┘                        │
-│        ┌─────────────────────────────────────┐                  │
-│        │        Unit Tests                   │ (Priority)       │
-│        │ Compiler, Validator, Type System    │                  │
-│        └─────────────────────────────────────┘                  │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+630+ tests (Vitest), spanning:
+
+  • Unit tests       — compiler, validator, auto-adapter, type casting
+  • GLSL correctness — every generated shader validated with
+                        glslangValidator when available (skipped otherwise)
+  • Component tests  — UI behavior (React Testing Library)
+  • Regression packs — real saved graphs (Examples/*.json) recompiled and
+                        re-validated end to end (catches load/refresh bugs)
 
 Test Commands:
-  npm test              → Run all tests
-  npm run test:ui       → Vitest UI
-  npm run test:coverage → Coverage report
+  npm test               → Run all tests
+  npx tsc -b             → Type-check
+  npm run build          → Production build
 
 ═══════════════════════════════════════════════════════════════════
                     KEY ALGORITHMS
@@ -250,52 +252,41 @@ Test Commands:
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Type Conversion Logic                          │
+│                   autoCast() — Explicit Casting                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  if sourceType != targetType:                                   │
+│  Applied to an already-compatible source expression, never to    │
+│  bypass connection validation — validation happens first.        │
 │                                                                  │
-│    // Upcasting (float → vec*)                                  │
-│    if target == vec2 and source == float:                       │
-│      return "vec2(" + source + ")"                              │
+│    float → vec2/vec3/vec4     "vecN(expr)"                       │
+│    vecN  → float               "(expr).x"                        │
+│    vec2  → vec3                "vec3(expr, 0.0)"                 │
+│    vec3  → vec2                "(expr).xy"                       │
+│    vec3  → vec4                "vec4(expr, 1.0)"                 │
+│    vec4  → vec3                "(expr).xyz"                      │
+│    vec2  → vec4 / vec4 → vec2  via zero-fill / .xy                │
 │                                                                  │
-│    if target == vec3 and source == float:                       │
-│      return "vec3(" + source + ")"                              │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│              Runtime Resources (textures / audio)                │
+├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│    if target == vec3 and source == vec2:                        │
-│      return "vec3(" + source + ".xy, 0.0)"                      │
+│  collectRuntimeResources(nodes) scans the graph for texture_2d   │
+│  and audio_input nodes, producing:                                │
+│    • one `uniform sampler2D u_tex_<nodeId>` per texture node      │
+│    • shared `u_audio_{level,bass,mid,high}` floats if any audio   │
+│      node is present                                              │
 │                                                                  │
-│    // Downcasting (vec* → smaller)                              │
-│    if target == float and source == vec*:                       │
-│      return source + ".x"                                       │
-│                                                                  │
-│    if target == vec2 and source == vec3/vec4:                   │
-│      return source + ".xy"                                      │
-│                                                                  │
-│    if target == vec3 and source == vec4:                        │
-│      return source + ".xyz"                                     │
+│  Every render target (main preview, PreviewNode, MonitorNode,    │
+│  ColorPreviewNode) binds these via threeResources.ts and updates │
+│  audio uniforms each frame from audioManager.ts's AnalyserNode.  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════
-                    PERFORMANCE NOTES
-═══════════════════════════════════════════════════════════════════
 
-• NodeEditor: 21KB (consider code splitting)
-• ShaderNode: 17KB (optimized with React.memo)
-• Real-time compilation: ~1-5ms for typical graphs
-• Large graphs (100+ nodes): May need debouncing
-• WebGL rendering: 60 FPS target
+See also: README.md (feature tour with screenshots), DEVELOPMENT.md
+(local setup), CLOUD_SYNC_DESIGN.md (Supabase provider design).
 
-Optimization Ideas:
-  ✓ React.memo on ShaderNode
-  ✓ useCallback for event handlers
-  ⚬ Debounce compilation (300ms)
-  ⚬ Cache GLSL per node (invalidate on change)
-  ⚬ Web Workers for heavy compilation
-  ⚬ Virtual scrolling for large node lists
-
-═══════════════════════════════════════════════════════════════════
-
-Last Updated: 2026-02-14
-Version: 1.0
+Last Updated: 2026-07-11

@@ -3,426 +3,145 @@
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
+- npm
 - Git
 
-### Installation
+### Installation & Dev Server
 ```bash
-cd shader-nodes
 npm install
+npm run dev        # http://localhost:5173 (or next free port)
 ```
 
-### Development Server
-```bash
-npm run dev
-```
-Opens at `http://localhost:5173`
+## Project Structure
 
-## Project Structure Explained
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full module map with data
+flow. Quick orientation:
 
-### `/src/components`
-React components for the UI. Main components:
-
-- **NodeEditor.tsx** (21KB) - Main graph editor, handles ReactFlow instance
-- **ShaderNode.tsx** (17KB) - Individual node rendering with ports and controls
-- **ShaderPreview.tsx** - Three.js WebGL preview
-- **Sidebar.tsx** - Node library panel
-- **Toolbar.tsx** - Top action bar
-- **MonitorNode.tsx** - Special node for debugging values
-- **ContextMenu.tsx** - Right-click menu
-
-### `/src/core`
-Core engine and utilities:
-
-- **compiler.ts** - Converts node graph to GLSL code
-- **types.ts** - TypeScript type definitions
-- **validator.ts** - Graph validation logic
-- **theme.ts** - UI color scheme
-
-### `/src/nodes`
-Node definitions organized by file:
-
-- **index.ts** - Central registry (60+ nodes)
-- **math.ts** - Math operations (add, multiply, sin, cos, etc.)
-- **vector.ts** - Vector operations (UV, length, scale, etc.)
-- **utils.ts** - Utility nodes (split, combine, relay, etc.)
-- **params.ts** - Parameter inputs (float slider, color picker)
-- **TimeNode.ts** - Animation time
-- **SDFCircle.ts** - Signed distance function
-- **PaletteNode.ts** - Color palette
-- **OutputNode.ts** - Final output
-
-**Future**: `/src/nodes/categories/` structure created for better organization
-
-### `/src/tests`
-Test files (setup complete, tests to be written):
-
-- **setup.ts** - Vitest configuration with Testing Library
+- **`src/components/`** — UI: `NodeEditor.tsx` (graph state, ReactFlow),
+  `ShaderNode.tsx` (per-node rendering), `ShaderPreview.tsx` (Three.js
+  WebGL preview, shared by the main pane and every in-graph preview node),
+  plus dialogs (`SettingsDialog`, `CloudDialog`, `CreateCustomNodeDialog`).
+- **`src/core/`** — engine: `compiler.ts` (graph → GLSL),
+  `connectionValidator.ts` + `autoAdapterSystem.ts` (strict typing +
+  auto Split/Combine insertion), `runtimeResources.ts`/`threeResources.ts`
+  (texture/audio uniforms), `projectStorage.ts`/`supabaseStorage.ts`
+  (local/cloud saves), `fileAccess.ts` (File System Access save/load).
+- **`src/nodes/`** — node definitions, registered in `index.ts`
+  (`NODE_REGISTRY`, 50 nodes across math/vector/color/media/utils/params).
+- **`src/tests/`** — integration/regression tests (in addition to
+  `*.test.ts` files colocated next to the code they test).
 
 ## Adding a New Node
 
-### Step 1: Define the Node
-Create a new node definition or add to existing file:
-
 ```typescript
-// src/nodes/math.ts or new file
+// src/nodes/math.ts (or a new file)
 import type { ShaderNodeDefinition } from '../core/types';
 
 export const MyNode: ShaderNodeDefinition = {
-  id: 'my_node',           // Unique identifier (snake_case)
-  label: 'My Node',        // Display name
-  compact: false,          // true for small nodes
+  id: 'my_node',            // unique, snake_case — this becomes the GLSL var prefix
+  label: 'My Node',
+  compact: true,             // small pill-shaped node vs. full card
   description: 'Does something cool',
-  
+
   inputs: [
-    { id: 'a', label: 'Input A', type: 'float' },
-    { id: 'b', label: 'Input B', type: 'vec3' }
+    { id: 'a', label: 'A', type: 'float' },
+    { id: 'b', label: 'B', type: 'vec3' },
   ],
-  
   outputs: [
-    { id: 'out', label: 'Result', type: 'vec3' }
+    { id: 'out', label: 'Result', type: 'vec3' },
   ],
-  
-  // Optional: Add controls (slider, color picker, text)
-  controls: {
-    type: 'float',
-    defaultValue: 1.0,
-    min: 0,
-    max: 10,
-    step: 0.1
-  },
-  
-  // GLSL code generation
+
+  // Optional control rendered on the node itself
+  controls: { type: 'float', defaultValue: 1.0, min: 0, max: 10, step: 0.1 },
+
+  // inputs are already-cast GLSL expression strings; data carries
+  // { value, nodeId, definition, ... } from the node's React state
   glslTemplate: (inputs, data) => {
     const a = inputs.a || '0.0';
     const b = inputs.b || 'vec3(1.0)';
     const factor = data?.value ?? 1.0;
-    
     return `(${b} * ${a} * ${factor})`;
-  }
+  },
 };
 ```
 
-### Step 2: Register the Node
-Add to `src/nodes/index.ts`:
+Register it in `src/nodes/index.ts` (`NODE_REGISTRY`), and add its id to the
+menu structures in `Sidebar.tsx` / `ContextMenu.tsx` if it should be
+user-addable. Then write a test asserting the exact `glslTemplate` output
+(and, ideally, a full-graph compile validated with glslangValidator — see
+existing tests in `src/tests/` for the pattern).
+
+## Type System (see ARCHITECTURE.md for the full picture)
 
 ```typescript
-import { MyNode } from './myfile';
-
-export const NODE_REGISTRY = {
-  // ... existing nodes
-  my_node: MyNode,
-};
+type DataType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto';
+// plus multi-type ports as pipe-joined strings, e.g. 'float|vec3'
 ```
 
-### Step 3: Test
-- Restart dev server
-- Node appears in sidebar
-- Drag to canvas and connect
-
-## Type System
-
-### Supported Types
-```typescript
-type DataType = 'float' | 'vec2' | 'vec3' | 'vec4';
-```
-
-### Type Conversion Rules
-The compiler automatically converts between types:
-
-```glsl
-// float → vec*
-float → vec2   // vec2(f)
-float → vec3   // vec3(f)
-float → vec4   // vec4(f, f, f, 1.0)
-
-// vec* → vec*
-vec2 → vec3    // vec3(v.xy, 0.0)
-vec3 → vec4    // vec4(v.xyz, 1.0)
-vec4 → vec3    // v.xyz
-vec3 → vec2    // v.xy
-
-// vec* → float
-vec* → float   // v.x
-```
-
-### Swizzling
-Edges support GLSL swizzling:
-- `.x`, `.y`, `.z`, `.w` (positional)
-- `.r`, `.g`, `.b`, `.a` (color)
-
-Example: Connect `vec3` output to `float` input via `.x` handle
+Connections are validated strictly (`connectionValidator.ts`) — same type,
+`auto`, or a listed multi-type always connects directly; anything else is
+either blocked outright or triggers `autoAdapterSystem.ts` to insert a
+Split/Combine node automatically. There is **no** silent implicit casting at
+connect time. `autoCast()` (`functionGenerator.ts`) only casts expressions
+that are already known-compatible (e.g. a vec3 feeding `gl_FragColor`).
 
 ## Testing
 
-### Running Tests
 ```bash
-npm test              # Run all tests
-npm test -- --watch   # Watch mode
-npm test -- --coverage # With coverage report
+npm test                    # run all tests (watch mode by default)
+npx vitest run               # single run, CI-style
+npx vitest run <path>        # a single file
+npm run test:coverage
 ```
 
-### Writing Tests
-
-#### Component Test Example
-```typescript
-// src/components/__tests__/MyComponent.test.tsx
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import MyComponent from '../MyComponent';
-
-describe('MyComponent', () => {
-  it('renders correctly', () => {
-    render(<MyComponent />);
-    expect(screen.getByText('Hello')).toBeInTheDocument();
-  });
-});
-```
-
-#### Compiler Test Example
-```typescript
-// src/core/__tests__/compiler.test.ts
-import { describe, it, expect } from 'vitest';
-import { compileGraphToGLSL } from '../compiler';
-
-describe('Compiler', () => {
-  it('compiles simple graph', () => {
-    const nodes = [/* ... */];
-    const edges = [/* ... */];
-    const glsl = compileGraphToGLSL(nodes, edges);
-    expect(glsl).toContain('void main()');
-  });
-});
-```
+Write tests that assert the real end state, not just that a component
+renders — e.g. the compiled GLSL string, `NODE_REGISTRY`/localStorage
+contents after an action, or DOM state after a full simulated user flow.
+See `src/tests/graphLoadRegression.test.ts` or
+`src/tests/slimAdapters.ui.test.tsx` for the standard this repo holds to.
 
 ## Code Style
 
-### TypeScript
-- Strict mode enabled
-- No implicit any
-- Use interfaces for complex types
-- Prefer type over interface for simple types
+- TypeScript strict mode, no implicit `any`.
+- Functional React components, hooks only.
+- Naming: components `PascalCase.tsx`, utilities `camelCase.ts`, node ids
+  and GLSL variables `snake_case`.
 
-### React
-- Functional components only
-- Hooks over class components
-- Use `useCallback` for event handlers
-- Use `useMemo` for expensive computations
+## Building & Checking
 
-### Naming
-- Components: `PascalCase.tsx`
-- Utilities: `camelCase.ts`
-- Node IDs: `snake_case`
-- GLSL vars: `snake_case`
-
-### Imports
-```typescript
-// External libraries
-import { useState } from 'react';
-import type { Node } from 'reactflow';
-
-// Internal - absolute imports (future)
-import { ShaderNodeDefinition } from '@core/types';
-import NodeEditor from '@components/NodeEditor';
-
-// Internal - relative imports (current)
-import { compileGraphToGLSL } from '../core/compiler';
-import type { GraphNode } from './types';
-```
-
-## Building & Deployment
-
-### Build for Production
 ```bash
-npm run build
-```
-Output in `dist/`
-
-### Preview Production Build
-```bash
-npm run preview
+npx tsc -b          # type-check (also runs as part of `npm run build`)
+npm run build       # type-check + production build → dist/
+npm run preview     # serve the production build locally
+npm run lint         # eslint
 ```
 
-### Type Checking
-```bash
-tsc --noEmit
-```
-
-### Linting
-```bash
-npm run lint
-```
-
-## Architecture Deep Dive
-
-### Graph Compilation Flow
-
-1. **User Edits Graph**
-   - NodeEditor catches `onNodesChange` / `onEdgesChange`
-   - Triggers `handleGraphChange` callback
-
-2. **Type Conversion**
-   - Converts ReactFlow `Node[]` to `GraphNode[]`
-   - Ensures type safety
-
-3. **Topological Sort**
-   - Compiler analyzes dependencies
-   - Orders nodes from inputs → output
-   - Detects cycles (future: error handling)
-
-4. **GLSL Generation**
-   - For each node in order:
-     - Resolve input values (from edges or defaults)
-     - Call `glslTemplate(inputs, data)`
-     - Store result in `nodeVarMap`
-
-5. **Type Casting**
-   - Automatic conversions inserted
-   - Swizzling handled (.x, .y, etc.)
-   - Constructor calls (vec2, vec3, etc.)
-
-6. **Final Assembly**
-   - Combine all statements
-   - Wrap in `void main() { ... }`
-   - Return to ShaderPreview
-
-7. **WebGL Rendering**
-   - Three.js ShaderMaterial receives code
-   - Fragment shader executes per pixel
-   - Canvas updated in real-time
-
-### State Management
-
-Currently using React local state:
-- `NodeEditor` - graph state (nodes, edges)
-- `App` - layout state (split %, floating mode)
-- `ShaderPreview` - shader code
-
-Future: Consider Zustand/Redux for complex state
-
-### Performance Considerations
-
-- **Large Graphs**: 100+ nodes may slow compilation
-- **Real-time**: Compilation runs on every change
-- **Optimization Ideas**:
-  - Debounce compilation
-  - Cache GLSL per node
-  - Incremental compilation
-  - Worker threads
+Run all three (plus `npm test`) before considering a change done.
 
 ## Debugging
 
-### Common Issues
-
-**Node doesn't appear in sidebar**
-→ Check NODE_REGISTRY in `src/nodes/index.ts`
-
-**Shader compilation error**
-→ Check browser console for GLSL errors
-→ Verify `glslTemplate` returns valid GLSL
-
-**Type mismatch**
-→ Ensure edge types are compatible
-→ Compiler auto-converts, but check logic
-
-**Three.js errors**
-→ Check ShaderPreview WebGL context
-→ Verify shader code syntax
-
-### Debug Tools
-
-```typescript
-// In compiler.ts
-console.log('Sorted nodes:', sortedNodes);
-console.log('Generated GLSL:', glsl);
-
-// In ShaderNode.tsx
-console.log('Node data:', node.data);
-
-// In NodeEditor.tsx
-console.log('Graph state:', nodes, edges);
-```
-
-## Git Workflow
-
-### Branches
-- `main` - stable releases
-- `develop` - active development (if needed)
-- `feature/*` - new features
-- `fix/*` - bug fixes
-
-### Commit Messages
-Follow existing style:
-```
-Short description (50 chars)
-
-- Bullet point details
-- What changed and why
-- Reference issues if any
-```
-
-### Before Committing
-```bash
-npm run lint        # Fix linting errors
-npm test            # Run tests
-npm run build       # Ensure build works
-git status          # Review changes
-git diff            # Check diff
-```
-
-## Roadmap & TODOs
-
-### High Priority
-- [ ] Write tests for compiler
-- [ ] Write tests for type conversion
-- [ ] Add more SDF shapes
-- [ ] Texture sampling nodes
-- [ ] Undo/redo system
-
-### Medium Priority
-- [ ] Export shader code feature
-- [ ] Import/export graph templates
-- [ ] Node search/filter in sidebar
-- [ ] Keyboard shortcuts system
-- [ ] Graph minimap
-
-### Low Priority
-- [ ] Custom function nodes
-- [ ] Shader optimization pass
-- [ ] Performance profiling
-- [ ] Dark/light theme toggle
-- [ ] Localization
-
-### Code Quality
-- [ ] Move nodes to `/categories` structure
-- [ ] Add path aliases (@components, @core, etc.)
-- [ ] Extract magic numbers to constants
-- [ ] Add JSDoc comments to complex functions
-- [ ] Set up CI/CD pipeline
+- **Node doesn't appear in the sidebar** → check it's registered in
+  `NODE_REGISTRY` (`src/nodes/index.ts`) and listed in the menu structure
+  (`Sidebar.tsx` / `ContextMenu.tsx`).
+- **Shader compilation error** → open `< > Code` in the toolbar to see the
+  generated GLSL, or check `getShaderValidationReport()` output
+  (`core/validator.ts`) which the preview panel surfaces on failure.
+- **Type mismatch / connection refused** → check
+  `connectionValidator.ts`'s rules; if it should auto-adapt but doesn't,
+  the issue is likely in `autoAdapterSystem.ts`'s type resolution.
+- If you're an AI agent without a way to click through the UI yourself,
+  see [AGENTS.md](AGENTS.md) first — you likely have more capability here
+  than you think.
 
 ## Resources
 
-### Documentation
-- [React](https://react.dev/)
-- [ReactFlow](https://reactflow.dev/)
-- [Three.js](https://threejs.org/)
-- [Vitest](https://vitest.dev/)
-- [Testing Library](https://testing-library.com/)
-
-### GLSL References
-- [The Book of Shaders](https://thebookofshaders.com/)
-- [GLSL Reference](https://www.khronos.org/opengl/wiki/OpenGL_Shading_Language)
-- [Shadertoy](https://www.shadertoy.com/)
-- [Inigo Quilez Articles](https://iquilezles.org/articles/)
-
-### Tools
-- [GLSL Sandbox](http://glslsandbox.com/)
-- [ShaderToy](https://www.shadertoy.com/)
-- [GLSL Editor](https://glsleditor.com/)
+- [React](https://react.dev/) · [ReactFlow](https://reactflow.dev/) ·
+  [Three.js](https://threejs.org/) · [Vitest](https://vitest.dev/)
+- [The Book of Shaders](https://thebookofshaders.com/) ·
+  [GLSL Reference](https://www.khronos.org/opengl/wiki/OpenGL_Shading_Language) ·
+  [Inigo Quilez Articles](https://iquilezles.org/articles/)
 
 ---
 
-**Questions?** Check PROJECT_SUMMARY.md or repository issues.
-
-**Last Updated**: 2026-02-14
+**Questions?** Check [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md), or repository issues.
