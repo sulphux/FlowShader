@@ -19,6 +19,8 @@ export interface TextureResource {
 export interface ShaderRuntimeResources {
   textures: TextureResource[];
   usesAudio: boolean;
+  /** Graf używa noda Feedback — czyta teksturę z poprzedniej klatki. */
+  usesFeedback: boolean;
 }
 
 /** Uniformy audio wspólne dla całego grafu (jedno źródło dźwięku). */
@@ -28,6 +30,9 @@ export const AUDIO_UNIFORMS = {
   mid: 'u_audio_mid',
   high: 'u_audio_high',
 } as const;
+
+/** Uniform tekstury poprzedniej klatki (ping-pong bufor w ShaderPreview). */
+export const FEEDBACK_UNIFORM = 'u_feedback';
 
 /** GLSL identifier nie może zawierać myślników ani kropek. */
 const sanitizeId = (nodeId: string): string => nodeId.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -40,14 +45,18 @@ export const isTextureNode = (node: GraphNode): boolean =>
 export const isAudioNode = (node: GraphNode): boolean =>
   node.data?.definition?.id === 'audio_input';
 
+export const isFeedbackNode = (node: GraphNode): boolean =>
+  node.data?.definition?.id === 'feedback';
+
 /**
- * Zbiera zasoby (tekstury + flaga audio) z listy nodów grafu.
+ * Zbiera zasoby (tekstury + flaga audio/feedback) z listy nodów grafu.
  * Tekstury bez wgranego obrazka są pomijane (shader dostanie czarny sampler
  * z domyślnej pustej tekstury bindowanej przez preview).
  */
 export function collectRuntimeResources(nodes: GraphNode[]): ShaderRuntimeResources {
   const textures: TextureResource[] = [];
   let usesAudio = false;
+  let usesFeedback = false;
 
   nodes.forEach(node => {
     if (isTextureNode(node)) {
@@ -57,9 +66,12 @@ export function collectRuntimeResources(nodes: GraphNode[]): ShaderRuntimeResour
     if (isAudioNode(node)) {
       usesAudio = true;
     }
+    if (isFeedbackNode(node)) {
+      usesFeedback = true;
+    }
   });
 
-  return { textures, usesAudio };
+  return { textures, usesAudio, usesFeedback };
 }
 
 /** Deklaracje uniformów do wstrzyknięcia w nagłówek shadera. */
@@ -72,6 +84,9 @@ export function buildUniformDeclarations(resources: ShaderRuntimeResources): str
     Object.values(AUDIO_UNIFORMS).forEach(name => {
       lines.push(`    uniform float ${name};`);
     });
+  }
+  if (resources.usesFeedback) {
+    lines.push(`    uniform sampler2D ${FEEDBACK_UNIFORM};`);
   }
   return lines.join('\n');
 }

@@ -503,6 +503,10 @@ ${resourceUniforms}
         vec3 d = vec3(0.263,0.416,0.557);
         return a + b*cos( 6.28318*(c*t+d) );
     }
+
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+    }
 ${functionsSection}
     void main() {
         uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;

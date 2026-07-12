@@ -1,18 +1,19 @@
 import * as THREE from 'three';
-import { AUDIO_UNIFORMS, type ShaderRuntimeResources } from './runtimeResources';
+import { AUDIO_UNIFORMS, FEEDBACK_UNIFORM, type ShaderRuntimeResources } from './runtimeResources';
 import { getAudioLevels } from './audioManager';
 
 /**
- * Bindowanie zasobów runtime (tekstury, audio) do materiałów THREE.
+ * Bindowanie zasobów runtime (tekstury, audio, feedback) do materiałów THREE.
  * Wspólne dla głównego podglądu, Preview, Monitora i Color Preview.
  */
 
 // Cache tekstur po źródle (data URL) — wiele okien współdzieli jedną teksturę
 const textureCache = new Map<string, THREE.Texture>();
 
-// 1x1 czarny placeholder dla nodów tekstury bez wgranego obrazka
+// 1x1 czarny placeholder — dla tekstur bez wgranego obrazka i dla feedbacku,
+// zanim pierwsza klatka zdąży coś wyrenderować do ping-pong bufora.
 let blackTexture: THREE.DataTexture | null = null;
-const getBlackTexture = (): THREE.DataTexture => {
+export const getBlackTexture = (): THREE.DataTexture => {
   if (!blackTexture) {
     blackTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
     blackTexture.needsUpdate = true;
@@ -47,6 +48,12 @@ export function buildResourceUniforms(resources: ShaderRuntimeResources): Record
       uniforms[name] = { value: 0 };
     });
   }
+  if (resources.usesFeedback) {
+    // Placeholder — the real previous-frame texture is patched in per-frame
+    // by updateFeedbackUniform (ShaderPreview owns the ping-pong buffers;
+    // Preview/Monitor/Color Preview just read the shared texture read-only).
+    uniforms[FEEDBACK_UNIFORM] = { value: getBlackTexture() };
+  }
   return uniforms;
 }
 
@@ -59,6 +66,13 @@ export function updateAudioUniforms(material: THREE.ShaderMaterial): void {
   uniforms[AUDIO_UNIFORMS.bass].value = levels.bass;
   uniforms[AUDIO_UNIFORMS.mid].value = levels.mid;
   uniforms[AUDIO_UNIFORMS.high].value = levels.high;
+}
+
+/** Aktualizacja tekstury feedbacku na materiale — wywoływana co klatkę. */
+export function updateFeedbackUniform(material: THREE.ShaderMaterial, texture: THREE.Texture | null): void {
+  const uniforms = material.uniforms;
+  if (!uniforms || !uniforms[FEEDBACK_UNIFORM]) return;
+  uniforms[FEEDBACK_UNIFORM].value = texture || getBlackTexture();
 }
 
 /** Czyszczenie cache (testy / zwolnienie pamięci). */

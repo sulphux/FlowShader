@@ -16,7 +16,7 @@ const sidebarIds = Object.values(SIDEBAR_MENU).flat();
 const contextIds = Object.values(CONTEXT_MENU).flat();
 const registryIds = Object.values(NODE_REGISTRY).map(def => def.id);
 
-const NEW_NODE_IDS = ['mono', 'math_fract', 'math_tan', 'math_cot', 'math_atan', 'color_preview', 'code_glsl'];
+const NEW_NODE_IDS = ['mono', 'math_fract', 'math_tan', 'math_cot', 'math_atan', 'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random'];
 const INTERNAL_ADAPTER_IDS = ['split_vec2', 'split_vec3', 'split_vec4', 'combine_vec2', 'combine_vec3', 'combine_vec4'];
 
 describe('Menu & registry audit', () => {

@@ -3,7 +3,8 @@ import { Handle, Position, type NodeProps, useReactFlow, NodeResizer, useEdges, 
 import * as THREE from 'three';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources } from '../core/runtimeResources';
-import { buildResourceUniforms, updateAudioUniforms } from '../core/threeResources';
+import { buildResourceUniforms, updateAudioUniforms, updateFeedbackUniform } from '../core/threeResources';
+import { sharedFeedbackTexture } from '../core/feedbackBuffer';
 import { TYPE_COLORS } from '../core/theme';
 
 // Grid the monitor probes to detect spatial variance (e.g. a texture or
@@ -162,6 +163,7 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
               const mat = meshRef.current.material as THREE.ShaderMaterial;
               mat.uniforms.iTime.value = (now - startTime) * 0.001;
               updateAudioUniforms(mat);
+              updateFeedbackUniform(mat, sharedFeedbackTexture.current);
               try {
                   rendererRef.current.setRenderTarget(targetRef.current);
                   rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));

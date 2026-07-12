@@ -7,6 +7,7 @@ import * as VecNodes from './vector';
 import * as Utils from './utils';
 import * as Params from './params';
 import * as Media from './media';
+import * as Simulation from './simulation';
 import { PreviewNodeDef } from './utils';
 import { MonitorNodeDef, SmartSplitNode, SmartComposeNode, RelayAutoNode } from './utils';
 import { CustomInputNode } from './CustomInput';
@@ -109,4 +110,9 @@ export const NODE_REGISTRY = {
   special_group: Utils.GroupNode,
 
   preview: PreviewNodeDef,
+
+  // Simulation
+  feedback: Simulation.FeedbackNode,
+  impulse: Simulation.ImpulseNode,
+  math_random: Simulation.RandomNode,
 };

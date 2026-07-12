@@ -146,7 +146,7 @@ function App() {
               ✕
             </button>
 
-            <ShaderPreview shaderCode={shaderCode} resources={shaderResources} />
+            <ShaderPreview shaderCode={shaderCode} resources={shaderResources} isMainOutput />
           </div>
           )}
       </div>

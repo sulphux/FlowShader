@@ -32,6 +32,7 @@ export const MENU_STRUCTURE = {
   "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
   "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl"],
+  "Simulation": ["feedback", "impulse", "math_random"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 
