@@ -121,6 +121,13 @@ function EditorInner({ onChange }: Props) {
   
   const [pendingConnection, setPendingConnection] = useState<OnConnectStartParams | null>(null);
   const connectionStartRef = useRef<OnConnectStartParams | null>(null);
+  // React Flow snaps a connection to the nearest handle within a radius, so
+  // the drag can land ON a valid target while event.target at mouseup is
+  // still the pane underneath (cursor a few px off the small handle circle)
+  // — onConnectEnd's pane check alone can't tell a real connection from an
+  // empty-space drop. onConnect fires first when the drop was valid, so it
+  // sets this; onConnectEnd checks it before showing the quick-add menu.
+  const justConnectedRef = useRef(false);
 
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -684,6 +691,7 @@ function EditorInner({ onChange }: Props) {
   );
 
   const onConnect: OnConnect = useCallback((params) => {
+        justConnectedRef.current = true;
         if (!params.source || !params.target || !params.sourceHandle || !params.targetHandle) {
             console.warn('Auto-Adapter: Incomplete connection params');
             return;
@@ -880,6 +888,11 @@ function EditorInner({ onChange }: Props) {
   const onMouseMove = useCallback((e: React.MouseEvent) => { if(ref.current) { const bounds = ref.current.getBoundingClientRect(); mousePos.current = { x: e.clientX - bounds.left, y: e.clientY - bounds.top }; } }, []);
   const onConnectStart = useCallback((_: unknown, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
   const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
+      if (justConnectedRef.current) {
+          justConnectedRef.current = false;
+          connectionStartRef.current = null;
+          return;
+      }
       const target = event.target as HTMLElement;
       const targetIsPane = target.classList.contains('react-flow__pane');
       if (targetIsPane && connectionStartRef.current && ref.current) {
