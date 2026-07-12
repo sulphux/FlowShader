@@ -18,7 +18,14 @@ export const CustomInputNode: ShaderNodeDefinition = {
   glslTemplate: (_, data) => {
     // Return a type-appropriate placeholder for live preview inside the subgraph.
     // When compiled as a function parameter the compiler overrides this via externalInput.
-    const t = (data as Record<string, unknown>)?.detectedType as string | undefined;
+    // Fall back to the definition's saved output port type: serializeGraph
+    // historically dropped data.detectedType while KEEPING the adapted port
+    // type in the definition — after a reload the compiler declared the var
+    // with the port type (e.g. float) while this template, seeing no
+    // detectedType, emitted vec3(0.5). "cannot convert vec3 to float".
+    const d = data as Record<string, unknown> | undefined;
+    const defType = (d?.definition as ShaderNodeDefinition | undefined)?.outputs?.[0]?.type;
+    const t = (d?.forcedType || d?.detectedType || defType) as string | undefined;
     if (t === 'float') return '0.0';
     if (t === 'vec2')  return 'vec2(0.5)';
     if (t === 'vec4')  return 'vec4(0.5, 0.5, 0.5, 1.0)';

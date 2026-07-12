@@ -49,13 +49,23 @@ export function generateCustomNodeFunction(
   }
   
   const body = compileSubgraphBody(subgraphNodes as GraphNode[], customDef.subgraph.edges as GraphEdge[], outputNode.id);
-  
+
   // Get output variable name
   const outputVar = `var_${outputNode.id.replace(/-/g, '_')}`;
-  
+
+  // The declared return type (from the OUTER node's output port) can disagree
+  // with what the body actually produced — e.g. the port stayed 'auto' (→vec3
+  // fallback) while a vec2 got wired to Custom Output inside the subgraph.
+  // Read the type from the body's own declaration of the output var and cast
+  // the return expression to match the signature, otherwise GLSL rejects the
+  // function ("return is not matching type").
+  const declMatch = body.match(new RegExp(`(float|vec2|vec3|vec4)\\s+${outputVar}\\s*=`));
+  const bodyType = declMatch?.[1] ?? returnType;
+  const returnExpr = autoCast(outputVar, bodyType, returnType);
+
   const functionCode = `
 ${returnType} ${customDef.id}(${params}) {
-${body}    return ${outputVar};
+${body}    return ${returnExpr};
 }
 `;
   

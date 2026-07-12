@@ -34,6 +34,8 @@ interface SerializedNode {
     label?: string;
     min?: number;
     max?: number;
+    detectedType?: string;
+    forcedType?: string;
   };
   [key: string]: unknown;
 }
@@ -91,6 +93,11 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           label: n.data.label,
           min: n.data.min,
           max: n.data.max,
+          // Custom Input/Output type resolution — dropping these while keeping
+          // the adapted port types in the definition made the compiler and the
+          // nodes' glslTemplates disagree about the variable type after reload
+          detectedType: n.data.detectedType,
+          forcedType: n.data.forcedType,
         },
       } as SerializedNode;
     }),

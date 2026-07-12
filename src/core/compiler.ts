@@ -454,6 +454,12 @@ export const compileGraphToGLSLWithReport = (
     uniform vec2 iResolution;
 ${resourceUniforms}
 
+    // Globals (assigned at the top of main) — custom node functions compile
+    // node templates like UV Coord to the bare identifier 'uv', so it must be
+    // visible at function scope, not a local of main().
+    vec2 uv;
+    vec2 uv0;
+
     vec3 palette( in float t ) {
         vec3 a = vec3(0.5, 0.5, 0.5);
         vec3 b = vec3(0.5, 0.5, 0.5);
@@ -463,8 +469,8 @@ ${resourceUniforms}
     }
 ${functionsSection}
     void main() {
-        vec2 uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;
-        vec2 uv0 = uv;
+        uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;
+        uv0 = uv;
 
         ${mainBody}
 
