@@ -1,6 +1,6 @@
 import type { ShaderNodeDefinition } from './types';
 import type { CustomNodeDefinition } from './customNodeManager';
-import { generateCustomNodeFunction, autoCast } from './functionGenerator';
+import { generateCustomNodeFunction, autoCast, customNodeFunctionName, sanitizeGLSLIdentifier } from './functionGenerator';
 import { shaderDebug } from './shaderDebug';
 import { createCompilerDebugReport } from './compilerDebugReport';
 import type { CompilerDebugReport } from './compilerDebugReport';
@@ -51,6 +51,89 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
 };
 
 /**
+ * A GLSL function returns exactly one value, so a custom node with several
+ * differently-typed output ports (e.g. vec2 "Image Process OUT" + vec3
+ * "Color OUT") compiles to one function PER PORT (customNodeFunctionName) —
+ * unlike built-in multi-output nodes (audio_input, smart_split), whose
+ * outputs are just swizzled channels of one shared vector, custom node ports
+ * can be arbitrary unrelated types with no single vector to swizzle.
+ * multiOutputVarMap tracks nodeId -> portId -> variable name so edges whose
+ * sourceHandle picks a specific port resolve to the right one.
+ */
+type MultiOutputVarMap = Record<string, Record<string, string>>;
+
+const isMultiOutputCustomNode = (def: ShaderNodeDefinition): def is CustomNodeDefinition =>
+  'isCustom' in def && Boolean((def as CustomNodeDefinition).isCustom) && def.outputs.length > 1;
+
+/** Declares one variable per output port, calling that port's generated function. */
+function emitMultiOutputCustomNode(
+  node: GraphNode,
+  customDef: CustomNodeDefinition,
+  callParams: string,
+  multiOutputVarMap: MultiOutputVarMap
+): string {
+  let body = '';
+  const ports: Record<string, string> = {};
+  const glslId = node.id.replace(/-/g, '_');
+  customDef.outputs.forEach(port => {
+    const funcName = customNodeFunctionName(customDef, port);
+    // GLSL ES reserves identifiers containing "__" — collapse any run of
+    // underscores from the id/port concatenation down to one.
+    const varName = `var_${glslId}_o_${sanitizeGLSLIdentifier(port.id)}`.replace(/_+/g, '_');
+    const type = (!port.type || port.type === 'auto') ? 'vec3' : port.type;
+    body += `    ${type} ${varName} = ${funcName}(${callParams});\n`;
+    ports[port.id] = varName;
+  });
+  multiOutputVarMap[node.id] = ports;
+  return body;
+}
+
+/**
+ * Resolves the expression + type to use when an edge consumes a source
+ * node's output. Checks multiOutputVarMap first (custom node with several
+ * ports, each its own variable); otherwise falls back to the legacy single
+ * shared variable, optionally swizzled (built-in multi-output nodes, or a
+ * custom node with exactly one port).
+ */
+function resolveSourceExpr(
+  edge: GraphEdge,
+  sourceNode: GraphNode | undefined,
+  nodeVarMap: Record<string, string>,
+  multiOutputVarMap: MultiOutputVarMap
+): { expr: string; type: string } | undefined {
+  const ports = multiOutputVarMap[edge.source];
+  if (ports && edge.sourceHandle && ports[edge.sourceHandle]) {
+    const def = sourceNode?.data.definition as CustomNodeDefinition | undefined;
+    const port = def?.outputs.find(o => o.id === edge.sourceHandle);
+    const type = (!port?.type || port.type === 'auto') ? 'vec3' : port.type;
+    return { expr: ports[edge.sourceHandle], type };
+  }
+
+  const sourceVarName = nodeVarMap[edge.source];
+  if (!sourceVarName) return undefined;
+
+  let sourceRawType = 'float';
+  if (sourceNode?.data.definition.varType) {
+    sourceRawType = sourceNode.data.definition.varType;
+  } else if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
+    sourceRawType = sourceNode.data.definition.inputs[0].type;
+  } else if (sourceNode?.data.definition.id === 'custom_input') {
+    // Custom Input inside a subgraph: use its detected type (falls back to
+    // the port's own declared type, which self-heals stale/legacy saves)
+    sourceRawType = sourceNode.data.detectedType || sourceNode.data.definition.outputs[0]?.type || 'float';
+  } else {
+    // Fallback do pierwszego wyjścia, gdy sourceHandle nie pasuje (np. stare zapisy z 'result')
+    const outputs = sourceNode?.data.definition.outputs || [];
+    sourceRawType = outputs.find(o => o.id === edge.sourceHandle)?.type || outputs[0]?.type || 'float';
+  }
+
+  const isSwizzled = Boolean(edge.sourceHandle && ['x', 'y', 'z', 'w', 'r', 'g', 'b', 'a'].includes(edge.sourceHandle));
+  const type = isSwizzled ? 'float' : sourceRawType;
+  const expr = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
+  return { expr, type };
+}
+
+/**
  * Compile subgraph body (no uniforms/precision/main wrapper)
  * Used for generating custom node function bodies
  */
@@ -60,6 +143,7 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
 
   let body = '';
   const nodeVarMap: Record<string, string> = {};
+  const multiOutputVarMap: MultiOutputVarMap = {};
 
   sortedNodes.forEach(node => {
     const def = node.data?.definition;
@@ -78,38 +162,22 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
     const inputs: Record<string, string> = {};
     def.inputs.forEach(inputDef => {
       const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
-      if (edge && nodeVarMap[edge.source]) {
-        const sourceVarName = nodeVarMap[edge.source];
-        const sourceNode = nodes.find(n => n.id === edge.source);
+      if (!edge) return;
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const resolved = resolveSourceExpr(edge, sourceNode, nodeVarMap, multiOutputVarMap);
+      if (!resolved) return;
 
-        // Determine source type
-        let sourceRawType = 'float';
-
-        if (sourceNode?.data.definition.varType) {
-          sourceRawType = sourceNode.data.definition.varType;
-        } else if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
-          sourceRawType = sourceNode.data.definition.inputs[0].type;
-        } else if (sourceNode?.data.definition.id === 'custom_input') {
-          // For Custom Input, use detectedType
-          sourceRawType = sourceNode.data.detectedType || sourceNode.data.definition.outputs[0]?.type || 'float';
-        } else {
-          // Fallback do pierwszego wyjścia, gdy sourceHandle nie pasuje (np. stare zapisy z 'result')
-          const outputs = sourceNode?.data.definition.outputs || [];
-          sourceRawType = outputs.find(o => o.id === edge.sourceHandle)?.type || outputs[0]?.type || 'float';
-        }
-
-        // Handle swizzling
-        const isSwizzled = edge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(edge.sourceHandle);
-        const effectiveSourceType = isSwizzled ? 'float' : sourceRawType;
-        const sourceExpression = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
-
-        // Auto-cast to target type
-        const targetType = inputDef.type;
-        const finalExpr = autoCast(sourceExpression, effectiveSourceType, targetType);
-
-        inputs[inputDef.id] = finalExpr;
-      }
+      // Auto-cast to target type
+      inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
     });
+
+    // Multi-output custom node used inside a subgraph (nested custom node)
+    if (isMultiOutputCustomNode(def)) {
+      const callParams = def.inputs.map(inp => inputs[inp.id] || (inp.type === 'float' ? '0.0' : `${inp.type === 'auto' ? 'vec3' : inp.type}(0.0)`)).join(', ');
+      body += emitMultiOutputCustomNode(node, def, callParams, multiOutputVarMap);
+      nodeVarMap[node.id] = multiOutputVarMap[node.id][def.outputs[0].id];
+      return;
+    }
 
     // Generate GLSL code (nodeId w data — szablony uniformów, np. tekstury)
     const glslCode = def.glslTemplate(inputs, { ...node.data, nodeId: node.id });
@@ -202,20 +270,19 @@ export const compileGraphToGLSLWithReport = (
           collectCustomNodes(customDef.subgraph.nodes as GraphNode[]);
         }
 
-        const funcCode = generateCustomNodeFunction(
-          customDef,
-          (subNodes, subEdges, targetId) => {
-            // Recursive compilation for subgraph body
-            const subMainBody = compileSubgraphMainBody(subNodes, subEdges, targetId);
-            return subMainBody;
-          }
-        );
+        const compileBody = (subNodes: GraphNode[], subEdges: GraphEdge[], targetId: string) =>
+          compileSubgraphMainBody(subNodes, subEdges, targetId);
 
-        // Only register nodes whose function was successfully generated
-        if (funcCode.trim()) {
-          customNodeFunctions.push(funcCode);
-          generatedCustomNodeIds.add(customDef.id);
-        }
+        // One GLSL function per output port — see MultiOutputVarMap doc above.
+        const ports = customDef.outputs.length > 1 ? customDef.outputs : [customDef.outputs[0]];
+        ports.forEach(port => {
+          const funcCode = generateCustomNodeFunction(customDef, compileBody, port);
+          // Only register nodes whose function was successfully generated
+          if (funcCode.trim()) {
+            customNodeFunctions.push(funcCode);
+            generatedCustomNodeIds.add(customDef.id);
+          }
+        });
       }
     });
   };
@@ -231,6 +298,7 @@ export const compileGraphToGLSLWithReport = (
 
   let mainBody = '';
   const nodeVarMap: Record<string, string> = {};
+  const multiOutputVarMap: MultiOutputVarMap = {};
 
   sortedNodes.forEach(node => {
     const def = node.data?.definition;
@@ -248,38 +316,11 @@ export const compileGraphToGLSLWithReport = (
 
     def.inputs.forEach(inputDef => {
       const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
-
-      if (edge && nodeVarMap[edge.source]) {
-        const sourceVarName = nodeVarMap[edge.source];
-        const sourceNode = nodes.find(n => n.id === edge.source);
-
-        // 1. USTALANIE TYPU ŹRÓDŁA
-        // Musimy wiedzieć, jaki typ ma zmienna źródłowa, żeby ją poprawnie rzutować
-        let sourceRawType = 'float';
-
-        // Specjalna obsługa dla Splita - jego zmienna ma typ wejścia, a nie wyjścia
-        if (sourceNode?.data.definition.varType) {
-             sourceRawType = sourceNode.data.definition.varType;
-        } else if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
-             sourceRawType = sourceNode.data.definition.inputs[0].type;
-        } else {
-             // Fallback do pierwszego wyjścia, gdy sourceHandle nie pasuje (np. stare zapisy z 'result')
-             const sourceOutputs = sourceNode?.data.definition.outputs || [];
-             sourceRawType = sourceOutputs.find(o => o.id === edge.sourceHandle)?.type || sourceOutputs[0]?.type || 'float';
-        }
-
-        // Obsługa swizzlingu (np. .x, .y, .z)
-        const isSwizzled = edge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(edge.sourceHandle);
-
-        // Jeśli swizzling, to efektywny typ to float (dla pojedynczych kanałów)
-        const effectiveSourceType = isSwizzled ? 'float' : sourceRawType;
-        const sourceExpression = isSwizzled ? `${sourceVarName}.${edge.sourceHandle}` : sourceVarName;
-
-        // 2. EXPLICIT CASTING — delegate to autoCast() (same logic used in subgraph compiler)
-        const targetType = inputDef.type;
-        const finalExpr = autoCast(sourceExpression, effectiveSourceType, targetType);
-        inputs[inputDef.id] = finalExpr;
-      }
+      if (!edge) return;
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const resolved = resolveSourceExpr(edge, sourceNode, nodeVarMap, multiOutputVarMap);
+      if (!resolved) return;
+      inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
     });
 
     // === CUSTOM NODE COMPILATION ===
@@ -311,8 +352,16 @@ export const compileGraphToGLSLWithReport = (
         return 'vec3(0.0)';
       }).join(', ');
 
+      // Multiple output ports: one function + one variable per port (see
+      // MultiOutputVarMap doc) instead of the single-line emit below.
+      if (isMultiOutputCustomNode(customDef)) {
+        mainBody += emitMultiOutputCustomNode(node, customDef, callParams, multiOutputVarMap);
+        nodeVarMap[node.id] = multiOutputVarMap[node.id][customDef.outputs[0].id];
+        return;
+      }
+
       // Function call instead of inline subgraph
-      glslCode = `${customDef.id}(${callParams})`;
+      glslCode = `${customNodeFunctionName(customDef)}(${callParams})`;
 
       shaderDebug.log('compiler', 'Generated custom node function call', { nodeId: node.id, call: glslCode });
     } else {
@@ -384,36 +433,23 @@ export const compileGraphToGLSLWithReport = (
 
   if (targetId) {
     const lastEdge = safeEdges.find(e => e.target === targetId);
-    if (lastEdge && nodeVarMap[lastEdge.source]) {
+    if (lastEdge) {
       const srcNode = nodes.find(n => n.id === lastEdge.source);
+      const resolved = resolveSourceExpr(lastEdge, srcNode, nodeVarMap, multiOutputVarMap);
 
-      // Podobna logika dla typu źródłowego jak wyżej
-      let srcType = 'float';
-      if (srcNode?.data.definition.varType) {
-          srcType = srcNode.data.definition.varType;
-      } else if (srcNode?.data.definition.id.includes('split')) {
-          srcType = srcNode.data.definition.inputs[0].type;
-      } else {
-          // Fallback do pierwszego wyjścia, gdy sourceHandle nie pasuje (np. stare zapisy z 'result')
-          const srcOutputs = srcNode?.data.definition.outputs || [];
-          srcType = srcOutputs.find(o => o.id === lastEdge.sourceHandle)?.type || srcOutputs[0]?.type || 'float';
+      if (resolved) {
+        // Unresolved custom-node port (e.g. its Custom Output was never wired
+        // inside the subgraph) — same vec3 fallback as everywhere else here,
+        // otherwise this silently drops the result and renders solid black.
+        const srcType = resolved.type === 'auto' ? 'vec3' : resolved.type;
+        const varName = resolved.expr;
+
+        // JAWNE RZUTOWANIE NA VEC4 (Dla gl_FragColor)
+        if (srcType === 'vec4') finalLine = `gl_FragColor = ${varName};`;
+        else if (srcType === 'vec3') finalLine = `gl_FragColor = vec4(${varName}, 1.0);`;
+        else if (srcType === 'vec2') finalLine = `gl_FragColor = vec4(${varName}, 0.0, 1.0);`;
+        else if (srcType === 'float') finalLine = `gl_FragColor = vec4(vec3(${varName}), 1.0);`;
       }
-
-      const isSwizzled = lastEdge.sourceHandle && ['x','y','z','w','r','g','b','a'].includes(lastEdge.sourceHandle);
-      if (isSwizzled) srcType = 'float';
-      // Unresolved custom-node port (e.g. its Custom Output was never wired
-      // inside the subgraph) — same vec3 fallback as everywhere else here,
-      // otherwise this silently drops the result and renders solid black.
-      if (srcType === 'auto') srcType = 'vec3';
-
-      let varName = nodeVarMap[lastEdge.source];
-      if (isSwizzled) varName += `.${lastEdge.sourceHandle}`;
-
-      // JAWNE RZUTOWANIE NA VEC4 (Dla gl_FragColor)
-      if (srcType === 'vec4') finalLine = `gl_FragColor = ${varName};`;
-      else if (srcType === 'vec3') finalLine = `gl_FragColor = vec4(${varName}, 1.0);`;
-      else if (srcType === 'vec2') finalLine = `gl_FragColor = vec4(${varName}, 0.0, 1.0);`;
-      else if (srcType === 'float') finalLine = `gl_FragColor = vec4(vec3(${varName}), 1.0);`;
     }
   }
 

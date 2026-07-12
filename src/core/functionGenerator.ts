@@ -5,31 +5,53 @@ import { shaderDebug } from './shaderDebug';
 /**
  * Generate GLSL function declaration for custom node
  */
+/** GLSL identifiers can't contain hyphens or other punctuation. */
+export const sanitizeGLSLIdentifier = (id: string): string => id.replace(/[^a-zA-Z0-9_]/g, '_');
+
+/**
+ * Name of the generated GLSL function for one output port of a custom node.
+ * The FIRST output keeps the bare custom node id (the historical name);
+ * additional outputs get a __<portId> suffix — a GLSL function returns one
+ * value, so a multi-output custom node compiles to one function per port.
+ */
+export const customNodeFunctionName = (
+  customDef: CustomNodeDefinition,
+  outputPort?: { id: string }
+): string => {
+  if (!outputPort || customDef.outputs[0]?.id === outputPort.id) return customDef.id;
+  // GLSL ES reserves identifiers containing "__" — collapse any run of
+  // underscores from the id/port concatenation down to one.
+  return `${customDef.id}_o_${sanitizeGLSLIdentifier(outputPort.id)}`.replace(/_+/g, '_');
+};
+
 export function generateCustomNodeFunction(
   customDef: CustomNodeDefinition,
-  compileSubgraphBody: (nodes: GraphNode[], edges: GraphEdge[], targetNodeId: string) => string
+  compileSubgraphBody: (nodes: GraphNode[], edges: GraphEdge[], targetNodeId: string) => string,
+  outputPort?: { id: string; type: string }
 ): string {
   // Use the outer node's declared ports as the ONE source of truth for the function signature.
   // Re-deriving from the subgraph here would diverge from customDef.inputs if they were set
   // via a different code path (e.g. handleCreateCustomNode on empty selection).
   const inputs = customDef.inputs;
   const outputs = customDef.outputs;
-  
+  const port = outputPort ?? outputs[0];
+
   shaderDebug.log('compiler', 'Generating custom node function', {
     nodeId: customDef.id,
+    port: port ? { id: port.id, type: port.type } : undefined,
     inputs: inputs.map(i => ({ id: i.id, type: i.type })),
     outputs: outputs.map(o => ({ id: o.id, type: o.type })),
   });
-  
+
   // 'auto' is not a valid GLSL type — fall back to vec3 when type is not yet determined
   const toGLSLType = (t: string) => (!t || t === 'auto') ? 'vec3' : t;
 
-  // Return type from first output
-  const returnType = toGLSLType(outputs[0]?.type ?? '');
-  
+  const funcName = customNodeFunctionName(customDef, port);
+  const returnType = toGLSLType(port?.type ?? '');
+
   // Parameters from inputs — sanitize IDs for GLSL (hyphens not allowed in identifiers)
   const params = inputs.map(inp => `${toGLSLType(inp.type)} ${inp.id.replace(/-/g, '_')}`).join(', ');
-  
+
   // Compile subgraph body
   // Replace Custom Input nodes with parameter references
   const subgraphNodes = customDef.subgraph.nodes.map(node => {
@@ -39,10 +61,13 @@ export function generateCustomNodeFunction(
     }
     return node;
   });
-  
-  // Compile subgraph targeting Custom Output
-  const outputNode = customDef.subgraph.nodes.find(n => n.data.definition.id === 'custom_output');
-  
+
+  // Compile subgraph targeting THIS port's Custom Output node. Port ids from
+  // extractCustomNodePorts are the subgraph node ids; legacy defs (e.g. a
+  // placeholder 'out' port) fall back to the first Custom Output node.
+  const outputNode = customDef.subgraph.nodes.find(n => n.data.definition.id === 'custom_output' && n.id === port?.id)
+    || customDef.subgraph.nodes.find(n => n.data.definition.id === 'custom_output');
+
   if (!outputNode) {
     shaderDebug.error('compiler', 'No Custom Output node found in subgraph', { customNodeId: customDef.id });
     return '';
@@ -64,7 +89,7 @@ export function generateCustomNodeFunction(
   const returnExpr = autoCast(outputVar, bodyType, returnType);
 
   const functionCode = `
-${returnType} ${customDef.id}(${params}) {
+${returnType} ${funcName}(${params}) {
 ${body}    return ${returnExpr};
 }
 `;

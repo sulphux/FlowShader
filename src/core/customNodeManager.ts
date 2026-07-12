@@ -38,21 +38,35 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
         nodes: customNode.subgraph.nodes.map((node: any) => {
           const defId = node.data?.definition?.id;
           const freshDef = defId ? NODE_REGISTRY[defId as keyof typeof NODE_REGISTRY] : undefined;
-          
+
+          // forcedType (manually chosen) wins, then detectedType (set live
+          // by onConnect while wiring inside the subgraph); if BOTH are
+          // absent — e.g. an older save, or a subgraph round-tripped through
+          // a file (Save writes definition.inputs/outputs but not these
+          // fields) — fall back to the type already baked into the SAVED
+          // definition instead of discarding it for the generic 'auto' one.
+          // Resetting to 'auto' here is what caused "cannot convert vec3 to
+          // vec2" after reloading a project with a working custom node.
+          const savedType = defId === 'custom_input'
+            ? node.data?.definition?.outputs?.[0]?.type
+            : defId === 'custom_output'
+              ? node.data?.definition?.inputs?.[0]?.type
+              : undefined;
+          const resolvedType = node.data.forcedType || node.data.detectedType || (savedType !== 'auto' ? savedType : undefined);
+
           return {
             ...node,
             data: {
               ...node.data,
               // Use fresh definition from registry (has glslTemplate function)
-              // BUT preserve detectedType for Custom Input/Output nodes
+              // BUT preserve the resolved type for Custom Input/Output nodes
               definition: freshDef ? {
                 ...freshDef,
-                // forcedType (manually chosen by the user) wins over auto-detectedType
-                ...(defId === 'custom_input' && (node.data.forcedType || node.data.detectedType) ? {
-                  outputs: [{ id: 'out', type: node.data.forcedType || node.data.detectedType, label: 'Value' }]
+                ...(defId === 'custom_input' && resolvedType ? {
+                  outputs: [{ id: 'out', type: resolvedType, label: 'Value' }]
                 } : {}),
-                ...(defId === 'custom_output' && (node.data.forcedType || node.data.detectedType) ? {
-                  inputs: [{ id: 'in', type: node.data.forcedType || node.data.detectedType, label: 'Value' }]
+                ...(defId === 'custom_output' && resolvedType ? {
+                  inputs: [{ id: 'in', type: resolvedType, label: 'Value' }]
                 } : {})
               } : node.data.definition
             }
