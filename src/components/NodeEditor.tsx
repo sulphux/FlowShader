@@ -259,8 +259,62 @@ function EditorInner({ onChange }: Props) {
       }
   }, [setNodes, setEdges, reactFlowInstance]);
 
+  /**
+   * Refresh a list of nodes against the current NODE_REGISTRY / customNodeManager
+   * state: custom node instances pick up their latest definition, and
+   * custom_input/custom_output ports reflect their forced/detected type.
+   * Used whenever we (re)display a graph level we've already visited —
+   * was duplicated 3x (navigateBack, navigateToLevel x2), independently
+   * editable and prone to drifting out of sync.
+   */
+  const refreshNodesFromRegistry = useCallback((nodesToRefresh: Node[]): Node[] => {
+    return nodesToRefresh.map(node => {
+      const def = node.data?.definition;
+
+      if (def && 'isCustom' in def && def.isCustom) {
+        const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
+        if (freshDef) {
+          return { ...node, data: { ...node.data, definition: freshDef } };
+        }
+      }
+
+      const portType = node.data?.forcedType || node.data?.detectedType;
+      if (def?.id === 'custom_input' && portType) {
+        return {
+          ...node,
+          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_input'], outputs: [{ id: 'out', type: portType, label: 'Value' }] } }
+        };
+      }
+      if (def?.id === 'custom_output' && portType) {
+        return {
+          ...node,
+          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_output'], inputs: [{ id: 'in', type: portType, label: 'Value' }] } }
+        };
+      }
+
+      return node;
+    });
+  }, []);
+
+  /**
+   * The PROJECT graph (Main level) regardless of where the user currently is.
+   * Inside a custom node's subgraph the canvas holds the subgraph view —
+   * saving that to a file used to overwrite the whole project with the custom
+   * node's innards (no Output node, loose Custom Input/Output nodes). Subgraph
+   * edits are already persisted into the custom node definition on every
+   * change, so Main + custom_nodes_library is the complete project state.
+   */
+  const getProjectGraph = useCallback((): { nodes: Node[]; edges: Edge[] } => {
+    if (currentContext === 'Main' || navigationStack.length === 0) {
+      return { nodes, edges };
+    }
+    const mainState = navigationStack[0];
+    return { nodes: refreshNodesFromRegistry(mainState.nodes), edges: mainState.edges };
+  }, [currentContext, navigationStack, nodes, edges, refreshNodesFromRegistry]);
+
   const handleSaveFile = useCallback((saveAs = false) => {
-      const dataToSave = serializeGraph(nodes, edges, reactFlowInstance.getViewport());
+      const project = getProjectGraph();
+      const dataToSave = serializeGraph(project.nodes, project.edges, reactFlowInstance.getViewport());
       const json = JSON.stringify(dataToSave, null, 2);
 
       let suggestedName = currentFilePath || 'shader_graph.json';
@@ -276,7 +330,7 @@ function EditorInner({ onChange }: Props) {
           fileHandleRef.current = result.handle;
           setCurrentFilePath(result.fileName);
       }).catch(err => console.error('Save failed:', err));
-  }, [nodes, edges, reactFlowInstance, currentFilePath]);
+  }, [getProjectGraph, reactFlowInstance, currentFilePath]);
 
   const handleLoadFileClick = useCallback(() => {
       if (supportsFileSystemAccess()) {
@@ -457,43 +511,6 @@ function EditorInner({ onChange }: Props) {
     // setEdges((eds) => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
   }, [nodes, edges, reactFlowInstance, setNodes]);
   
-  /**
-   * Refresh a list of nodes against the current NODE_REGISTRY / customNodeManager
-   * state: custom node instances pick up their latest definition, and
-   * custom_input/custom_output ports reflect their forced/detected type.
-   * Used whenever we (re)display a graph level we've already visited —
-   * was duplicated 3x (navigateBack, navigateToLevel x2), independently
-   * editable and prone to drifting out of sync.
-   */
-  const refreshNodesFromRegistry = useCallback((nodesToRefresh: Node[]): Node[] => {
-    return nodesToRefresh.map(node => {
-      const def = node.data?.definition;
-
-      if (def && 'isCustom' in def && def.isCustom) {
-        const freshDef = NODE_REGISTRY[def.id as keyof typeof NODE_REGISTRY];
-        if (freshDef) {
-          return { ...node, data: { ...node.data, definition: freshDef } };
-        }
-      }
-
-      const portType = node.data?.forcedType || node.data?.detectedType;
-      if (def?.id === 'custom_input' && portType) {
-        return {
-          ...node,
-          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_input'], outputs: [{ id: 'out', type: portType, label: 'Value' }] } }
-        };
-      }
-      if (def?.id === 'custom_output' && portType) {
-        return {
-          ...node,
-          data: { ...node.data, definition: { ...NODE_REGISTRY['custom_output'], inputs: [{ id: 'in', type: portType, label: 'Value' }] } }
-        };
-      }
-
-      return node;
-    });
-  }, []);
-
   /** Default Custom Input/Output pair used to seed a brand-new (empty) custom node subgraph. */
   const defaultCustomSubgraphNodes = useCallback((): Node[] => [
     { id: 'custom_input_default', type: 'shaderNode', position: { x: 100, y: 200 }, data: { definition: NODE_REGISTRY['custom_input'], value: undefined } },
@@ -1170,7 +1187,10 @@ function EditorInner({ onChange }: Props) {
         {showCloudDialog && createPortal(
           <CloudDialog
             onClose={() => setShowCloudDialog(false)}
-            getProjectJson={() => JSON.stringify(serializeGraph(nodes, edges, reactFlowInstance.getViewport()))}
+            getProjectJson={() => {
+              const project = getProjectGraph();
+              return JSON.stringify(serializeGraph(project.nodes, project.edges, reactFlowInstance.getViewport()));
+            }}
             onLoadProject={(json, name) => restoreGraph(json, name)}
           />,
           document.body
