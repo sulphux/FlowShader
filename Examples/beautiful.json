@@ -4,8 +4,8 @@
       "id": "out1",
       "type": "shaderNode",
       "position": {
-        "x": 5593.942049485427,
-        "y": 208.15933047997237
+        "x": 1578.4003049795956,
+        "y": 261.6071675632488
       },
       "data": {
         "definition": {
@@ -16,2687 +16,569 @@
       "height": 66,
       "selected": false,
       "positionAbsolute": {
-        "x": 5593.942049485427,
-        "y": 208.15933047997237
+        "x": 1578.4003049795956,
+        "y": 261.6071675632488
       },
       "dragging": false
     },
     {
-      "id": "uv_1769824852775",
+      "id": "custom_beautynode_1783827707307",
       "type": "shaderNode",
       "position": {
-        "x": 111.60264476880457,
-        "y": -281.8967730658877
+        "x": 156.68768690890954,
+        "y": 70.59599958343166
       },
       "data": {
         "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "positionAbsolute": {
-        "x": 111.60264476880457,
-        "y": -281.8967730658877
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "uv_scale_1769825038719",
-      "type": "shaderNode",
-      "position": {
-        "x": 292.5650825460093,
-        "y": -237.21327458138097
-      },
-      "data": {
-        "definition": {
-          "id": "uv_scale"
-        }
-      },
-      "width": 93,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 292.5650825460093,
-        "y": -237.21327458138097
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1769825065923",
-      "type": "shaderNode",
-      "position": {
-        "x": 57.137279721035156,
-        "y": -230.16936503665193
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
+          "id": "custom_beautynode"
         },
-        "value": "1.5"
+        "label": "BeautyNode"
       },
-      "width": 172,
-      "height": 65,
-      "selected": false,
+      "zIndex": 0,
+      "width": 193,
+      "height": 116,
       "positionAbsolute": {
-        "x": 57.137279721035156,
-        "y": -230.16936503665193
+        "x": 156.68768690890954,
+        "y": 70.59599958343166
       },
+      "selected": false,
       "dragging": false
     },
     {
-      "id": "vec_fract_1769825101203",
+      "id": "param_color_1783827725067",
       "type": "shaderNode",
       "position": {
-        "x": 426.19764803641056,
-        "y": -235.40753885846038
-      },
-      "data": {
-        "definition": {
-          "id": "vec_fract"
-        }
-      },
-      "width": 94,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 426.19764803641056,
-        "y": -235.40753885846038
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_shift_1769825138808",
-      "type": "shaderNode",
-      "position": {
-        "x": 563.2197133537393,
-        "y": -240.0883568799473
-      },
-      "data": {
-        "definition": {
-          "id": "uv_shift"
-        }
-      },
-      "width": 98,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 563.2197133537393,
-        "y": -240.0883568799473
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1769825163347_eqtfn",
-      "type": "shaderNode",
-      "position": {
-        "x": 333.76018653707115,
-        "y": -318.6400606535729
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 333.76018653707115,
-        "y": -318.6400606535729
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1769825259695",
-      "type": "shaderNode",
-      "position": {
-        "x": 82.39267377967008,
-        "y": -131.14952700375954
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 82.39267377967008,
-        "y": -131.14952700375954
-      }
-    },
-    {
-      "id": "uv_1769825274571",
-      "type": "shaderNode",
-      "position": {
-        "x": 74.03781563110351,
-        "y": -82.18953371850309
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 74.03781563110351,
-        "y": -82.18953371850309
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1769825283380_b8t2z",
-      "type": "shaderNode",
-      "position": {
-        "x": 188.7536801858073,
-        "y": -79.94988524863022
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 188.7536801858073,
-        "y": -79.94988524863022
-      }
-    },
-    {
-      "id": "math_negate_1769825309251",
-      "type": "shaderNode",
-      "position": {
-        "x": 288.05600443066396,
-        "y": -80.53772207700014
-      },
-      "data": {
-        "definition": {
-          "id": "math_negate"
-        }
-      },
-      "width": 88,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 288.05600443066396,
-        "y": -80.53772207700014
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_exp_1769825356783",
-      "type": "shaderNode",
-      "position": {
-        "x": 395.7974485878526,
-        "y": -83.6226206220236
-      },
-      "data": {
-        "definition": {
-          "id": "math_exp"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 395.7974485878526,
-        "y": -83.6226206220236
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1769825380543",
-      "type": "shaderNode",
-      "position": {
-        "x": 516.0199360237291,
-        "y": -154.15278346858875
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 516.0199360237291,
-        "y": -154.15278346858875
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1769825428967",
-      "type": "shaderNode",
-      "position": {
-        "x": 600.7775503560576,
-        "y": -84.91505123203534
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 600.7775503560576,
-        "y": -84.91505123203534
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1769825432559",
-      "type": "shaderNode",
-      "position": {
-        "x": 173.91038451731373,
-        "y": 0.32464066855592133
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "8.00"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 173.91038451731373,
-        "y": 0.32464066855592133
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1769825501319",
-      "type": "shaderNode",
-      "position": {
-        "x": 701.6083042400232,
-        "y": -43.215471034869246
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 701.6083042400232,
-        "y": -43.215471034869246
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1769825531183",
-      "type": "shaderNode",
-      "position": {
-        "x": 549.9066979210943,
-        "y": -26.045852737615675
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 549.9066979210943,
-        "y": -26.045852737615675
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_sin_1769825567223",
-      "type": "shaderNode",
-      "position": {
-        "x": 791.5463380403585,
-        "y": -35.660455260592336
-      },
-      "data": {
-        "definition": {
-          "id": "math_sin"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 791.5463380403585,
-        "y": -35.660455260592336
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1769825581087",
-      "type": "shaderNode",
-      "position": {
-        "x": 604.3504193921824,
-        "y": 83.97495071308423
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 604.3504193921824,
-        "y": 83.97495071308423
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_abs_1769825615731",
-      "type": "shaderNode",
-      "position": {
-        "x": 709.7178147361326,
-        "y": 94.02606131930831
-      },
-      "data": {
-        "definition": {
-          "id": "math_abs"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 709.7178147361326,
-        "y": 94.02606131930831
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1769825659203",
-      "type": "shaderNode",
-      "position": {
-        "x": 884.2960035768097,
-        "y": 172.7338708322746
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 884.2960035768097,
-        "y": 172.7338708322746
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1769825676810_18ys1",
-      "type": "shaderNode",
-      "position": {
-        "x": 963.85840112615,
-        "y": -48.41012771606294
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.01"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 963.85840112615,
-        "y": -48.41012771606294
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_pow_1769825722091",
-      "type": "shaderNode",
-      "position": {
-        "x": 1000.9966375009144,
-        "y": 210.10605991774366
-      },
-      "data": {
-        "definition": {
-          "id": "math_pow"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1000.9966375009144,
-        "y": 210.10605991774366
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1769825732760_varpo",
-      "type": "shaderNode",
-      "position": {
-        "x": 552.4354608110765,
-        "y": 223.77978956925273
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.2"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 552.4354608110765,
-        "y": 223.77978956925273
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_1769825775195",
-      "type": "shaderNode",
-      "position": {
-        "x": -2.5698081825102577,
-        "y": 132.7630935100397
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": -2.5698081825102577,
-        "y": 132.7630935100397
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1769825789863",
-      "type": "shaderNode",
-      "position": {
-        "x": 149.79914449175163,
-        "y": 161.24782231901872
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 149.79914449175163,
-        "y": 161.24782231901872
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1769825815823",
-      "type": "shaderNode",
-      "position": {
-        "x": 133.53908197864854,
-        "y": 228.1188707958313
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 133.53908197864854,
-        "y": 228.1188707958313
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1769825825911",
-      "type": "shaderNode",
-      "position": {
-        "x": 255.09600518446365,
-        "y": 193.07186975860714
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 255.09600518446365,
-        "y": 193.07186975860714
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1769826024633_konnr",
-      "type": "shaderNode",
-      "position": {
-        "x": 365.3871708399161,
-        "y": 222.52988754429066
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 365.3871708399161,
-        "y": 222.52988754429066
-      },
-      "dragging": false
-    },
-    {
-      "id": "palette_1769826085175",
-      "type": "shaderNode",
-      "position": {
-        "x": 546.7038687287858,
-        "y": 317.7899200105604
-      },
-      "data": {
-        "definition": {
-          "id": "palette"
-        }
-      },
-      "width": 182,
-      "height": 66,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 546.7038687287858,
-        "y": 317.7899200105604
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_mult_1769826388998",
-      "type": "shaderNode",
-      "position": {
-        "x": 1123.4361042492242,
-        "y": 288.6418944022585
-      },
-      "data": {
-        "definition": {
-          "id": "color_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1123.4361042492242,
-        "y": 288.6418944022585
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_add_1769826422826",
-      "type": "shaderNode",
-      "position": {
-        "x": 1129.6979277141463,
-        "y": 448.41306070150347
-      },
-      "data": {
-        "definition": {
-          "id": "color_add"
-        }
-      },
-      "width": 92,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1129.6979277141463,
-        "y": 448.41306070150347
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_color_1769826528262",
-      "type": "shaderNode",
-      "position": {
-        "x": 801.7481759977775,
-        "y": 444.4555927486275
+        "x": -115.00295195714497,
+        "y": 199.15454756270023
       },
       "data": {
         "definition": {
           "id": "param_color"
         },
-        "value": "#000000"
+        "value": "#000000",
+        "label": "Color Param"
       },
+      "zIndex": 0,
       "width": 182,
       "height": 106,
-      "positionAbsolute": {
-        "x": 801.7481759977775,
-        "y": 444.4555927486275
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "uv_scale_1771101825747_mry5d",
-      "type": "shaderNode",
-      "position": {
-        "x": 1789.9748626831952,
-        "y": -280.87613041392746
-      },
-      "data": {
-        "definition": {
-          "id": "uv_scale"
-        }
-      },
-      "width": 93,
-      "height": 34,
       "selected": false,
       "positionAbsolute": {
-        "x": 1789.9748626831952,
-        "y": -280.87613041392746
+        "x": -115.00295195714497,
+        "y": 199.15454756270023
       },
       "dragging": false
     },
     {
-      "id": "param_float_1771101825747_hsz9y",
+      "id": "uv_1783827736050",
       "type": "shaderNode",
       "position": {
-        "x": 1554.547059858221,
-        "y": -273.83222086919835
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1554.547059858221,
-        "y": -273.83222086919835
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_fract_1771101825747_hstb8",
-      "type": "shaderNode",
-      "position": {
-        "x": 1923.6074281735964,
-        "y": -279.0703946910068
-      },
-      "data": {
-        "definition": {
-          "id": "vec_fract"
-        }
-      },
-      "width": 94,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1923.6074281735964,
-        "y": -279.0703946910068
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_shift_1771101825747_0e0ga",
-      "type": "shaderNode",
-      "position": {
-        "x": 2060.629493490925,
-        "y": -283.7512127124938
-      },
-      "data": {
-        "definition": {
-          "id": "uv_shift"
-        }
-      },
-      "width": 98,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2060.629493490925,
-        "y": -283.7512127124938
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101825747_izolk",
-      "type": "shaderNode",
-      "position": {
-        "x": 1831.169966674257,
-        "y": -362.3029164861194
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1831.169966674257,
-        "y": -362.3029164861194
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101825747_uy3e6",
-      "type": "shaderNode",
-      "position": {
-        "x": 1579.802453916856,
-        "y": -174.812382836306
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 1579.802453916856,
-        "y": -174.812382836306
-      }
-    },
-    {
-      "id": "uv_1771101825747_p9o9o",
-      "type": "shaderNode",
-      "position": {
-        "x": 1571.4475957682894,
-        "y": -125.85238955104953
+        "x": -38.17181003371542,
+        "y": -32.50926821630678
       },
       "data": {
         "definition": {
           "id": "uv"
-        }
+        },
+        "label": "UV Coord"
       },
+      "zIndex": 0,
       "width": 81,
       "height": 34,
-      "selected": false,
       "positionAbsolute": {
-        "x": 1571.4475957682894,
-        "y": -125.85238955104953
+        "x": -38.17181003371542,
+        "y": -32.50926821630678
       },
-      "dragging": false
+      "selected": false
     },
     {
-      "id": "vec_length_1771101825747_ceioq",
+      "id": "param_float_1783875112443",
       "type": "shaderNode",
       "position": {
-        "x": 1686.1634603229932,
-        "y": -123.61274108117667
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 1686.1634603229932,
-        "y": -123.61274108117667
-      }
-    },
-    {
-      "id": "math_negate_1771101825747_iec8u",
-      "type": "shaderNode",
-      "position": {
-        "x": 1785.4657845678498,
-        "y": -124.20057790954658
-      },
-      "data": {
-        "definition": {
-          "id": "math_negate"
-        }
-      },
-      "width": 88,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1785.4657845678498,
-        "y": -124.20057790954658
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_exp_1771101825747_ohj1g",
-      "type": "shaderNode",
-      "position": {
-        "x": 1893.2072287250385,
-        "y": -127.28547645457004
-      },
-      "data": {
-        "definition": {
-          "id": "math_exp"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1893.2072287250385,
-        "y": -127.28547645457004
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101825747_m7ym2",
-      "type": "shaderNode",
-      "position": {
-        "x": 2013.429716160915,
-        "y": -197.81563930113523
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2013.429716160915,
-        "y": -197.81563930113523
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101825747_7mb7z",
-      "type": "shaderNode",
-      "position": {
-        "x": 2098.1873304932433,
-        "y": -128.5779070645818
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2098.1873304932433,
-        "y": -128.5779070645818
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101825747_lc0ua",
-      "type": "shaderNode",
-      "position": {
-        "x": 1671.3201646544996,
-        "y": -43.338215163990526
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "8.00"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1671.3201646544996,
-        "y": -43.338215163990526
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101825747_jkyr3",
-      "type": "shaderNode",
-      "position": {
-        "x": 2199.018084377209,
-        "y": -86.8783268674157
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2199.018084377209,
-        "y": -86.8783268674157
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101825747_gus8f",
-      "type": "shaderNode",
-      "position": {
-        "x": 2047.3164780582802,
-        "y": -69.70870857016214
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2047.3164780582802,
-        "y": -69.70870857016214
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_sin_1771101825747_8hsgb",
-      "type": "shaderNode",
-      "position": {
-        "x": 2288.9561181775443,
-        "y": -79.32331109313878
-      },
-      "data": {
-        "definition": {
-          "id": "math_sin"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2288.9561181775443,
-        "y": -79.32331109313878
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101825747_xso6s",
-      "type": "shaderNode",
-      "position": {
-        "x": 2101.760199529368,
-        "y": 40.31209488053776
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2101.760199529368,
-        "y": 40.31209488053776
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_abs_1771101825747_7ys4d",
-      "type": "shaderNode",
-      "position": {
-        "x": 2207.1275948733182,
-        "y": 50.36320548676184
-      },
-      "data": {
-        "definition": {
-          "id": "math_abs"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2207.1275948733182,
-        "y": 50.36320548676184
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101825747_fddy8",
-      "type": "shaderNode",
-      "position": {
-        "x": 2381.7057837139955,
-        "y": 129.07101499972816
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2381.7057837139955,
-        "y": 129.07101499972816
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101825747_xfcpi",
-      "type": "shaderNode",
-      "position": {
-        "x": 2461.268181263336,
-        "y": -92.07298354860939
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.01"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2461.268181263336,
-        "y": -92.07298354860939
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_pow_1771101825747_qpcpv",
-      "type": "shaderNode",
-      "position": {
-        "x": 2498.4064176381003,
-        "y": 166.44320408519718
-      },
-      "data": {
-        "definition": {
-          "id": "math_pow"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2498.4064176381003,
-        "y": 166.44320408519718
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101825747_gx2tj",
-      "type": "shaderNode",
-      "position": {
-        "x": 2049.8452409482625,
-        "y": 180.1169337367063
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.2"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2049.8452409482625,
-        "y": 180.1169337367063
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_1771101825747_yydxr",
-      "type": "shaderNode",
-      "position": {
-        "x": 1494.8399719546755,
-        "y": 89.10023767749328
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1494.8399719546755,
-        "y": 89.10023767749328
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101825747_2e0jz",
-      "type": "shaderNode",
-      "position": {
-        "x": 1647.2089246289374,
-        "y": 117.58496648647224
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1647.2089246289374,
-        "y": 117.58496648647224
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101825747_zz3v4",
-      "type": "shaderNode",
-      "position": {
-        "x": 1630.9488621158343,
-        "y": 184.45601496328482
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1630.9488621158343,
-        "y": 184.45601496328482
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101825747_o5yu3",
-      "type": "shaderNode",
-      "position": {
-        "x": 1752.5057853216495,
-        "y": 149.40901392606065
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1752.5057853216495,
-        "y": 149.40901392606065
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101825747_gf56b",
-      "type": "shaderNode",
-      "position": {
-        "x": 1665.4600256467402,
-        "y": 375.9159644793151
+        "x": -246.10362228909923,
+        "y": 46.92756629677639
       },
       "data": {
         "definition": {
           "id": "param_float"
         },
         "value": "0.4",
-        "label": "i1",
-        "max": 4
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1665.4600256467402,
-        "y": 375.9159644793151
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101825747_v8oxe",
-      "type": "shaderNode",
-      "position": {
-        "x": 1862.796950977102,
-        "y": 178.86703171174418
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 1862.796950977102,
-        "y": 178.86703171174418
-      },
-      "dragging": false
-    },
-    {
-      "id": "palette_1771101825747_tm0sq",
-      "type": "shaderNode",
-      "position": {
-        "x": 2044.1136488659718,
-        "y": 274.12706417801405
-      },
-      "data": {
-        "definition": {
-          "id": "palette"
-        }
-      },
-      "width": 182,
-      "height": 66,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2044.1136488659718,
-        "y": 274.12706417801405
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_mult_1771101825747_dmj5i",
-      "type": "shaderNode",
-      "position": {
-        "x": 2620.84588438641,
-        "y": 244.9790385697121
-      },
-      "data": {
-        "definition": {
-          "id": "color_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2620.84588438641,
-        "y": 244.9790385697121
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_add_1771101825747_bmh0v",
-      "type": "shaderNode",
-      "position": {
-        "x": 2627.107707851332,
-        "y": 404.7502048689571
-      },
-      "data": {
-        "definition": {
-          "id": "color_add"
-        }
-      },
-      "width": 92,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2627.107707851332,
-        "y": 404.7502048689571
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_scale_1771101876221_lzqb8",
-      "type": "shaderNode",
-      "position": {
-        "x": 3189.465658004602,
-        "y": -311.7400090282858
-      },
-      "data": {
-        "definition": {
-          "id": "uv_scale"
-        }
-      },
-      "width": 93,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3189.465658004602,
-        "y": -311.7400090282858
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_t5goo",
-      "type": "shaderNode",
-      "position": {
-        "x": 2954.037855179628,
-        "y": -304.6960994835568
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2954.037855179628,
-        "y": -304.6960994835568
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_fract_1771101876221_2pnte",
-      "type": "shaderNode",
-      "position": {
-        "x": 3323.0982234950034,
-        "y": -309.93427330536525
-      },
-      "data": {
-        "definition": {
-          "id": "vec_fract"
-        }
-      },
-      "width": 94,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3323.0982234950034,
-        "y": -309.93427330536525
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_shift_1771101876221_l6oao",
-      "type": "shaderNode",
-      "position": {
-        "x": 3460.120288812332,
-        "y": -314.6150913268521
-      },
-      "data": {
-        "definition": {
-          "id": "uv_shift"
-        }
-      },
-      "width": 98,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3460.120288812332,
-        "y": -314.6150913268521
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_zq2az",
-      "type": "shaderNode",
-      "position": {
-        "x": 3230.660761995664,
-        "y": -393.1667951004777
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3230.660761995664,
-        "y": -393.1667951004777
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101876221_y3hhd",
-      "type": "shaderNode",
-      "position": {
-        "x": 2979.293249238263,
-        "y": -205.6762614506643
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 2979.293249238263,
-        "y": -205.6762614506643
-      }
-    },
-    {
-      "id": "uv_1771101876221_nstl6",
-      "type": "shaderNode",
-      "position": {
-        "x": 2970.9383910896963,
-        "y": -156.71626816540794
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2970.9383910896963,
-        "y": -156.71626816540794
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101876221_omffp",
-      "type": "shaderNode",
-      "position": {
-        "x": 3085.6542556444,
-        "y": -154.47661969553502
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 3085.6542556444,
-        "y": -154.47661969553502
-      }
-    },
-    {
-      "id": "math_negate_1771101876221_pvfh8",
-      "type": "shaderNode",
-      "position": {
-        "x": 3184.956579889257,
-        "y": -155.064456523905
-      },
-      "data": {
-        "definition": {
-          "id": "math_negate"
-        }
-      },
-      "width": 88,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3184.956579889257,
-        "y": -155.064456523905
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_exp_1771101876221_rh416",
-      "type": "shaderNode",
-      "position": {
-        "x": 3292.6980240464454,
-        "y": -158.1493550689284
-      },
-      "data": {
-        "definition": {
-          "id": "math_exp"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3292.6980240464454,
-        "y": -158.1493550689284
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101876221_o191j",
-      "type": "shaderNode",
-      "position": {
-        "x": 3412.9205114823217,
-        "y": -228.6795179154936
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3412.9205114823217,
-        "y": -228.6795179154936
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101876221_h42fq",
-      "type": "shaderNode",
-      "position": {
-        "x": 3497.6781258146502,
-        "y": -159.4417856789401
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3497.6781258146502,
-        "y": -159.4417856789401
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_zkx8z",
-      "type": "shaderNode",
-      "position": {
-        "x": 3070.8109599759064,
-        "y": -74.20209377834891
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "8.00"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3070.8109599759064,
-        "y": -74.20209377834891
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101876221_23q9e",
-      "type": "shaderNode",
-      "position": {
-        "x": 3598.508879698616,
-        "y": -117.74220548177408
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3598.508879698616,
-        "y": -117.74220548177408
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101876221_v64l2",
-      "type": "shaderNode",
-      "position": {
-        "x": 3446.807273379687,
-        "y": -100.5725871845205
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3446.807273379687,
-        "y": -100.5725871845205
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_sin_1771101876221_k4l00",
-      "type": "shaderNode",
-      "position": {
-        "x": 3688.4469134989513,
-        "y": -110.18718970749711
-      },
-      "data": {
-        "definition": {
-          "id": "math_sin"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3688.4469134989513,
-        "y": -110.18718970749711
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101876221_ulm0y",
-      "type": "shaderNode",
-      "position": {
-        "x": 3501.250994850775,
-        "y": 9.44821626617943
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3501.250994850775,
-        "y": 9.44821626617943
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_abs_1771101876221_s1aw1",
-      "type": "shaderNode",
-      "position": {
-        "x": 3606.618390194725,
-        "y": 19.499326872403515
-      },
-      "data": {
-        "definition": {
-          "id": "math_abs"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3606.618390194725,
-        "y": 19.499326872403515
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101876221_5dtv6",
-      "type": "shaderNode",
-      "position": {
-        "x": 3781.1965790354025,
-        "y": 98.20713638536978
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3781.1965790354025,
-        "y": 98.20713638536978
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_itcms",
-      "type": "shaderNode",
-      "position": {
-        "x": 3860.758976584743,
-        "y": -122.93686216296777
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.01"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3860.758976584743,
-        "y": -122.93686216296777
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_pow_1771101876221_04ult",
-      "type": "shaderNode",
-      "position": {
-        "x": 3897.897212959507,
-        "y": 135.5793254708388
-      },
-      "data": {
-        "definition": {
-          "id": "math_pow"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3897.897212959507,
-        "y": 135.5793254708388
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_robml",
-      "type": "shaderNode",
-      "position": {
-        "x": 3449.3360362696694,
-        "y": 149.25305512234792
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.2"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3449.3360362696694,
-        "y": 149.25305512234792
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_1771101876221_kxady",
-      "type": "shaderNode",
-      "position": {
-        "x": 2894.3307672760825,
-        "y": 58.2363590631349
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 2894.3307672760825,
-        "y": 58.2363590631349
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101876221_aujmo",
-      "type": "shaderNode",
-      "position": {
-        "x": 3046.6997199503444,
-        "y": 86.72108787211391
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3046.6997199503444,
-        "y": 86.72108787211391
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101876221_7qb80",
-      "type": "shaderNode",
-      "position": {
-        "x": 3030.4396574372413,
-        "y": 153.59213634892654
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3030.4396574372413,
-        "y": 153.59213634892654
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101876221_h4nek",
-      "type": "shaderNode",
-      "position": {
-        "x": 3151.9965806430564,
-        "y": 118.54513531170232
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3151.9965806430564,
-        "y": 118.54513531170232
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101876221_1x6r6",
-      "type": "shaderNode",
-      "position": {
-        "x": 3064.950820968147,
-        "y": 345.05208586495684
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.8",
-        "label": "i2",
-        "max": 4
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3064.950820968147,
-        "y": 345.05208586495684
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101876221_ikxaz",
-      "type": "shaderNode",
-      "position": {
-        "x": 3262.287746298509,
-        "y": 148.0031530973859
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3262.287746298509,
-        "y": 148.0031530973859
-      },
-      "dragging": false
-    },
-    {
-      "id": "palette_1771101876221_nvbap",
-      "type": "shaderNode",
-      "position": {
-        "x": 3443.6044441873787,
-        "y": 243.26318556365555
-      },
-      "data": {
-        "definition": {
-          "id": "palette"
-        }
-      },
-      "width": 182,
-      "height": 66,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 3443.6044441873787,
-        "y": 243.26318556365555
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_mult_1771101876221_agd1f",
-      "type": "shaderNode",
-      "position": {
-        "x": 4020.336679707817,
-        "y": 214.1151599553537
-      },
-      "data": {
-        "definition": {
-          "id": "color_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4020.336679707817,
-        "y": 214.1151599553537
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_add_1771101876221_y2uc4",
-      "type": "shaderNode",
-      "position": {
-        "x": 4026.598503172739,
-        "y": 373.8863262545986
-      },
-      "data": {
-        "definition": {
-          "id": "color_add"
-        }
-      },
-      "width": 92,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4026.598503172739,
-        "y": 373.8863262545986
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_scale_1771101902243_7aw2e",
-      "type": "shaderNode",
-      "position": {
-        "x": 4469.005784975121,
-        "y": -368.195080831547
-      },
-      "data": {
-        "definition": {
-          "id": "uv_scale"
-        }
-      },
-      "width": 93,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4469.005784975121,
-        "y": -368.195080831547
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_0bj7j",
-      "type": "shaderNode",
-      "position": {
-        "x": 4233.577982150147,
-        "y": -361.1511712868179
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4233.577982150147,
-        "y": -361.1511712868179
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_fract_1771101902243_g642q",
-      "type": "shaderNode",
-      "position": {
-        "x": 4602.638350465522,
-        "y": -366.38934510862634
-      },
-      "data": {
-        "definition": {
-          "id": "vec_fract"
-        }
-      },
-      "width": 94,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4602.638350465522,
-        "y": -366.38934510862634
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_shift_1771101902243_5n6b2",
-      "type": "shaderNode",
-      "position": {
-        "x": 4739.6604157828515,
-        "y": -371.0701631301133
-      },
-      "data": {
-        "definition": {
-          "id": "uv_shift"
-        }
-      },
-      "width": 98,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4739.6604157828515,
-        "y": -371.0701631301133
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_cwura",
-      "type": "shaderNode",
-      "position": {
-        "x": 4510.200888966183,
-        "y": -449.6218669037389
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.5"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4510.200888966183,
-        "y": -449.6218669037389
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101902243_yamw7",
-      "type": "shaderNode",
-      "position": {
-        "x": 4258.833376208782,
-        "y": -262.1313332539256
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 4258.833376208782,
-        "y": -262.1313332539256
-      }
-    },
-    {
-      "id": "uv_1771101902243_gdbhe",
-      "type": "shaderNode",
-      "position": {
-        "x": 4250.478518060216,
-        "y": -213.17133996866912
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4250.478518060216,
-        "y": -213.17133996866912
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101902243_mb3ux",
-      "type": "shaderNode",
-      "position": {
-        "x": 4365.19438261492,
-        "y": -210.93169149879625
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "dragging": false,
-      "positionAbsolute": {
-        "x": 4365.19438261492,
-        "y": -210.93169149879625
-      }
-    },
-    {
-      "id": "math_negate_1771101902243_ct5q1",
-      "type": "shaderNode",
-      "position": {
-        "x": 4464.496706859776,
-        "y": -211.51952832716617
-      },
-      "data": {
-        "definition": {
-          "id": "math_negate"
-        }
-      },
-      "width": 88,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4464.496706859776,
-        "y": -211.51952832716617
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_exp_1771101902243_no2z7",
-      "type": "shaderNode",
-      "position": {
-        "x": 4572.238151016965,
-        "y": -214.60442687218963
-      },
-      "data": {
-        "definition": {
-          "id": "math_exp"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4572.238151016965,
-        "y": -214.60442687218963
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101902243_5dkii",
-      "type": "shaderNode",
-      "position": {
-        "x": 4692.4606384528415,
-        "y": -285.1345897187548
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4692.4606384528415,
-        "y": -285.1345897187548
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_mult_1771101902243_nrzw2",
-      "type": "shaderNode",
-      "position": {
-        "x": 4777.21825278517,
-        "y": -215.8968574822014
-      },
-      "data": {
-        "definition": {
-          "id": "math_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4777.21825278517,
-        "y": -215.8968574822014
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_qs7g8",
-      "type": "shaderNode",
-      "position": {
-        "x": 4350.351086946426,
-        "y": -130.65716558161014
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "8.00"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4350.351086946426,
-        "y": -130.65716558161014
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101902243_fpbyn",
-      "type": "shaderNode",
-      "position": {
-        "x": 4878.049006669135,
-        "y": -174.1972772850353
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4878.049006669135,
-        "y": -174.1972772850353
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101902243_1gdq4",
-      "type": "shaderNode",
-      "position": {
-        "x": 4726.347400350207,
-        "y": -157.02765898778173
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4726.347400350207,
-        "y": -157.02765898778173
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_sin_1771101902243_qpk9b",
-      "type": "shaderNode",
-      "position": {
-        "x": 4967.987040469471,
-        "y": -166.64226151075835
-      },
-      "data": {
-        "definition": {
-          "id": "math_sin"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4967.987040469471,
-        "y": -166.64226151075835
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101902243_h0gl7",
-      "type": "shaderNode",
-      "position": {
-        "x": 4780.791121821295,
-        "y": -47.006855537081805
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4780.791121821295,
-        "y": -47.006855537081805
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_abs_1771101902243_o0kg1",
-      "type": "shaderNode",
-      "position": {
-        "x": 4886.158517165245,
-        "y": -36.95574493085772
-      },
-      "data": {
-        "definition": {
-          "id": "math_abs"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4886.158517165245,
-        "y": -36.95574493085772
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_div_1771101902243_ffwxy",
-      "type": "shaderNode",
-      "position": {
-        "x": 5060.736706005921,
-        "y": 41.752064582108545
-      },
-      "data": {
-        "definition": {
-          "id": "math_div"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 5060.736706005921,
-        "y": 41.752064582108545
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_un492",
-      "type": "shaderNode",
-      "position": {
-        "x": 5140.299103555262,
-        "y": -179.391933966229
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0.01"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 5140.299103555262,
-        "y": -179.391933966229
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_pow_1771101902243_hjgse",
-      "type": "shaderNode",
-      "position": {
-        "x": 5177.437339930027,
-        "y": 79.12425366757762
-      },
-      "data": {
-        "definition": {
-          "id": "math_pow"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 5177.437339930027,
-        "y": 79.12425366757762
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_6p6mn",
-      "type": "shaderNode",
-      "position": {
-        "x": 4728.876163240189,
-        "y": 92.79798331908668
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.2"
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4728.876163240189,
-        "y": 92.79798331908668
-      },
-      "dragging": false
-    },
-    {
-      "id": "uv_1771101902243_elbzj",
-      "type": "shaderNode",
-      "position": {
-        "x": 4173.870894246602,
-        "y": 1.7812872598736647
-      },
-      "data": {
-        "definition": {
-          "id": "uv"
-        }
-      },
-      "width": 81,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4173.870894246602,
-        "y": 1.7812872598736647
-      },
-      "dragging": false
-    },
-    {
-      "id": "vec_length_1771101902243_6c298",
-      "type": "shaderNode",
-      "position": {
-        "x": 4326.239846920864,
-        "y": 30.26601606885268
-      },
-      "data": {
-        "definition": {
-          "id": "vec_length"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4326.239846920864,
-        "y": 30.26601606885268
-      },
-      "dragging": false
-    },
-    {
-      "id": "time_1771101902243_80wm6",
-      "type": "shaderNode",
-      "position": {
-        "x": 4309.97978440776,
-        "y": 97.13706454566525
-      },
-      "data": {
-        "definition": {
-          "id": "time"
-        }
-      },
-      "width": 96,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4309.97978440776,
-        "y": 97.13706454566525
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101902243_1pftt",
-      "type": "shaderNode",
-      "position": {
-        "x": 4431.536707613575,
-        "y": 62.09006350844109
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4431.536707613575,
-        "y": 62.09006350844109
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771101902243_qqkfj",
-      "type": "shaderNode",
-      "position": {
-        "x": 4344.490947938666,
-        "y": 288.59701406169563
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "1.2",
-        "label": "i3",
-        "max": 4
-      },
-      "width": 172,
-      "height": 65,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4344.490947938666,
-        "y": 288.59701406169563
-      },
-      "dragging": false
-    },
-    {
-      "id": "math_add_1771101902243_xwz2v",
-      "type": "shaderNode",
-      "position": {
-        "x": 4541.827873269029,
-        "y": 91.54808129412461
-      },
-      "data": {
-        "definition": {
-          "id": "math_add"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4541.827873269029,
-        "y": 91.54808129412461
-      },
-      "dragging": false
-    },
-    {
-      "id": "palette_1771101902243_jwumz",
-      "type": "shaderNode",
-      "position": {
-        "x": 4723.144571157898,
-        "y": 186.80811376039432
-      },
-      "data": {
-        "definition": {
-          "id": "palette"
-        }
-      },
-      "width": 182,
-      "height": 66,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 4723.144571157898,
-        "y": 186.80811376039432
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_mult_1771101902243_8hhhd",
-      "type": "shaderNode",
-      "position": {
-        "x": 5299.876806678337,
-        "y": 157.66008815209247
-      },
-      "data": {
-        "definition": {
-          "id": "color_mult"
-        }
-      },
-      "width": 66,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 5299.876806678337,
-        "y": 157.66008815209247
-      },
-      "dragging": false
-    },
-    {
-      "id": "color_add_1771101902243_niite",
-      "type": "shaderNode",
-      "position": {
-        "x": 5306.1386301432585,
-        "y": 317.4312544513374
-      },
-      "data": {
-        "definition": {
-          "id": "color_add"
-        }
-      },
-      "width": 92,
-      "height": 34,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 5306.1386301432585,
-        "y": 317.4312544513374
-      },
-      "dragging": false
-    },
-    {
-      "id": "param_float_1771102054097",
-      "type": "shaderNode",
-      "position": {
-        "x": 217.8891045485991,
-        "y": 456.9207825753064
-      },
-      "data": {
-        "definition": {
-          "id": "param_float"
-        },
-        "value": "0",
-        "label": "i0"
+        "label": "Float Param"
       },
       "zIndex": 0,
       "width": 172,
       "height": 65,
       "positionAbsolute": {
-        "x": 217.8891045485991,
-        "y": 456.9207825753064
-      }
+        "x": -246.10362228909923,
+        "y": 46.92756629677639
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "custom_beautynode_1783875215836_winbl",
+      "type": "shaderNode",
+      "position": {
+        "x": 421.4995188613093,
+        "y": 86.81267457486794
+      },
+      "data": {
+        "definition": {
+          "id": "custom_beautynode"
+        },
+        "label": "BeautyNode"
+      },
+      "zIndex": 0,
+      "width": 193,
+      "height": 116,
+      "positionAbsolute": {
+        "x": 421.4995188613093,
+        "y": 86.81267457486794
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1783875244883",
+      "type": "shaderNode",
+      "position": {
+        "x": 232.33481511096045,
+        "y": 248.69074866590387
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        },
+        "label": "×"
+      },
+      "zIndex": 0,
+      "width": 66,
+      "height": 34,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 232.33481511096045,
+        "y": 248.69074866590387
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875263955",
+      "type": "shaderNode",
+      "position": {
+        "x": -41.249768167705895,
+        "y": 335.9910512323948
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "2",
+        "label": "Float Param 2"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": -41.249768167705895,
+        "y": 335.9910512323948
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875268546",
+      "type": "shaderNode",
+      "position": {
+        "x": 342.2931257992317,
+        "y": 361.6466069358414
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "3",
+        "label": "Float Param 3"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 342.2931257992317,
+        "y": 361.6466069358414
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875271535",
+      "type": "shaderNode",
+      "position": {
+        "x": 667.4575508991668,
+        "y": 390.071953510739
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "4",
+        "label": "Float Param 4"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 667.4575508991668,
+        "y": 390.071953510739
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875352220_503mp",
+      "type": "shaderNode",
+      "position": {
+        "x": 347.17766909549607,
+        "y": 271.21813447999443
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.4",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 347.17766909549607,
+        "y": 271.21813447999443
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1783875352220_oha6a",
+      "type": "shaderNode",
+      "position": {
+        "x": 556.1348587276515,
+        "y": 332.18493458836303
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        },
+        "label": "×"
+      },
+      "zIndex": 0,
+      "width": 66,
+      "height": 34,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 556.1348587276515,
+        "y": 332.18493458836303
+      },
+      "dragging": false
+    },
+    {
+      "id": "custom_beautynode_1783875364004_etvhy",
+      "type": "shaderNode",
+      "position": {
+        "x": 687.9163035635122,
+        "y": 108.55060531690702
+      },
+      "data": {
+        "definition": {
+          "id": "custom_beautynode"
+        },
+        "label": "BeautyNode"
+      },
+      "zIndex": 0,
+      "width": 193,
+      "height": 116,
+      "positionAbsolute": {
+        "x": 687.9163035635122,
+        "y": 108.55060531690702
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "custom_beautynode_1783875370782_ye5g3",
+      "type": "shaderNode",
+      "position": {
+        "x": 967.9951284908284,
+        "y": 120.6621220705207
+      },
+      "data": {
+        "definition": {
+          "id": "custom_beautynode"
+        },
+        "label": "BeautyNode"
+      },
+      "zIndex": 0,
+      "width": 193,
+      "height": 116,
+      "positionAbsolute": {
+        "x": 967.9951284908284,
+        "y": 120.6621220705207
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875401792_zytk2",
+      "type": "shaderNode",
+      "position": {
+        "x": 681.9296816709036,
+        "y": 264.4533620163818
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.4",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 681.9296816709036,
+        "y": 264.4533620163818
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1783875401792_7rs5w",
+      "type": "shaderNode",
+      "position": {
+        "x": 887.8589921146554,
+        "y": 322.392282936347
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        },
+        "label": "×"
+      },
+      "zIndex": 0,
+      "width": 66,
+      "height": 34,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 887.8589921146554,
+        "y": 322.392282936347
+      },
+      "dragging": false
+    },
+    {
+      "id": "custom_beautynode_1783875448678_g5r0z",
+      "type": "shaderNode",
+      "position": {
+        "x": 1279.8666848963805,
+        "y": 152.4548535487566
+      },
+      "data": {
+        "definition": {
+          "id": "custom_beautynode"
+        },
+        "label": "BeautyNode"
+      },
+      "zIndex": 0,
+      "width": 193,
+      "height": 116,
+      "positionAbsolute": {
+        "x": 1279.8666848963805,
+        "y": 152.4548535487566
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875541560_tnt56",
+      "type": "shaderNode",
+      "position": {
+        "x": 978.4951284908284,
+        "y": 350.5439672877514
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "0.4",
+        "label": "Float Param"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 978.4951284908284,
+        "y": 350.5439672877514
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "math_mult_1783875543032_6hwe2",
+      "type": "shaderNode",
+      "position": {
+        "x": 1173.805450345789,
+        "y": 396.3227591717855
+      },
+      "data": {
+        "definition": {
+          "id": "math_mult"
+        },
+        "label": "×"
+      },
+      "zIndex": 0,
+      "width": 66,
+      "height": 34,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1173.805450345789,
+        "y": 396.3227591717855
+      },
+      "dragging": false
+    },
+    {
+      "id": "param_float_1783875555212",
+      "type": "shaderNode",
+      "position": {
+        "x": 928.2405650126747,
+        "y": 457.2270074036351
+      },
+      "data": {
+        "definition": {
+          "id": "param_float"
+        },
+        "value": "5",
+        "label": "Float Param 5"
+      },
+      "zIndex": 0,
+      "width": 172,
+      "height": 65,
+      "positionAbsolute": {
+        "x": 928.2405650126747,
+        "y": 457.2270074036351
+      },
+      "selected": false
+    },
+    {
+      "id": "preview_1783875616555",
+      "type": "previewNode",
+      "position": {
+        "x": 402.90352582468165,
+        "y": -146.83489068284666
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        },
+        "label": "Preview"
+      },
+      "zIndex": 0,
+      "width": 152,
+      "height": 152,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 402.90352582468165,
+        "y": -146.83489068284666
+      },
+      "dragging": false
+    },
+    {
+      "id": "preview_1783875623722_zz7w0",
+      "type": "previewNode",
+      "position": {
+        "x": 723.5556995055294,
+        "y": -125.94275665393731
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        },
+        "label": "Preview"
+      },
+      "zIndex": 0,
+      "width": 152,
+      "height": 152,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 723.5556995055294,
+        "y": -125.94275665393731
+      },
+      "dragging": false
+    },
+    {
+      "id": "preview_1783875632257_1dh24",
+      "type": "previewNode",
+      "position": {
+        "x": 977.8975513314165,
+        "y": -88.0942667988946
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        },
+        "label": "Preview"
+      },
+      "zIndex": 0,
+      "width": 152,
+      "height": 152,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 977.8975513314165,
+        "y": -88.0942667988946
+      },
+      "dragging": false
+    },
+    {
+      "id": "preview_1783875639124_n99bg",
+      "type": "previewNode",
+      "position": {
+        "x": 1223.1557655920933,
+        "y": -65.38517288586897
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        },
+        "label": "Preview"
+      },
+      "zIndex": 0,
+      "width": 152,
+      "height": 152,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1223.1557655920933,
+        "y": -65.38517288586897
+      },
+      "dragging": false
+    },
+    {
+      "id": "preview_1783875644969_4g7sq",
+      "type": "previewNode",
+      "position": {
+        "x": 1531.9994428092418,
+        "y": -18.453045465616015
+      },
+      "data": {
+        "definition": {
+          "id": "preview"
+        },
+        "label": "Preview"
+      },
+      "zIndex": 0,
+      "width": 152,
+      "height": 152,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1531.9994428092418,
+        "y": -18.453045465616015
+      },
+      "dragging": false
     }
   ],
   "edges": [
@@ -2704,462 +586,99 @@
       "type": "default",
       "interactionWidth": 25,
       "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1769824852775",
-      "sourceHandle": "out",
-      "target": "uv_scale_1769825038719",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "reactflow__edge-uv_1769824852775out-uv_scale_1769825038719uv",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825065923",
-      "sourceHandle": "out",
-      "target": "uv_scale_1769825038719",
-      "targetHandle": "scale",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825065923out-uv_scale_1769825038719scale",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_scale_1769825038719",
-      "sourceHandle": "out",
-      "target": "vec_fract_1769825101203",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-uv_scale_1769825038719out-vec_fract_1769825101203in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "vec_fract_1769825101203",
-      "sourceHandle": "out",
-      "target": "uv_shift_1769825138808",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "reactflow__edge-vec_fract_1769825101203out-uv_shift_1769825138808uv",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825163347_eqtfn",
-      "sourceHandle": "out",
-      "target": "uv_shift_1769825138808",
-      "targetHandle": "shift",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825163347_eqtfnout-uv_shift_1769825138808shift",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1769825274571",
-      "sourceHandle": "out",
-      "target": "vec_length_1769825283380_b8t2z",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-uv_1769825274571out-vec_length_1769825283380_b8t2zin",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1769825283380_b8t2z",
-      "sourceHandle": "out",
-      "target": "math_negate_1769825309251",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-vec_length_1769825283380_b8t2zout-math_negate_1769825309251in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_negate_1769825309251",
-      "sourceHandle": "out",
-      "target": "math_exp_1769825356783",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-math_negate_1769825309251out-math_exp_1769825356783in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1769825380543",
-      "sourceHandle": "out",
-      "target": "math_mult_1769825428967",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-math_mult_1769825380543out-math_mult_1769825428967a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825432559",
-      "sourceHandle": "out",
-      "target": "math_mult_1769825428967",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825432559out-math_mult_1769825428967b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1769825428967",
-      "sourceHandle": "out",
-      "target": "math_add_1769825501319",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-math_mult_1769825428967out-math_add_1769825501319a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1769825531183",
-      "sourceHandle": "t",
-      "target": "math_add_1769825501319",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-time_1769825531183t-math_add_1769825501319b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825432559",
-      "sourceHandle": "out",
-      "target": "math_div_1769825581087",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825432559out-math_div_1769825581087b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1769825501319",
-      "sourceHandle": "out",
-      "target": "math_sin_1769825567223",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-math_add_1769825501319out-math_sin_1769825567223in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_sin_1769825567223",
-      "sourceHandle": "out",
-      "target": "math_div_1769825581087",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-math_sin_1769825567223out-math_div_1769825581087a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1769825581087",
-      "sourceHandle": "out",
-      "target": "math_abs_1769825615731",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-math_div_1769825581087out-math_abs_1769825615731in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_abs_1769825615731",
-      "sourceHandle": "out",
-      "target": "math_div_1769825659203",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-math_abs_1769825615731out-math_div_1769825659203b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825676810_18ys1",
-      "sourceHandle": "out",
-      "target": "math_div_1769825659203",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825676810_18ys1out-math_div_1769825659203a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1769825659203",
-      "sourceHandle": "out",
-      "target": "math_pow_1769825722091",
-      "targetHandle": "base",
-      "animated": false,
-      "id": "reactflow__edge-math_div_1769825659203out-math_pow_1769825722091base",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825732760_varpo",
-      "sourceHandle": "out",
-      "target": "math_pow_1769825722091",
-      "targetHandle": "exp",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825732760_varpoout-math_pow_1769825722091exp",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1769825775195",
-      "sourceHandle": "out",
-      "target": "vec_length_1769825789863",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-uv_1769825775195out-vec_length_1769825789863in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1769825789863",
-      "sourceHandle": "out",
-      "target": "math_add_1769825825911",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-vec_length_1769825789863out-math_add_1769825825911a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1769825815823",
-      "sourceHandle": "t",
-      "target": "math_add_1769825825911",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-time_1769825815823t-math_add_1769825825911b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1769825935646_bj15a",
-      "sourceHandle": "out",
-      "target": "math_add_1769826024633_konnr",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-param_float_1769825935646_bj15aout-math_add_1769826024633_konnrb",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1769825825911",
-      "sourceHandle": "out",
-      "target": "math_add_1769826024633_konnr",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-math_add_1769825825911out-math_add_1769826024633_konnra",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1769826024633_konnr",
-      "sourceHandle": "out",
-      "target": "palette_1769826085175",
-      "targetHandle": "t",
-      "animated": false,
-      "id": "reactflow__edge-math_add_1769826024633_konnrout-palette_1769826085175t",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_pow_1769825722091",
-      "sourceHandle": "out",
-      "target": "color_mult_1769826388998",
-      "targetHandle": "fac",
-      "animated": false,
-      "id": "reactflow__edge-math_pow_1769825722091out-color_mult_1769826388998fac",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "palette_1769826085175",
-      "sourceHandle": "color",
-      "target": "color_mult_1769826388998",
-      "targetHandle": "col",
-      "animated": false,
-      "id": "reactflow__edge-palette_1769826085175color-color_mult_1769826388998col",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_mult_1769826388998",
-      "sourceHandle": "out",
-      "target": "color_add_1769826422826",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "reactflow__edge-color_mult_1769826388998out-color_add_1769826422826a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "param_color_1769826528262",
+      "source": "param_color_1783827725067",
       "sourceHandle": "rgb",
-      "target": "color_add_1769826422826",
-      "targetHandle": "b",
+      "target": "custom_beautynode_1783827707307",
+      "targetHandle": "custom_input_1783790329789",
       "animated": false,
-      "id": "reactflow__edge-param_color_1769826528262rgb-color_add_1769826422826b",
-      "selected": false
+      "id": "reactflow__edge-param_color_1783827725067rgb-custom_beautynode_1783827707307custom_input_1783790329789"
     },
     {
-      "id": "e_uv_1769878085286_uv_scale_1769878090957",
-      "source": "uv_1769878085286",
-      "sourceHandle": "out",
-      "target": "uv_scale_1769878090957",
-      "targetHandle": "uv",
+      "type": "default",
+      "interactionWidth": 25,
       "style": {
-        "stroke": "#fff",
+        "stroke": "#81c784",
         "strokeWidth": 3
-      }
+      },
+      "source": "uv_1783827736050",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783827707307",
+      "targetHandle": "custom_input_default",
+      "animated": false,
+      "id": "reactflow__edge-uv_1783827736050out-custom_beautynode_1783827707307custom_input_default"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1783875112443",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783827707307",
+      "targetHandle": "custom_input_1783790190112",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875112443out-custom_beautynode_1783827707307custom_input_1783790190112"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1783875112443",
+      "sourceHandle": "out",
+      "target": "math_mult_1783875244883",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875112443out-math_mult_1783875244883a"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1783875244883",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783875215836_winbl",
+      "targetHandle": "custom_input_1783790190112",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1783875244883out-custom_beautynode_1783875215836_winblcustom_input_1783790190112"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1783875263955",
+      "sourceHandle": "out",
+      "target": "math_mult_1783875244883",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875263955out-math_mult_1783875244883b"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783827707307",
+      "sourceHandle": "custom_output_1783790248712",
+      "target": "custom_beautynode_1783875215836_winbl",
+      "targetHandle": "custom_input_default",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783827707307custom_output_1783790248712-custom_beautynode_1783875215836_winblcustom_input_default"
     },
     {
       "type": "default",
@@ -3168,13 +687,12 @@
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "color_add_1769826422826",
-      "sourceHandle": "out",
-      "target": "preview_1769878753816_ukedk",
-      "targetHandle": "in",
+      "source": "custom_beautynode_1783827707307",
+      "sourceHandle": "custom_output_default",
+      "target": "custom_beautynode_1783875215836_winbl",
+      "targetHandle": "custom_input_1783790329789",
       "animated": false,
-      "id": "reactflow__edge-color_add_1769826422826out-preview_1769878753816_ukedkin",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783827707307custom_output_default-custom_beautynode_1783875215836_winblcustom_input_1783790329789"
     },
     {
       "type": "default",
@@ -3183,71 +701,12 @@
         "stroke": "#a0a0a0",
         "strokeWidth": 3
       },
-      "source": "time_1769878985797",
-      "sourceHandle": "t",
-      "target": "sdf_circle_1769879049789",
-      "targetHandle": "radius",
-      "animated": false,
-      "id": "reactflow__edge-time_1769878985797t-sdf_circle_1769879049789radius"
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1769825138808",
+      "source": "param_float_1783875352220_503mp",
       "sourceHandle": "out",
-      "target": "vec_length_1769825259695",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "reactflow__edge-uv_shift_1769825138808out-vec_length_1769825259695in",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1769825259695",
-      "sourceHandle": "out",
-      "target": "math_mult_1769825380543",
+      "target": "math_mult_1783875352220_oha6a",
       "targetHandle": "a",
       "animated": false,
-      "id": "reactflow__edge-vec_length_1769825259695out-math_mult_1769825380543a",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_exp_1769825356783",
-      "sourceHandle": "out",
-      "target": "math_mult_1769825380543",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-math_exp_1769825356783out-math_mult_1769825380543b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_hsz9y",
-      "sourceHandle": "out",
-      "target": "uv_scale_1771101825747_mry5d",
-      "targetHandle": "scale",
-      "animated": false,
-      "id": "e_param_float_1771101825747_hsz9y_uv_scale_1771101825747_mry5d_0.18251626302445012",
+      "id": "e_param_float_1783875352220_503mp_math_mult_1783875352220_oha6a_0.6644040497652987",
       "selected": false
     },
     {
@@ -3257,373 +716,12 @@
         "stroke": "#81c784",
         "strokeWidth": 3
       },
-      "source": "uv_scale_1771101825747_mry5d",
-      "sourceHandle": "out",
-      "target": "vec_fract_1771101825747_hstb8",
-      "targetHandle": "in",
+      "source": "custom_beautynode_1783875215836_winbl",
+      "sourceHandle": "custom_output_1783790248712",
+      "target": "custom_beautynode_1783875364004_etvhy",
+      "targetHandle": "custom_input_default",
       "animated": false,
-      "id": "e_uv_scale_1771101825747_mry5d_vec_fract_1771101825747_hstb8_0.5845342103768563",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "vec_fract_1771101825747_hstb8",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101825747_0e0ga",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "e_vec_fract_1771101825747_hstb8_uv_shift_1771101825747_0e0ga_0.721749665145821",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_izolk",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101825747_0e0ga",
-      "targetHandle": "shift",
-      "animated": false,
-      "id": "e_param_float_1771101825747_izolk_uv_shift_1771101825747_0e0ga_0.7812335391616043",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101825747_p9o9o",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101825747_ceioq",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101825747_p9o9o_vec_length_1771101825747_ceioq_0.14615265760222074",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101825747_ceioq",
-      "sourceHandle": "out",
-      "target": "math_negate_1771101825747_iec8u",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_vec_length_1771101825747_ceioq_math_negate_1771101825747_iec8u_0.08102392692151594",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_negate_1771101825747_iec8u",
-      "sourceHandle": "out",
-      "target": "math_exp_1771101825747_ohj1g",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_negate_1771101825747_iec8u_math_exp_1771101825747_ohj1g_0.09247686270681732",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101825747_m7ym2",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101825747_7mb7z",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101825747_m7ym2_math_mult_1771101825747_7mb7z_0.7045918365207289",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_lc0ua",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101825747_7mb7z",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101825747_lc0ua_math_mult_1771101825747_7mb7z_0.6991598686159135",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101825747_7mb7z",
-      "sourceHandle": "out",
-      "target": "math_add_1771101825747_jkyr3",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101825747_7mb7z_math_add_1771101825747_jkyr3_0.31358758679425947",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101825747_gus8f",
-      "sourceHandle": "t",
-      "target": "math_add_1771101825747_jkyr3",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101825747_gus8f_math_add_1771101825747_jkyr3_0.5270203819124862",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_lc0ua",
-      "sourceHandle": "out",
-      "target": "math_div_1771101825747_xso6s",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101825747_lc0ua_math_div_1771101825747_xso6s_0.2440550219462292",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101825747_jkyr3",
-      "sourceHandle": "out",
-      "target": "math_sin_1771101825747_8hsgb",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_add_1771101825747_jkyr3_math_sin_1771101825747_8hsgb_0.06689782891912477",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_sin_1771101825747_8hsgb",
-      "sourceHandle": "out",
-      "target": "math_div_1771101825747_xso6s",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_sin_1771101825747_8hsgb_math_div_1771101825747_xso6s_0.8608442485456947",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101825747_xso6s",
-      "sourceHandle": "out",
-      "target": "math_abs_1771101825747_7ys4d",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_div_1771101825747_xso6s_math_abs_1771101825747_7ys4d_0.38367971008265644",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_abs_1771101825747_7ys4d",
-      "sourceHandle": "out",
-      "target": "math_div_1771101825747_fddy8",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_math_abs_1771101825747_7ys4d_math_div_1771101825747_fddy8_0.4701689211728848",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_xfcpi",
-      "sourceHandle": "out",
-      "target": "math_div_1771101825747_fddy8",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_param_float_1771101825747_xfcpi_math_div_1771101825747_fddy8_0.35973301830258775",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101825747_fddy8",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101825747_qpcpv",
-      "targetHandle": "base",
-      "animated": false,
-      "id": "e_math_div_1771101825747_fddy8_math_pow_1771101825747_qpcpv_0.15761697854406376",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_gx2tj",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101825747_qpcpv",
-      "targetHandle": "exp",
-      "animated": false,
-      "id": "e_param_float_1771101825747_gx2tj_math_pow_1771101825747_qpcpv_0.3209968984047077",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101825747_yydxr",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101825747_2e0jz",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101825747_yydxr_vec_length_1771101825747_2e0jz_0.8363873569324634",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101825747_2e0jz",
-      "sourceHandle": "out",
-      "target": "math_add_1771101825747_o5yu3",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101825747_2e0jz_math_add_1771101825747_o5yu3_0.9176068822156075",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101825747_zz3v4",
-      "sourceHandle": "t",
-      "target": "math_add_1771101825747_o5yu3",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101825747_zz3v4_math_add_1771101825747_o5yu3_0.09800268983890381",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101825747_gf56b",
-      "sourceHandle": "out",
-      "target": "math_add_1771101825747_v8oxe",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101825747_gf56b_math_add_1771101825747_v8oxe_0.8582798430120365",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101825747_o5yu3",
-      "sourceHandle": "out",
-      "target": "math_add_1771101825747_v8oxe",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_add_1771101825747_o5yu3_math_add_1771101825747_v8oxe_0.8439226274599555",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101825747_v8oxe",
-      "sourceHandle": "out",
-      "target": "palette_1771101825747_tm0sq",
-      "targetHandle": "t",
-      "animated": false,
-      "id": "e_math_add_1771101825747_v8oxe_palette_1771101825747_tm0sq_0.7023641692890756",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_pow_1771101825747_qpcpv",
-      "sourceHandle": "out",
-      "target": "color_mult_1771101825747_dmj5i",
-      "targetHandle": "fac",
-      "animated": false,
-      "id": "e_math_pow_1771101825747_qpcpv_color_mult_1771101825747_dmj5i_0.7444851199758573",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783875215836_winblcustom_output_1783790248712-custom_beautynode_1783875364004_etvhycustom_input_default"
     },
     {
       "type": "default",
@@ -3632,13 +730,26 @@
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "palette_1771101825747_tm0sq",
-      "sourceHandle": "color",
-      "target": "color_mult_1771101825747_dmj5i",
-      "targetHandle": "col",
+      "source": "custom_beautynode_1783875215836_winbl",
+      "sourceHandle": "custom_output_default",
+      "target": "custom_beautynode_1783875364004_etvhy",
+      "targetHandle": "custom_input_1783790329789",
       "animated": false,
-      "id": "e_palette_1771101825747_tm0sq_color_mult_1771101825747_dmj5i_0.7917926050329084",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783875215836_winblcustom_output_default-custom_beautynode_1783875364004_etvhycustom_input_1783790329789"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#81c784",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783875364004_etvhy",
+      "sourceHandle": "custom_output_1783790248712",
+      "target": "custom_beautynode_1783875370782_ye5g3",
+      "targetHandle": "custom_input_default",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783875364004_etvhycustom_output_1783790248712-custom_beautynode_1783875370782_ye5g3custom_input_default"
     },
     {
       "type": "default",
@@ -3647,28 +758,12 @@
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "color_mult_1771101825747_dmj5i",
-      "sourceHandle": "out",
-      "target": "color_add_1771101825747_bmh0v",
-      "targetHandle": "a",
+      "source": "custom_beautynode_1783875364004_etvhy",
+      "sourceHandle": "custom_output_default",
+      "target": "custom_beautynode_1783875370782_ye5g3",
+      "targetHandle": "custom_input_1783790329789",
       "animated": false,
-      "id": "e_color_mult_1771101825747_dmj5i_color_add_1771101825747_bmh0v_0.040704189944939406",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1771101825747_0e0ga",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101825747_uy3e6",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_shift_1771101825747_0e0ga_vec_length_1771101825747_uy3e6_0.08588588717320966",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783875364004_etvhycustom_output_default-custom_beautynode_1783875370782_ye5g3custom_input_1783790329789"
     },
     {
       "type": "default",
@@ -3677,42 +772,70 @@
         "stroke": "#a0a0a0",
         "strokeWidth": 3
       },
-      "source": "vec_length_1771101825747_uy3e6",
+      "source": "param_float_1783875268546",
       "sourceHandle": "out",
-      "target": "math_mult_1771101825747_m7ym2",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101825747_uy3e6_math_mult_1771101825747_m7ym2_0.1360109015193126",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_exp_1771101825747_ohj1g",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101825747_m7ym2",
+      "target": "math_mult_1783875352220_oha6a",
       "targetHandle": "b",
       "animated": false,
-      "id": "e_math_exp_1771101825747_ohj1g_math_mult_1771101825747_m7ym2_0.26648502940455754",
+      "id": "reactflow__edge-param_float_1783875268546out-math_mult_1783875352220_oha6ab",
       "selected": false
     },
     {
       "type": "default",
       "interactionWidth": 25,
       "style": {
-        "stroke": "#81c784",
+        "stroke": "#a0a0a0",
         "strokeWidth": 3
       },
-      "source": "uv_shift_1769825138808",
+      "source": "param_float_1783875401792_zytk2",
       "sourceHandle": "out",
-      "target": "uv_scale_1771101825747_mry5d",
-      "targetHandle": "uv",
+      "target": "math_mult_1783875401792_7rs5w",
+      "targetHandle": "a",
       "animated": false,
-      "id": "reactflow__edge-uv_shift_1769825138808out-uv_scale_1771101825747_mry5duv"
+      "id": "e_param_float_1783875401792_zytk2_math_mult_1783875401792_7rs5w_0.5739588307045834",
+      "selected": false
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1783875352220_oha6a",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783875364004_etvhy",
+      "targetHandle": "custom_input_1783790190112",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1783875352220_oha6aout-custom_beautynode_1783875364004_etvhycustom_input_1783790190112"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1783875401792_7rs5w",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783875370782_ye5g3",
+      "targetHandle": "custom_input_1783790190112",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1783875401792_7rs5wout-custom_beautynode_1783875370782_ye5g3custom_input_1783790190112"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1783875271535",
+      "sourceHandle": "out",
+      "target": "math_mult_1783875401792_7rs5w",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875271535out-math_mult_1783875401792_7rs5wb"
     },
     {
       "type": "default",
@@ -3721,27 +844,12 @@
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "color_add_1769826422826",
-      "sourceHandle": "out",
-      "target": "color_add_1771101825747_bmh0v",
-      "targetHandle": "b",
+      "source": "custom_beautynode_1783875370782_ye5g3",
+      "sourceHandle": "custom_output_default",
+      "target": "custom_beautynode_1783875448678_g5r0z",
+      "targetHandle": "custom_input_1783790329789",
       "animated": false,
-      "id": "reactflow__edge-color_add_1769826422826out-color_add_1771101825747_bmh0vb"
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_t5goo",
-      "sourceHandle": "out",
-      "target": "uv_scale_1771101876221_lzqb8",
-      "targetHandle": "scale",
-      "animated": false,
-      "id": "e_param_float_1771101876221_t5goo_uv_scale_1771101876221_lzqb8_0.2243239918324259",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783875370782_ye5g3custom_output_default-custom_beautynode_1783875448678_g5r0zcustom_input_1783790329789"
     },
     {
       "type": "default",
@@ -3750,373 +858,12 @@
         "stroke": "#81c784",
         "strokeWidth": 3
       },
-      "source": "uv_scale_1771101876221_lzqb8",
-      "sourceHandle": "out",
-      "target": "vec_fract_1771101876221_2pnte",
-      "targetHandle": "in",
+      "source": "custom_beautynode_1783875370782_ye5g3",
+      "sourceHandle": "custom_output_1783790248712",
+      "target": "custom_beautynode_1783875448678_g5r0z",
+      "targetHandle": "custom_input_default",
       "animated": false,
-      "id": "e_uv_scale_1771101876221_lzqb8_vec_fract_1771101876221_2pnte_0.5087377889123285",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "vec_fract_1771101876221_2pnte",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101876221_l6oao",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "e_vec_fract_1771101876221_2pnte_uv_shift_1771101876221_l6oao_0.2869390184740135",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_zq2az",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101876221_l6oao",
-      "targetHandle": "shift",
-      "animated": false,
-      "id": "e_param_float_1771101876221_zq2az_uv_shift_1771101876221_l6oao_0.3766192994699846",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101876221_nstl6",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101876221_omffp",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101876221_nstl6_vec_length_1771101876221_omffp_0.8666458077543794",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101876221_omffp",
-      "sourceHandle": "out",
-      "target": "math_negate_1771101876221_pvfh8",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_vec_length_1771101876221_omffp_math_negate_1771101876221_pvfh8_0.5987897091480796",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_negate_1771101876221_pvfh8",
-      "sourceHandle": "out",
-      "target": "math_exp_1771101876221_rh416",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_negate_1771101876221_pvfh8_math_exp_1771101876221_rh416_0.41198684921606044",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101876221_o191j",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101876221_h42fq",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101876221_o191j_math_mult_1771101876221_h42fq_0.4092279192971172",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_zkx8z",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101876221_h42fq",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101876221_zkx8z_math_mult_1771101876221_h42fq_0.32648197660548595",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101876221_h42fq",
-      "sourceHandle": "out",
-      "target": "math_add_1771101876221_23q9e",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101876221_h42fq_math_add_1771101876221_23q9e_0.30301695632421943",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101876221_v64l2",
-      "sourceHandle": "t",
-      "target": "math_add_1771101876221_23q9e",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101876221_v64l2_math_add_1771101876221_23q9e_0.1280211502510663",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_zkx8z",
-      "sourceHandle": "out",
-      "target": "math_div_1771101876221_ulm0y",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101876221_zkx8z_math_div_1771101876221_ulm0y_0.06856125446659278",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101876221_23q9e",
-      "sourceHandle": "out",
-      "target": "math_sin_1771101876221_k4l00",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_add_1771101876221_23q9e_math_sin_1771101876221_k4l00_0.9844801189869922",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_sin_1771101876221_k4l00",
-      "sourceHandle": "out",
-      "target": "math_div_1771101876221_ulm0y",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_sin_1771101876221_k4l00_math_div_1771101876221_ulm0y_0.6143663454799044",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101876221_ulm0y",
-      "sourceHandle": "out",
-      "target": "math_abs_1771101876221_s1aw1",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_div_1771101876221_ulm0y_math_abs_1771101876221_s1aw1_0.6407451356172974",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_abs_1771101876221_s1aw1",
-      "sourceHandle": "out",
-      "target": "math_div_1771101876221_5dtv6",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_math_abs_1771101876221_s1aw1_math_div_1771101876221_5dtv6_0.3955483614772073",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_itcms",
-      "sourceHandle": "out",
-      "target": "math_div_1771101876221_5dtv6",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_param_float_1771101876221_itcms_math_div_1771101876221_5dtv6_0.8817191102331523",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101876221_5dtv6",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101876221_04ult",
-      "targetHandle": "base",
-      "animated": false,
-      "id": "e_math_div_1771101876221_5dtv6_math_pow_1771101876221_04ult_0.0995852488646759",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_robml",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101876221_04ult",
-      "targetHandle": "exp",
-      "animated": false,
-      "id": "e_param_float_1771101876221_robml_math_pow_1771101876221_04ult_0.36469109617273343",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101876221_kxady",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101876221_aujmo",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101876221_kxady_vec_length_1771101876221_aujmo_0.46792306933618066",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101876221_aujmo",
-      "sourceHandle": "out",
-      "target": "math_add_1771101876221_h4nek",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101876221_aujmo_math_add_1771101876221_h4nek_0.4452189632800184",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101876221_7qb80",
-      "sourceHandle": "t",
-      "target": "math_add_1771101876221_h4nek",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101876221_7qb80_math_add_1771101876221_h4nek_0.7760677042466307",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101876221_1x6r6",
-      "sourceHandle": "out",
-      "target": "math_add_1771101876221_ikxaz",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101876221_1x6r6_math_add_1771101876221_ikxaz_0.7558187796540512",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101876221_h4nek",
-      "sourceHandle": "out",
-      "target": "math_add_1771101876221_ikxaz",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_add_1771101876221_h4nek_math_add_1771101876221_ikxaz_0.5621269383528303",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101876221_ikxaz",
-      "sourceHandle": "out",
-      "target": "palette_1771101876221_nvbap",
-      "targetHandle": "t",
-      "animated": false,
-      "id": "e_math_add_1771101876221_ikxaz_palette_1771101876221_nvbap_0.44974723352128554",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_pow_1771101876221_04ult",
-      "sourceHandle": "out",
-      "target": "color_mult_1771101876221_agd1f",
-      "targetHandle": "fac",
-      "animated": false,
-      "id": "e_math_pow_1771101876221_04ult_color_mult_1771101876221_agd1f_0.3455253414304619",
-      "selected": false
+      "id": "reactflow__edge-custom_beautynode_1783875370782_ye5g3custom_output_1783790248712-custom_beautynode_1783875448678_g5r0zcustom_input_default"
     },
     {
       "type": "default",
@@ -4125,626 +872,129 @@
         "stroke": "#fff176",
         "strokeWidth": 3
       },
-      "source": "palette_1771101876221_nvbap",
-      "sourceHandle": "color",
-      "target": "color_mult_1771101876221_agd1f",
-      "targetHandle": "col",
-      "animated": false,
-      "id": "e_palette_1771101876221_nvbap_color_mult_1771101876221_agd1f_0.3028765203775823",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_mult_1771101876221_agd1f",
-      "sourceHandle": "out",
-      "target": "color_add_1771101876221_y2uc4",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_color_mult_1771101876221_agd1f_color_add_1771101876221_y2uc4_0.5195925910830275",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1771101876221_l6oao",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101876221_y3hhd",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_shift_1771101876221_l6oao_vec_length_1771101876221_y3hhd_0.5479895032589347",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101876221_y3hhd",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101876221_o191j",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101876221_y3hhd_math_mult_1771101876221_o191j_0.7635652311058804",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_exp_1771101876221_rh416",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101876221_o191j",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_math_exp_1771101876221_rh416_math_mult_1771101876221_o191j_0.779243771126248",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1771101825747_0e0ga",
-      "sourceHandle": "out",
-      "target": "uv_scale_1771101876221_lzqb8",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "reactflow__edge-uv_shift_1771101825747_0e0gaout-uv_scale_1771101876221_lzqb8uv"
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_add_1771101825747_bmh0v",
-      "sourceHandle": "out",
-      "target": "color_add_1771101876221_y2uc4",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-color_add_1771101825747_bmh0vout-color_add_1771101876221_y2uc4b",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_0bj7j",
-      "sourceHandle": "out",
-      "target": "uv_scale_1771101902243_7aw2e",
-      "targetHandle": "scale",
-      "animated": false,
-      "id": "e_param_float_1771101902243_0bj7j_uv_scale_1771101902243_7aw2e_0.8616639288870225",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_scale_1771101902243_7aw2e",
-      "sourceHandle": "out",
-      "target": "vec_fract_1771101902243_g642q",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_scale_1771101902243_7aw2e_vec_fract_1771101902243_g642q_0.6172198271206879",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "vec_fract_1771101902243_g642q",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101902243_5n6b2",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "e_vec_fract_1771101902243_g642q_uv_shift_1771101902243_5n6b2_0.22644012951744297",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_cwura",
-      "sourceHandle": "out",
-      "target": "uv_shift_1771101902243_5n6b2",
-      "targetHandle": "shift",
-      "animated": false,
-      "id": "e_param_float_1771101902243_cwura_uv_shift_1771101902243_5n6b2_0.15683085463324364",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101902243_gdbhe",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101902243_mb3ux",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101902243_gdbhe_vec_length_1771101902243_mb3ux_0.8473359091347177",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101902243_mb3ux",
-      "sourceHandle": "out",
-      "target": "math_negate_1771101902243_ct5q1",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_vec_length_1771101902243_mb3ux_math_negate_1771101902243_ct5q1_0.26226397786891",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_negate_1771101902243_ct5q1",
-      "sourceHandle": "out",
-      "target": "math_exp_1771101902243_no2z7",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_negate_1771101902243_ct5q1_math_exp_1771101902243_no2z7_0.1247473378453352",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101902243_5dkii",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101902243_nrzw2",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101902243_5dkii_math_mult_1771101902243_nrzw2_0.3193566859949334",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_qs7g8",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101902243_nrzw2",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101902243_qs7g8_math_mult_1771101902243_nrzw2_0.6779992448852129",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_mult_1771101902243_nrzw2",
-      "sourceHandle": "out",
-      "target": "math_add_1771101902243_fpbyn",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_mult_1771101902243_nrzw2_math_add_1771101902243_fpbyn_0.5380180431165315",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101902243_1gdq4",
-      "sourceHandle": "t",
-      "target": "math_add_1771101902243_fpbyn",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101902243_1gdq4_math_add_1771101902243_fpbyn_0.3837179271823997",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_qs7g8",
-      "sourceHandle": "out",
-      "target": "math_div_1771101902243_h0gl7",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101902243_qs7g8_math_div_1771101902243_h0gl7_0.9076354521573913",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101902243_fpbyn",
-      "sourceHandle": "out",
-      "target": "math_sin_1771101902243_qpk9b",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_add_1771101902243_fpbyn_math_sin_1771101902243_qpk9b_0.6911634479507281",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_sin_1771101902243_qpk9b",
-      "sourceHandle": "out",
-      "target": "math_div_1771101902243_h0gl7",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_sin_1771101902243_qpk9b_math_div_1771101902243_h0gl7_0.40015199727107",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101902243_h0gl7",
-      "sourceHandle": "out",
-      "target": "math_abs_1771101902243_o0kg1",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_math_div_1771101902243_h0gl7_math_abs_1771101902243_o0kg1_0.3576257885679033",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_abs_1771101902243_o0kg1",
-      "sourceHandle": "out",
-      "target": "math_div_1771101902243_ffwxy",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_math_abs_1771101902243_o0kg1_math_div_1771101902243_ffwxy_0.8023720907901749",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_un492",
-      "sourceHandle": "out",
-      "target": "math_div_1771101902243_ffwxy",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_param_float_1771101902243_un492_math_div_1771101902243_ffwxy_0.12235373711113096",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_div_1771101902243_ffwxy",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101902243_hjgse",
-      "targetHandle": "base",
-      "animated": false,
-      "id": "e_math_div_1771101902243_ffwxy_math_pow_1771101902243_hjgse_0.4268346724560571",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_6p6mn",
-      "sourceHandle": "out",
-      "target": "math_pow_1771101902243_hjgse",
-      "targetHandle": "exp",
-      "animated": false,
-      "id": "e_param_float_1771101902243_6p6mn_math_pow_1771101902243_hjgse_0.9013201690600591",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_1771101902243_elbzj",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101902243_6c298",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_1771101902243_elbzj_vec_length_1771101902243_6c298_0.7953551115456539",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101902243_6c298",
-      "sourceHandle": "out",
-      "target": "math_add_1771101902243_1pftt",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101902243_6c298_math_add_1771101902243_1pftt_0.14566207323972757",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "time_1771101902243_80wm6",
-      "sourceHandle": "t",
-      "target": "math_add_1771101902243_1pftt",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_time_1771101902243_80wm6_math_add_1771101902243_1pftt_0.6073984455587798",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "param_float_1771101902243_qqkfj",
-      "sourceHandle": "out",
-      "target": "math_add_1771101902243_xwz2v",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_param_float_1771101902243_qqkfj_math_add_1771101902243_xwz2v_0.8527521362880396",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101902243_1pftt",
-      "sourceHandle": "out",
-      "target": "math_add_1771101902243_xwz2v",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_math_add_1771101902243_1pftt_math_add_1771101902243_xwz2v_0.9865917850455045",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_add_1771101902243_xwz2v",
-      "sourceHandle": "out",
-      "target": "palette_1771101902243_jwumz",
-      "targetHandle": "t",
-      "animated": false,
-      "id": "e_math_add_1771101902243_xwz2v_palette_1771101902243_jwumz_0.01732005304748896",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_pow_1771101902243_hjgse",
-      "sourceHandle": "out",
-      "target": "color_mult_1771101902243_8hhhd",
-      "targetHandle": "fac",
-      "animated": false,
-      "id": "e_math_pow_1771101902243_hjgse_color_mult_1771101902243_8hhhd_0.5674903885103615",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "palette_1771101902243_jwumz",
-      "sourceHandle": "color",
-      "target": "color_mult_1771101902243_8hhhd",
-      "targetHandle": "col",
-      "animated": false,
-      "id": "e_palette_1771101902243_jwumz_color_mult_1771101902243_8hhhd_0.11246759159801345",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_mult_1771101902243_8hhhd",
-      "sourceHandle": "out",
-      "target": "color_add_1771101902243_niite",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_color_mult_1771101902243_8hhhd_color_add_1771101902243_niite_0.6313923803082371",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1771101902243_5n6b2",
-      "sourceHandle": "out",
-      "target": "vec_length_1771101902243_yamw7",
-      "targetHandle": "in",
-      "animated": false,
-      "id": "e_uv_shift_1771101902243_5n6b2_vec_length_1771101902243_yamw7_0.17888772047779977",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "vec_length_1771101902243_yamw7",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101902243_5dkii",
-      "targetHandle": "a",
-      "animated": false,
-      "id": "e_vec_length_1771101902243_yamw7_math_mult_1771101902243_5dkii_0.7535548916921955",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#a0a0a0",
-        "strokeWidth": 3
-      },
-      "source": "math_exp_1771101902243_no2z7",
-      "sourceHandle": "out",
-      "target": "math_mult_1771101902243_5dkii",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "e_math_exp_1771101902243_no2z7_math_mult_1771101902243_5dkii_0.505821993746556",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#81c784",
-        "strokeWidth": 3
-      },
-      "source": "uv_shift_1771101876221_l6oao",
-      "sourceHandle": "out",
-      "target": "uv_scale_1771101902243_7aw2e",
-      "targetHandle": "uv",
-      "animated": false,
-      "id": "reactflow__edge-uv_shift_1771101876221_l6oaoout-uv_scale_1771101902243_7aw2euv"
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_add_1771101876221_y2uc4",
-      "sourceHandle": "out",
-      "target": "color_add_1771101902243_niite",
-      "targetHandle": "b",
-      "animated": false,
-      "id": "reactflow__edge-color_add_1771101876221_y2uc4out-color_add_1771101902243_niiteb",
-      "selected": false
-    },
-    {
-      "type": "default",
-      "interactionWidth": 25,
-      "style": {
-        "stroke": "#fff176",
-        "strokeWidth": 3
-      },
-      "source": "color_add_1771101902243_niite",
-      "sourceHandle": "out",
+      "source": "custom_beautynode_1783875448678_g5r0z",
+      "sourceHandle": "custom_output_default",
       "target": "out1",
       "targetHandle": "color",
       "animated": false,
-      "id": "reactflow__edge-color_add_1771101902243_niiteout-out1color"
+      "id": "reactflow__edge-custom_beautynode_1783875448678_g5r0zcustom_output_default-out1color"
     },
     {
-      "id": "e_param_float_1771102054097_math_add_1769826024633_konnr",
-      "source": "param_float_1771102054097",
-      "sourceHandle": "out",
-      "target": "math_add_1769826024633_konnr",
-      "targetHandle": "b",
+      "type": "default",
+      "interactionWidth": 25,
       "style": {
-        "stroke": "#fff",
+        "stroke": "#a0a0a0",
         "strokeWidth": 3
-      }
+      },
+      "source": "param_float_1783875541560_tnt56",
+      "sourceHandle": "out",
+      "target": "math_mult_1783875543032_6hwe2",
+      "targetHandle": "a",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875541560_tnt56out-math_mult_1783875543032_6hwe2a"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "math_mult_1783875543032_6hwe2",
+      "sourceHandle": "out",
+      "target": "custom_beautynode_1783875448678_g5r0z",
+      "targetHandle": "custom_input_1783790190112",
+      "animated": false,
+      "id": "reactflow__edge-math_mult_1783875543032_6hwe2out-custom_beautynode_1783875448678_g5r0zcustom_input_1783790190112"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#a0a0a0",
+        "strokeWidth": 3
+      },
+      "source": "param_float_1783875555212",
+      "sourceHandle": "out",
+      "target": "math_mult_1783875543032_6hwe2",
+      "targetHandle": "b",
+      "animated": false,
+      "id": "reactflow__edge-param_float_1783875555212out-math_mult_1783875543032_6hwe2b"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783827707307",
+      "sourceHandle": "custom_output_default",
+      "target": "preview_1783875616555",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783827707307custom_output_default-preview_1783875616555in"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783875215836_winbl",
+      "sourceHandle": "custom_output_default",
+      "target": "preview_1783875623722_zz7w0",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783875215836_winblcustom_output_default-preview_1783875623722_zz7w0in"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783875364004_etvhy",
+      "sourceHandle": "custom_output_default",
+      "target": "preview_1783875632257_1dh24",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783875364004_etvhycustom_output_default-preview_1783875632257_1dh24in"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783875370782_ye5g3",
+      "sourceHandle": "custom_output_default",
+      "target": "preview_1783875639124_n99bg",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783875370782_ye5g3custom_output_default-preview_1783875639124_n99bgin"
+    },
+    {
+      "type": "default",
+      "interactionWidth": 25,
+      "style": {
+        "stroke": "#fff176",
+        "strokeWidth": 3
+      },
+      "source": "custom_beautynode_1783875448678_g5r0z",
+      "sourceHandle": "custom_output_default",
+      "target": "preview_1783875644969_4g7sq",
+      "targetHandle": "in",
+      "animated": false,
+      "id": "reactflow__edge-custom_beautynode_1783875448678_g5r0zcustom_output_default-preview_1783875644969_4g7sqin"
     }
   ],
   "viewport": {
-    "x": -347.62463255638113,
-    "y": 69.48406373251635,
-    "zoom": 0.6964404506369036
+    "x": 48.070801722900114,
+    "y": 227.9886059161243,
+    "zoom": 0.6605283353641953
   }
 }
