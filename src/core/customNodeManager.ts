@@ -135,6 +135,60 @@ export function getCustomNode(nodeId: string): CustomNodeDefinition | null {
 }
 
 /**
+ * Collects the full definitions of every custom node referenced by `nodes`,
+ * including nested ones (a custom node's own subgraph can itself contain
+ * instances of other custom nodes) — so a save embedding this list is
+ * self-contained and still works when opened somewhere the recipient's
+ * custom_nodes_library doesn't already have them. A save file previously
+ * only carried a bare {id: "custom_x"} reference, so sharing a project with
+ * a custom node meant the recipient saw "Missing node" unless they'd
+ * separately built the exact same node themselves.
+ */
+export function collectUsedCustomNodes(nodes: Node[]): CustomNodeDefinition[] {
+  const collected = new Map<string, CustomNodeDefinition>();
+
+  const visit = (scanNodes: Node[]) => {
+    scanNodes.forEach(node => {
+      const defId = node.data?.definition?.id as string | undefined;
+      if (!defId || collected.has(defId)) return; // dedup + cycle guard
+      const def = getCustomNode(defId);
+      if (!def) return;
+      collected.set(defId, def);
+      if (def.subgraph?.nodes) visit(def.subgraph.nodes);
+    });
+  };
+
+  visit(nodes);
+  return Array.from(collected.values());
+}
+
+/**
+ * Registers custom node definitions embedded in a loaded save file. Only
+ * adds ones missing locally — never overwrites an existing definition with
+ * the same id, in case of an unrelated id collision. Returns true if
+ * anything was actually imported, so the caller can refresh the sidebar.
+ */
+export function importEmbeddedCustomNodes(customNodes: CustomNodeDefinition[] | undefined): boolean {
+  if (!customNodes || customNodes.length === 0) return false;
+  let imported = false;
+  customNodes.forEach(def => {
+    if (getCustomNode(def.id)) return; // already have it — don't clobber
+    addCustomNode(def);
+    // Re-read through loadCustomNodes() rather than registering `def` as-is —
+    // it came from parsed JSON (a file), so glslTemplate on it AND on every
+    // node inside its subgraph was stripped by JSON.stringify. loadCustomNodes()
+    // is what restores those; skipping it left NODE_REGISTRY holding function-less
+    // subgraph nodes, breaking compilation the first time this node was used.
+    const restored = getCustomNode(def.id);
+    if (restored) {
+      (NODE_REGISTRY as Record<string, ShaderNodeDefinition>)[def.id] = restored;
+    }
+    imported = true;
+  });
+  return imported;
+}
+
+/**
  * Extract inputs and outputs from Custom Input/Output nodes in subgraph.
  *
  * Port order follows the nodes' vertical (Y) position on the canvas, top to

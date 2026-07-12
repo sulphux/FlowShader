@@ -1,6 +1,6 @@
 import type { Node, Edge, Viewport } from 'reactflow';
 import { NODE_REGISTRY } from '../nodes';
-import { loadCustomNodes } from './customNodeManager';
+import { loadCustomNodes, collectUsedCustomNodes, importEmbeddedCustomNodes, type CustomNodeDefinition } from './customNodeManager';
 import type { ShaderNodeDefinition } from './types';
 import { computeSmartSplitPorts } from './smartSplitAdapter';
 
@@ -44,6 +44,14 @@ export interface SerializedGraph {
   nodes: SerializedNode[];
   edges: Edge[];
   viewport?: Viewport;
+  /**
+   * Full definitions of every custom node used in this graph (including
+   * nested ones), embedded so the save is self-contained. Without this, a
+   * shared project only carried {id: "custom_x"} references — opening it
+   * anywhere the recipient's browser didn't already have that exact custom
+   * node showed a "Missing node" placeholder instead of working.
+   */
+  customNodes?: CustomNodeDefinition[];
 }
 
 const findDefinition = (defId: string): ShaderNodeDefinition | undefined => {
@@ -78,7 +86,9 @@ const portsDiffer = (def: ShaderNodeDefinition, registryDef: ShaderNodeDefinitio
 };
 
 export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport): SerializedGraph {
+  const usedCustomNodes = collectUsedCustomNodes(nodes);
   return {
+    ...(usedCustomNodes.length > 0 ? { customNodes: usedCustomNodes } : {}),
     nodes: nodes.map(n => {
       const def = n.data.definition as ShaderNodeDefinition;
       const registryDef = findDefinition(def.id);
@@ -190,6 +200,15 @@ const dropOrphanedEdges = (nodes: SerializedNode[], edges: Edge[]): Edge[] => {
 };
 
 export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges: Edge[]; viewport?: Viewport } {
+  // Register any custom nodes embedded in the file BEFORE resolving node
+  // definitions below (findDefinition falls back to loadCustomNodes(), so
+  // this must run first for a just-imported custom node to resolve instead
+  // of showing "Missing node").
+  const imported = importEmbeddedCustomNodes(parsed.customNodes);
+  if (imported && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('customNodesUpdated'));
+  }
+
   const migratedEdges = migrateLegacyEdges(parsed.nodes || [], parsed.edges || []);
   const edges = dropOrphanedEdges(parsed.nodes || [], migratedEdges);
   const nodesWithSavedPorts = new Set<string>();
