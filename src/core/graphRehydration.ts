@@ -4,6 +4,7 @@ import { loadCustomNodes, collectUsedCustomNodes, importEmbeddedCustomNodes, typ
 import type { ShaderNodeDefinition } from './types';
 import { computeSmartSplitPorts } from './smartSplitAdapter';
 import { TYPE_COLORS } from './theme';
+import { resolveFrameBufferMode, type FrameBufferMode } from './frameBufferMode';
 
 /**
  * Wspólna serializacja/rehydracja grafu.
@@ -38,6 +39,7 @@ interface SerializedNode {
     step?: number;
     detectedType?: string;
     forcedType?: string;
+    captureMode?: FrameBufferMode;
   };
   [key: string]: unknown;
 }
@@ -111,6 +113,7 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           // nodes' glslTemplates disagree about the variable type after reload
           detectedType: n.data.detectedType,
           forcedType: n.data.forcedType,
+          captureMode: n.data.captureMode,
         },
       } as SerializedNode;
     }),
@@ -231,10 +234,18 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
       nodesWithSavedPorts.add(n.id);
     }
 
+    const restoredData = {
+      ...n.data,
+      definition,
+      ...(savedDef.id === 'feedback'
+        ? { captureMode: resolveFrameBufferMode(n, edges) }
+        : {}),
+    };
+
     return {
       ...n,
       type,
-      data: { ...n.data, definition },
+      data: restoredData,
     } as Node;
   });
 

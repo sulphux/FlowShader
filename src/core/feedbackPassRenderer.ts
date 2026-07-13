@@ -97,6 +97,21 @@ export class FeedbackPassRenderer {
     return textures;
   }
 
+  /**
+   * Snapshot should become visible as soon as it is captured. Last Frame is
+   * different: after the ping-pong swap `read` is the just-written current
+   * input and `write` is the completed previous frame, which is the texture
+   * consumers must see for a real one-frame delay.
+   */
+  private displayTextures(): Map<string, THREE.Texture> {
+    const textures = new Map<string, THREE.Texture>();
+    this.states.forEach(state => {
+      const target = state.definition.captureMode === 'last-frame' ? state.write : state.read;
+      if (target) textures.set(state.definition.uniform, target.texture);
+    });
+    return textures;
+  }
+
   renderPasses(
     renderer: THREE.WebGLRenderer,
     scene: THREE.Scene,
@@ -132,7 +147,7 @@ export class FeedbackPassRenderer {
   }
 
   bindCurrent(material: THREE.ShaderMaterial): void {
-    updateFeedbackUniforms(material, this.currentTextures());
+    updateFeedbackUniforms(material, this.displayTextures());
   }
 
   dispose(): void {

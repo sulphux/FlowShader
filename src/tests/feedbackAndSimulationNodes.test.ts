@@ -71,7 +71,7 @@ describe('Feedback node', () => {
     expectValidGLSL(shader, 'feedback -> output');
   });
 
-  it('compiles a legal self-referential writer pass and snapshots every frame by default', () => {
+  it('preserves disconnected legacy buffers as Last Frame and compiles a legal self-reference', () => {
     const feedback = { id: 'feedback-1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } } as GraphNode;
     const output = { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY.output } } as GraphNode;
     const edges = [
@@ -80,6 +80,7 @@ describe('Feedback node', () => {
     ];
 
     const [pass] = compileFeedbackPasses([feedback, output], edges);
+    expect(pass.captureMode).toBe('last-frame');
     expect(pass.uniform).toBe(feedbackUniformName('feedback-1'));
     expect(pass.shader).toContain('vec4(var_feedback_1, 0.0)');
     expect(pass.shader).not.toContain('var__');
@@ -97,6 +98,7 @@ describe('Feedback node', () => {
       { source: 'pulse1', sourceHandle: 'out', target: 'feedback1', targetHandle: 'impulse' },
     ];
     const [pass] = compileFeedbackPasses(nodes, edges);
+    expect(pass.captureMode).toBe('snapshot');
     expect(pass.shader).toContain('step(0.000001, var_pulse1)');
     expect(pass.shader).toContain('(1.0 - step(1.5, var_pulse1))');
     expect(pass.shader).toContain(`texture2D(${pass.uniform}, screenUv).a`);
@@ -105,6 +107,38 @@ describe('Feedback node', () => {
     expect(pass.shader).not.toContain(`texture2D(${pass.uniform}, (uv * 0.5 + 0.5))`);
     expect(pass.shader).toContain('var_color1');
     expectValidGLSL(pass.shader, 'impulse-gated feedback writer');
+  });
+
+  it('keeps an explicit Snapshot frozen when no trigger is connected', () => {
+    const nodes: GraphNode[] = [
+      { id: 'color1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#ff0000' } },
+      { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback, captureMode: 'snapshot' } },
+    ];
+    const [pass] = compileFeedbackPasses(nodes, [
+      { source: 'color1', sourceHandle: 'out', target: 'buffer1', targetHandle: 'in' },
+    ]);
+
+    expect(pass.captureMode).toBe('snapshot');
+    expect(pass.shader).toContain(`texture2D(${pass.uniform}, screenUv)`);
+    expect(pass.shader).not.toContain('vec4(var_color1, 0.0)');
+    expectValidGLSL(pass.shader, 'disconnected explicit Snapshot writer');
+  });
+
+  it('ignores Snapshot events in explicit Last Frame mode and writes Image In every render', () => {
+    const nodes: GraphNode[] = [
+      { id: 'color1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#ff0000' } },
+      { id: 'impulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.impulse } },
+      { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback, captureMode: 'last-frame' } },
+    ];
+    const [pass] = compileFeedbackPasses(nodes, [
+      { source: 'color1', sourceHandle: 'out', target: 'buffer1', targetHandle: 'in' },
+      { source: 'impulse1', sourceHandle: 'out', target: 'buffer1', targetHandle: 'impulse' },
+    ]);
+
+    expect(pass.captureMode).toBe('last-frame');
+    expect(pass.shader).toContain('vec4(var_color1, 0.0)');
+    expect(pass.shader).not.toContain('var_feedback_event_buffer1');
+    expectValidGLSL(pass.shader, 'explicit Last Frame writer');
   });
 
   it('latches a connected Impulse by interval event instead of sampling its short pulse', () => {

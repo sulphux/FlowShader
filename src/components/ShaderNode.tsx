@@ -12,6 +12,7 @@ import { compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
 import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
 import ShaderPreview from './ShaderPreview';
+import { resolveFrameBufferMode, type FrameBufferMode } from '../core/frameBufferMode';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const def = data.definition as ShaderNodeDefinition;
@@ -136,6 +137,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isCustomNode = Boolean('isCustom' in def && def.isCustom);
   const isCustomPort = def.id === 'custom_input' || def.id === 'custom_output';
   const displayedFloatValue = floatEditing ? floatDraft : String(currentValue);
+  const frameBufferMode: FrameBufferMode = def.id === 'feedback'
+    ? resolveFrameBufferMode({ id, data }, getEdges())
+    : 'snapshot';
 
   // Custom Input/Output: force a fixed type instead of relying on auto-detection
   // from whatever gets connected. Forced type wins over detectedType everywhere
@@ -431,7 +435,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   // --- FRAME BUFFER (opcjonalny podgląd zapamiętanego obrazu) ---
   if (def.id === 'feedback') {
     return (
-      <div style={{ ...baseStyle, width: '210px', position: 'relative', overflow: 'visible' }}>
+      <div style={{ ...baseStyle, width: '230px', position: 'relative', overflow: 'visible' }}>
         {renderInfoIcon()}
         <div style={{ height: '4px', background: TYPE_COLORS.vec3, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
         <div style={{
@@ -457,18 +461,64 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           </button>
         </div>
 
+        <div
+          className="nodrag"
+          role="group"
+          aria-label="Frame Buffer mode"
+          data-testid="frame-buffer-mode-switch"
+          onMouseDown={preventDrag}
+          style={{ display: 'flex', gap: '3px', padding: '7px 8px 0' }}
+        >
+          {([
+            ['snapshot', 'SNAPSHOT', 'Capture once per event'],
+            ['last-frame', 'LAST FRAME', 'One completed frame behind'],
+          ] as const).map(([mode, label, title]) => {
+            const active = frameBufferMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                data-testid={`frame-buffer-mode-${mode}`}
+                aria-pressed={active}
+                title={title}
+                onMouseDown={preventDrag}
+                onClick={() => updateNodeData({ captureMode: mode })}
+                style={{
+                  flex: 1, background: active ? '#263a42' : '#242424',
+                  border: `1px solid ${active ? '#29d9ff' : '#404040'}`,
+                  borderRadius: '4px', color: active ? '#8cecff' : '#777',
+                  fontSize: '8px', fontWeight: 700, padding: '4px 3px', cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: '4px 9px 0', color: '#777', fontSize: '8px', lineHeight: 1.25 }}>
+          {frameBufferMode === 'snapshot'
+            ? 'Stores once when Snapshot fires.'
+            : 'Stores automatically; output is exactly 1 frame old.'}
+        </div>
+
         <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
             {def.inputs.map(input => {
               const isMultiType = input.type.includes('|');
               return (
-                <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                <div key={input.id} style={{
+                  display: 'flex', alignItems: 'center', height: '16px', position: 'relative',
+                  opacity: input.id === 'impulse' && frameBufferMode === 'last-frame' ? 0.35 : 1,
+                }}>
                   <Handle
                     type="target"
                     position={Position.Left}
                     id={input.id}
                     title={input.id === 'impulse'
-                      ? 'Snapshot: manual signals capture on 0 → 1; Impulse connections latch every interval boundary'
+                      ? (frameBufferMode === 'snapshot'
+                        ? 'Snapshot: manual signals capture on 0 → 1; Impulse connections latch every interval boundary'
+                        : 'Snapshot is ignored in LAST FRAME mode')
                       : input.label}
                     style={{
                       background: isMultiType ? 'transparent' : (TYPE_COLORS[input.type] || '#888'), width: '10px', height: '10px',

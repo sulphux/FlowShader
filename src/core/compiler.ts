@@ -15,6 +15,7 @@ export interface GraphNode {
     externalInput?: string;  // External input value for Custom Input nodes
     detectedType?: string;   // Detected type for Custom Input/Output nodes
     value?: unknown;         // Node value (for controls)
+    captureMode?: 'snapshot' | 'last-frame'; // Frame Buffer write/display semantics
   };
 }
 

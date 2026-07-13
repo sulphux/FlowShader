@@ -1,12 +1,14 @@
 import { compileGraphToGLSL, type GraphEdge, type GraphNode } from './compiler';
 import { feedbackUniformName, isFeedbackNode } from './runtimeResources';
 import { buildImpulseEventTokenGLSL } from './impulseTiming';
+import { resolveFrameBufferMode, type FrameBufferMode } from './frameBufferMode';
 import type { ShaderNodeDefinition } from './types';
 
 export interface FeedbackPassDefinition {
   nodeId: string;
   uniform: string;
   shader: string;
+  captureMode: FrameBufferMode;
 }
 
 const outputDefinition: ShaderNodeDefinition = {
@@ -24,6 +26,7 @@ const outputDefinition: ShaderNodeDefinition = {
  */
 export function compileFeedbackPasses(nodes: GraphNode[], edges: GraphEdge[]): FeedbackPassDefinition[] {
   return nodes.filter(isFeedbackNode).map(feedbackNode => {
+    const captureMode = resolveFrameBufferMode(feedbackNode, edges);
     const uniform = feedbackUniformName(feedbackNode.id);
     const safeNodeId = feedbackNode.id.replace(/[^a-zA-Z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+/, '') || 'node';
     const writerId = `feedback_writer_${safeNodeId}`;
@@ -40,14 +43,23 @@ export function compileFeedbackPasses(nodes: GraphNode[], edges: GraphEdge[]): F
       outputs: [{ id: 'state', label: 'RGBA state', type: 'vec4' }],
       glslTemplate: inputs => {
         const nextValue = inputs.in || 'vec3(0.0)';
+        const previous = `texture2D(${uniform}, screenUv)`;
+
+        // LAST FRAME always writes the current input. The renderer exposes
+        // the other ping-pong target to consumers, so the visible output is
+        // exactly one completed render behind rather than the just-written
+        // texture from this same render.
+        if (captureMode === 'last-frame') return `vec4(${nextValue}, 0.0)`;
+
+        // SNAPSHOT without a trigger is intentionally frozen. This makes the
+        // mode honest: Image In alone never silently turns it into a live
+        // one-frame delay.
+        if (!inputs.impulse) return previous;
+
         // Alpha stores the previous trigger state. Ordinary Snapshot signals
         // retain 0 -> 1 semantics. Impulse connections are compiled to a
         // persistent event token >= 2 which changes once per interval, so a
         // narrow pulse cannot disappear between rendered frames.
-        // With no Snapshot connection the documented behavior stays useful:
-        // capture Image In every frame.
-        if (!inputs.impulse) return `vec4(${nextValue}, 0.0)`;
-        const previous = `texture2D(${uniform}, screenUv)`;
         const eventMode = `step(1.5, ${inputs.impulse})`;
         const snapshotHigh = `step(0.000001, ${inputs.impulse})`;
         const risingEdge = `((1.0 - ${eventMode}) * ${snapshotHigh} * (1.0 - step(0.000001, ${previous}.a)))`;
@@ -74,7 +86,7 @@ export function compileFeedbackPasses(nodes: GraphNode[], edges: GraphEdge[]): F
     const inEdge = edges.find(edge => edge.target === feedbackNode.id && edge.targetHandle === 'in');
     const impulseEdge = edges.find(edge => edge.target === feedbackNode.id && edge.targetHandle === 'impulse');
     if (inEdge) passEdges.push({ ...inEdge, target: writerId, targetHandle: 'in' });
-    if (impulseEdge) {
+    if (captureMode === 'snapshot' && impulseEdge) {
       const impulseNode = nodes.find(node => node.id === impulseEdge.source);
       if (impulseNode?.data?.definition?.id === 'impulse') {
         const tokenDefinition: ShaderNodeDefinition = {
@@ -102,6 +114,7 @@ export function compileFeedbackPasses(nodes: GraphNode[], edges: GraphEdge[]): F
       nodeId: feedbackNode.id,
       uniform,
       shader: compileGraphToGLSL(passNodes, passEdges, outputId),
+      captureMode,
     };
   });
 }

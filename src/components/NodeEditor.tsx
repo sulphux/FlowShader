@@ -657,7 +657,12 @@ function EditorInner({ onChange }: Props) {
       id: `${typeId}_${Date.now()}`,
       type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : (isColorPreview ? 'colorPreviewNode' : 'shaderNode')),
       position,
-      data: { definition: def, label: newLabel, value: def.controls?.defaultValue },
+      data: {
+        definition: def,
+        label: newLabel,
+        value: def.controls?.defaultValue,
+        ...(def.id === 'feedback' ? { captureMode: 'snapshot' as const } : {}),
+      },
       zIndex: isGroup ? -10 : 0,
       style: isGroup ? { width: 400, height: 300 } : undefined,
     };
@@ -1038,7 +1043,12 @@ function EditorInner({ onChange }: Props) {
       id: newNodeId,
       type: isPreview ? 'previewNode' : (isMonitor ? 'monitorNode' : (isColorPreview ? 'colorPreviewNode' : 'shaderNode')),
       position,
-      data: { definition: def, label: newLabel, value: def.controls?.defaultValue }, 
+      data: {
+        definition: def,
+        label: newLabel,
+        value: def.controls?.defaultValue,
+        ...(def.id === 'feedback' ? { captureMode: 'snapshot' as const } : {}),
+      },
       zIndex: isGroup ? -10 : 0, 
       style: isGroup ? { width: 400, height: 300 } : undefined, 
     }; 

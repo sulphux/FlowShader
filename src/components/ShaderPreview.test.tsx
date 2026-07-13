@@ -114,7 +114,7 @@ describe('ShaderPreview feedback (ping-pong) buffers', () => {
     feedbacks: [{ nodeId: 'feedback1', uniform: 'u_feedback_feedback1' }],
   };
   const feedbackPasses = [{
-    nodeId: 'feedback1', uniform: 'u_feedback_feedback1', shader: 'void main(){}',
+    nodeId: 'feedback1', uniform: 'u_feedback_feedback1', shader: 'void main(){}', captureMode: 'snapshot' as const,
   }];
 
   it('allocates an independent ping-pong pair for a Feedback pass', async () => {

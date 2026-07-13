@@ -2,7 +2,7 @@ import type { ShaderNodeDefinition } from '../core/types';
 import { feedbackUniformName } from '../core/runtimeResources';
 
 /**
- * Nody symulacji: Feedback (własny pamiętany snapshot), Impulse (okresowy puls
+ * Nody symulacji: Frame Buffer (snapshot lub poprzednia klatka), Impulse (okresowy puls
  * wyzwalający zapis) i Random (szum opcjonalnie trzymany w oknie czasowym).
  * Każdy Feedback jest osobnym przebiegiem i parą buforów ping-pong; Impulse i
  * Random pozostają bezstanowymi funkcjami iTime.
@@ -26,7 +26,7 @@ export const FeedbackNode: ShaderNodeDefinition = {
     const uniform = feedbackUniformName(String(data?.nodeId ?? 'feedback'));
     return `texture2D(${uniform}, ${coords}).rgb`;
   },
-  description: 'Stores Image In in its own frame buffer. Snapshot captures once on the 0 → 1 edge; keeping it high does not write again. When disconnected, it captures every frame. Sample UV is an advanced optional input for reading another location in the stored image.',
+  description: 'Stores Image In in its own frame buffer. SNAPSHOT captures once per event. LAST FRAME automatically stores every render and outputs the previous completed frame. Sample UV is an advanced optional input for reading another location in the stored image.',
 };
 
 export const ImpulseNode: ShaderNodeDefinition = {
