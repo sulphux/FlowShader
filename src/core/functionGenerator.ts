@@ -12,6 +12,7 @@ export const sanitizeGLSLIdentifier = (id: string): string => id.replace(/[^a-zA
 export const toGLSLType = (type: string): string => {
   if (!type || type === 'auto') return 'vec3';
   if (type === 'impulse') return 'float';
+  if (type === 'buffer2d') return 'sampler2D';
   return type;
 };
 

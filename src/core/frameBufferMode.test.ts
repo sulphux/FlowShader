@@ -43,4 +43,17 @@ describe('Frame Buffer mode migration and persistence', () => {
     expect(serialized.nodes[0].data.captureMode).toBe('last-frame');
     expect(rehydrateGraph(JSON.parse(JSON.stringify(serialized))).nodes[0].data.captureMode).toBe('last-frame');
   });
+
+  it('round-trips Sample Buffer wrap mode and inline pixel offsets', () => {
+    const nodes: Node[] = [{
+      id: 'sample1', type: 'shaderNode', position: { x: 0, y: 0 },
+      data: { definition: NODE_REGISTRY.sample_buffer, sampleWrap: 'clamp', offsetX: -2.5, offsetY: 3 },
+    }];
+    const serialized = serializeGraph(nodes, [] as Edge[]);
+    expect(serialized.nodes[0].data).toMatchObject({ sampleWrap: 'clamp', offsetX: -2.5, offsetY: 3 });
+
+    const restored = rehydrateGraph(JSON.parse(JSON.stringify(serialized))).nodes[0];
+    expect(restored.data).toMatchObject({ sampleWrap: 'clamp', offsetX: -2.5, offsetY: 3 });
+    expect(restored.data.definition.inputs[0]).toMatchObject({ id: 'buffer', type: 'buffer2d' });
+  });
 });

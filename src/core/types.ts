@@ -3,7 +3,11 @@
  * intentionally a separate graph type so it cannot be mistaken for an
  * ordinary numeric value or silently connected to float inputs.
  */
-export type DataType = 'float' | 'impulse' | 'vec2' | 'vec3' | 'vec4' | 'auto';
+/**
+ * `buffer2d` is an opaque texture resource. It can only be wired to another
+ * buffer2d port; sampling it produces the normal numeric/vector values.
+ */
+export type DataType = 'float' | 'impulse' | 'vec2' | 'vec3' | 'vec4' | 'buffer2d' | 'auto';
 
 export interface PortDefinition {
   id: string;

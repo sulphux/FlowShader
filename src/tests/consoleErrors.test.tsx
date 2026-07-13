@@ -37,10 +37,9 @@ describe('Console Error Detection', () => {
     
     const warnings = consoleWarnSpy.mock.calls.filter(call => {
       const msg = String(call[0]);
-      // Look for React warnings but exclude known/acceptable ones
+      // Canvas warnings are a jsdom limitation; React/React Flow warnings are regressions.
       return (msg.includes('React') || msg.includes('Warning')) &&
-             !msg.includes('nodeTypes') && // ReactFlow warning is acceptable
-             !msg.includes('Canvas'); // jsdom limitation
+             !msg.includes('Canvas');
     });
     
     expect(warnings).toHaveLength(0);

@@ -96,6 +96,7 @@ preview window — useful on lower-end hardware:
 | Math | `+ − × ÷`, Negate, POW, SIN/COS/TAN/COT/ATAN, ABS, EXP, FRACT |
 | Vector | UV Scale/Shift, Length, Fract (Vec2), Mix (Lerp), Relay |
 | Utility | Split/Combine (Auto), Value Watcher, Preview, Color Preview, **Code (GLSL)**, Comment, Group |
+| Simulation | **Frame Buffer**, **Sample Buffer** (multi-probe), Impulse, Random |
 | Color & shapes | Cosine Palette, Add/Scale (Color), Mono (RGB), Circle SDF |
 | Custom | Create Custom Node — wrap a piece of the graph into a reusable block with its own subgraph |
 

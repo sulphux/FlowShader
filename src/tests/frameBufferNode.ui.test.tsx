@@ -68,6 +68,7 @@ describe('Frame Buffer node preview', () => {
     expect(screen.getByText('Snapshot')).toBeInTheDocument();
     expect(screen.getByText('Sample UV (Advanced)')).toBeInTheDocument();
     expect(screen.getByText('Stored Image')).toBeInTheDocument();
-    expect(container.querySelectorAll('.react-flow__handle')).toHaveLength(4);
+    expect(screen.getByText('Buffer2D')).toBeInTheDocument();
+    expect(container.querySelectorAll('.react-flow__handle')).toHaveLength(5);
   });
 });

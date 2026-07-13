@@ -16,7 +16,10 @@ export const FeedbackNode: ShaderNodeDefinition = {
     { id: 'impulse', label: 'Snapshot', type: 'impulse|float' },
     { id: 'uv', label: 'Sample UV (Advanced)', type: 'vec2' },
   ],
-  outputs: [{ id: 'rgb', label: 'Stored Image', type: 'vec3' }],
+  outputs: [
+    { id: 'rgb', label: 'Stored Image', type: 'vec3' },
+    { id: 'buffer', label: 'Buffer2D', type: 'buffer2d' },
+  ],
   glslTemplate: (inputs, data) => {
     // Frame Buffer targets have the same pixel dimensions as the preview.
     // Centered `uv` is aspect-corrected for SDFs, so mapping it back with
@@ -26,7 +29,37 @@ export const FeedbackNode: ShaderNodeDefinition = {
     const uniform = feedbackUniformName(String(data?.nodeId ?? 'feedback'));
     return `texture2D(${uniform}, ${coords}).rgb`;
   },
-  description: 'Stores Image In in its own frame buffer. SNAPSHOT captures once per event. LAST FRAME automatically stores every render and outputs the previous completed frame. Sample UV is an advanced optional input for reading another location in the stored image.',
+  description: 'Stores Image In in its own frame buffer. SNAPSHOT captures once per event. LAST FRAME automatically stores every render and outputs the previous completed frame. Stored Image reads one location directly; Buffer2D can fan out to any number of Sample Buffer nodes.',
+};
+
+const glslFloat = (value: unknown, fallback: number): string => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return fallback.toFixed(1);
+  return Number.isInteger(numeric) ? numeric.toFixed(1) : String(numeric);
+};
+
+export const SampleBufferNode: ShaderNodeDefinition = {
+  id: 'sample_buffer',
+  label: 'Sample Buffer',
+  inputs: [
+    { id: 'buffer', label: 'Buffer2D', type: 'buffer2d' },
+    { id: 'uv', label: 'UV (optional)', type: 'vec2' },
+    { id: 'offsetX', label: 'Offset X (px)', type: 'float' },
+    { id: 'offsetY', label: 'Offset Y (px)', type: 'float' },
+  ],
+  outputs: [{ id: 'rgb', label: 'RGB', type: 'vec3' }],
+  glslTemplate: (inputs, data) => {
+    if (!inputs.buffer) return 'vec3(0.0)';
+    const uv = inputs.uv || 'screenUv';
+    const offsetX = inputs.offsetX || glslFloat(data?.offsetX, 0);
+    const offsetY = inputs.offsetY || glslFloat(data?.offsetY, 0);
+    const shifted = `((${uv}) + vec2(${offsetX}, ${offsetY}) / iResolution.xy)`;
+    const coords = data?.sampleWrap === 'clamp'
+      ? `clamp(${shifted}, vec2(0.0), vec2(1.0))`
+      : `fract(${shifted})`;
+    return `texture2D(${inputs.buffer}, ${coords}).rgb`;
+  },
+  description: 'Samples a Buffer2D resource. Duplicate this node to read the same Frame Buffer at any number of UVs or pixel offsets. Repeat wraps at the edges; Clamp stops at the edge.',
 };
 
 export const ImpulseNode: ShaderNodeDefinition = {

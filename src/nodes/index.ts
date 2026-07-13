@@ -155,6 +155,7 @@ export const NODE_REGISTRY = {
 
   // Simulation
   feedback: Simulation.FeedbackNode,
+  sample_buffer: Simulation.SampleBufferNode,
   impulse: Simulation.ImpulseNode,
   math_random: Simulation.RandomNode,
 };

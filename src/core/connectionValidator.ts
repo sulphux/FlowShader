@@ -126,10 +126,10 @@ export function isValidConnection(sourceType: string, targetType: string): boole
 export function getValidTargetTypes(sourceType: DataType): DataType[] {
   // 'auto' can connect to anything
   if (sourceType === 'auto') {
-    return ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
+    return ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto'];
   }
 
-  const allTypes: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
+  const allTypes: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto'];
   return allTypes.filter(targetType => isValidConnection(sourceType, targetType));
 }
 
@@ -148,6 +148,7 @@ export function isValidSwizzle(sourceType: DataType | string, component: string)
     'vec2': ['x', 'y', 'r', 'g'],
     'vec3': ['x', 'y', 'z', 'r', 'g', 'b'],
     'vec4': ['x', 'y', 'z', 'w', 'r', 'g', 'b', 'a'],
+    'buffer2d': [],
     'auto': [] // auto has no swizzling until type is determined
   };
 

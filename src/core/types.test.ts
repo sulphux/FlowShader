@@ -4,7 +4,7 @@ import type { DataType, PortDefinition, ShaderNodeDefinition } from './types';
 describe('types', () => {
   describe('DataType', () => {
     it('should accept valid DataType values', () => {
-      const validTypes: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
+      const validTypes: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto'];
       
       validTypes.forEach(type => {
         const port: PortDefinition = {

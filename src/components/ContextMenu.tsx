@@ -35,7 +35,7 @@ export const MENU_STRUCTURE = {
   "Vector (Geometry)": ["vec_length", "vec_length3", "vec_normalize2", "vec_normalize3", "vec_dot2", "vec_dot3", "vec_distance2", "vec_distance3", "vec_cross3", "vec_reflect3", "vec_refract3", "vec_faceforward3"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_fract", "math_mix", "relay_auto"],
   "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl"],
-  "Simulation": ["feedback", "impulse", "math_random"],
+  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 

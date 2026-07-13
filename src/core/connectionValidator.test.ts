@@ -10,7 +10,7 @@ import type { DataType } from './types';
 describe('connectionValidator', () => {
   describe('validateConnection', () => {
     describe('Rule 1: Same type connections (always valid)', () => {
-      const sameTypeTests: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4'];
+      const sameTypeTests: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d'];
 
       sameTypeTests.forEach(type => {
         it(`should allow ${type} → ${type}`, () => {
@@ -31,6 +31,16 @@ describe('connectionValidator', () => {
         expect(validateConnection('impulse', 'impulse')).toMatchObject({ valid: true });
         expect(validateConnection('impulse', 'impulse|float')).toMatchObject({ valid: true });
         expect(validateConnection('float', 'impulse|float')).toMatchObject({ valid: true });
+      });
+    });
+
+    describe('Opaque Buffer2D resource', () => {
+      it('only connects to another Buffer2D port and never asks for a numeric adapter', () => {
+        expect(validateConnection('buffer2d', 'buffer2d')).toEqual({ valid: true });
+        expect(validateConnection('buffer2d', 'vec3')).toMatchObject({ valid: false });
+        expect(validateConnection('vec3', 'buffer2d')).toMatchObject({ valid: false });
+        expect(validateConnection('buffer2d', 'vec3').requiresAdapter).toBeUndefined();
+        expect(isValidSwizzle('buffer2d', 'r')).toBe(false);
       });
     });
 
@@ -254,7 +264,7 @@ describe('connectionValidator', () => {
   describe('getValidTargetTypes', () => {
     it('should return all types for auto source', () => {
       const validTargets = getValidTargetTypes('auto');
-      expect(validTargets).toEqual(['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto']);
+      expect(validTargets).toEqual(['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto']);
     });
 
     it('should return only float + auto for float source', () => {

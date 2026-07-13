@@ -40,6 +40,9 @@ interface SerializedNode {
     detectedType?: string;
     forcedType?: string;
     captureMode?: FrameBufferMode;
+    sampleWrap?: 'repeat' | 'clamp';
+    offsetX?: number;
+    offsetY?: number;
   };
   [key: string]: unknown;
 }
@@ -114,6 +117,9 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           detectedType: n.data.detectedType,
           forcedType: n.data.forcedType,
           captureMode: n.data.captureMode,
+          sampleWrap: n.data.sampleWrap,
+          offsetX: n.data.offsetX,
+          offsetY: n.data.offsetY,
         },
       } as SerializedNode;
     }),

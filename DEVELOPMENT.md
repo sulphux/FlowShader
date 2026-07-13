@@ -75,9 +75,13 @@ existing tests in `src/tests/` for the pattern).
 ## Type System (see ARCHITECTURE.md for the full picture)
 
 ```typescript
-type DataType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto';
+type DataType = 'float' | 'impulse' | 'vec2' | 'vec3' | 'vec4' | 'buffer2d' | 'auto';
 // plus multi-type ports as pipe-joined strings, e.g. 'float|vec3'
 ```
+
+`impulse` is a semantic event represented as a float only after compilation.
+`buffer2d` is an opaque sampler resource: it only connects to another
+`buffer2d` port and must be converted to numeric data by a sampling node.
 
 Connections are validated strictly (`connectionValidator.ts`) — same type,
 `auto`, or a listed multi-type always connects directly; anything else is

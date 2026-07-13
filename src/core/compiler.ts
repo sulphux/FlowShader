@@ -4,7 +4,7 @@ import { generateCustomNodeFunction, autoCast, customNodeFunctionName, sanitizeG
 import { shaderDebug } from './shaderDebug';
 import { createCompilerDebugReport } from './compilerDebugReport';
 import type { CompilerDebugReport } from './compilerDebugReport';
-import { collectRuntimeResources, buildUniformDeclarations } from './runtimeResources';
+import { collectRuntimeResources, buildUniformDeclarations, feedbackUniformName } from './runtimeResources';
 
 export interface GraphNode {
   id: string;
@@ -16,6 +16,9 @@ export interface GraphNode {
     detectedType?: string;   // Detected type for Custom Input/Output nodes
     value?: unknown;         // Node value (for controls)
     captureMode?: 'snapshot' | 'last-frame'; // Frame Buffer write/display semantics
+    sampleWrap?: 'repeat' | 'clamp'; // Sample Buffer edge behaviour
+    offsetX?: number;        // Sample Buffer inline pixel offset
+    offsetY?: number;
   };
 }
 
@@ -108,6 +111,13 @@ function resolveSourceExpr(
   nodeVarMap: Record<string, string>,
   multiOutputVarMap: MultiOutputVarMap
 ): { expr: string; type: string } | undefined {
+  // Buffer2D is an opaque runtime resource, not a value that GLSL ES lets us
+  // copy into a local variable. The Frame Buffer handle therefore resolves
+  // directly to the sampler uniform owned by that particular buffer.
+  if (sourceNode?.data.definition.id === 'feedback' && edge.sourceHandle === 'buffer') {
+    return { expr: feedbackUniformName(sourceNode.id), type: 'buffer2d' };
+  }
+
   const ports = multiOutputVarMap[edge.source];
   if (ports && edge.sourceHandle && ports[edge.sourceHandle]) {
     const def = sourceNode?.data.definition as CustomNodeDefinition | undefined;

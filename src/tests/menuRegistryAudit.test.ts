@@ -19,7 +19,7 @@ const registryIds = Object.values(NODE_REGISTRY).map(def => def.id);
 const NEW_NODE_IDS = [
   'mono', 'math_fract', 'math_step', 'math_min', 'math_max', 'math_clamp', 'math_mix_float',
   'vec_length3', 'vec_normalize3', 'math_tan', 'math_cot', 'math_atan',
-  'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random',
+  'color_preview', 'code_glsl', 'feedback', 'sample_buffer', 'impulse', 'math_random',
 ];
 const BASIC_BUILTIN_NODE_IDS = [
   'math_floor', 'math_ceil', 'math_round', 'math_sign', 'math_sqrt', 'math_inversesqrt', 'math_mod',

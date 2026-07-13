@@ -5,7 +5,7 @@ import type { DataType } from './types';
 describe('Theme System', () => {
   describe('TYPE_COLORS', () => {
     it('should have colors for all data types', () => {
-      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
+      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto'];
       
       types.forEach(type => {
         expect(TYPE_COLORS[type]).toBeDefined();
@@ -27,7 +27,7 @@ describe('Theme System', () => {
 
   describe('TYPE_NAMES', () => {
     it('should have human-readable names for all types', () => {
-      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
+      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'buffer2d', 'auto'];
       
       types.forEach(type => {
         expect(TYPE_NAMES[type]).toBeDefined();

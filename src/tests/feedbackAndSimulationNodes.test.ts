@@ -54,7 +54,7 @@ describe('collectRuntimeResources / buildUniformDeclarations: usesFeedback', () 
 });
 
 describe('Feedback node', () => {
-  it('exposes Image In, Snapshot and advanced Sample UV while keeping compatible port ids', () => {
+  it('exposes Image In, Snapshot, direct sampling and the reusable Buffer2D resource', () => {
     const { nodes, edges } = outputGraph('feedback');
     const shader = compileGraphToGLSL(nodes, edges);
     const uniform = feedbackUniformName('src1');
@@ -62,7 +62,10 @@ describe('Feedback node', () => {
     expect(NODE_REGISTRY.feedback.inputs.map(input => input.id)).toEqual(['in', 'impulse', 'uv']);
     expect(NODE_REGISTRY.feedback.label).toBe('Frame Buffer');
     expect(NODE_REGISTRY.feedback.inputs.map(input => input.label)).toEqual(['Image In', 'Snapshot', 'Sample UV (Advanced)']);
-    expect(NODE_REGISTRY.feedback.outputs[0].label).toBe('Stored Image');
+    expect(NODE_REGISTRY.feedback.outputs.map(output => [output.id, output.label, output.type])).toEqual([
+      ['rgb', 'Stored Image', 'vec3'],
+      ['buffer', 'Buffer2D', 'buffer2d'],
+    ]);
     expect(shader).toContain(`uniform sampler2D ${uniform};`);
     expect(shader).toContain('vec2 screenUv;');
     expect(shader).toContain('screenUv = gl_FragCoord.xy / iResolution.xy;');
@@ -187,6 +190,59 @@ describe('Feedback node', () => {
     expect(shader).toContain(`texture2D(${feedbackUniformName(buffer.id)}, screenUv).rgb`);
     expect(shader).toContain('gl_FragColor = vec4(var_buffer1, 1.0);');
     expectValidGLSL(shader, 'Frame Buffer stored output preview');
+  });
+});
+
+describe('Sample Buffer node', () => {
+  it('fans one Frame Buffer resource out to independent pixel probes', () => {
+    const nodes: GraphNode[] = [
+      { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback, captureMode: 'last-frame' } },
+      { id: 'left', type: 'shaderNode', data: { definition: NODE_REGISTRY.sample_buffer, offsetX: -1, offsetY: 0, sampleWrap: 'repeat' } },
+      { id: 'above', type: 'shaderNode', data: { definition: NODE_REGISTRY.sample_buffer, offsetX: 0, offsetY: 1, sampleWrap: 'clamp' } },
+      { id: 'add', type: 'shaderNode', data: { definition: NODE_REGISTRY.color_add } },
+      { id: 'out', type: 'shaderNode', data: { definition: NODE_REGISTRY.output } },
+    ];
+    const edges = [
+      { source: 'buffer1', sourceHandle: 'buffer', target: 'left', targetHandle: 'buffer' },
+      { source: 'buffer1', sourceHandle: 'buffer', target: 'above', targetHandle: 'buffer' },
+      { source: 'left', sourceHandle: 'rgb', target: 'add', targetHandle: 'a' },
+      { source: 'above', sourceHandle: 'rgb', target: 'add', targetHandle: 'b' },
+      { source: 'add', sourceHandle: 'out', target: 'out', targetHandle: 'color' },
+    ];
+
+    const shader = compileGraphToGLSL(nodes, edges);
+    const uniform = feedbackUniformName('buffer1');
+    expect(shader).toContain(`texture2D(${uniform}, fract(((screenUv) + vec2(-1.0, 0.0) / iResolution.xy))).rgb`);
+    expect(shader).toContain(`texture2D(${uniform}, clamp(((screenUv) + vec2(0.0, 1.0) / iResolution.xy), vec2(0.0), vec2(1.0))).rgb`);
+    expect(shader).not.toMatch(/sampler2D\s+var_/);
+    expectValidGLSL(shader, 'two Sample Buffer probes -> output');
+  });
+
+  it('uses connected UV and offsets in preference to inline defaults', () => {
+    const inputs = { buffer: 'u_test', uv: 'customUv', offsetX: 'dx', offsetY: 'dy' };
+    expect(NODE_REGISTRY.sample_buffer.glslTemplate(inputs, { offsetX: 99, offsetY: 99, sampleWrap: 'repeat' }))
+      .toBe('texture2D(u_test, fract(((customUv) + vec2(dx, dy) / iResolution.xy))).rgb');
+  });
+
+  it('compiles a legal previous-frame loop through the resource handle', () => {
+    const buffer = { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback, captureMode: 'last-frame' } } as GraphNode;
+    const sample = { id: 'sample1', type: 'shaderNode', data: { definition: NODE_REGISTRY.sample_buffer, offsetX: 1, offsetY: 0 } } as GraphNode;
+    const edges = [
+      { source: buffer.id, sourceHandle: 'buffer', target: sample.id, targetHandle: 'buffer' },
+      { source: sample.id, sourceHandle: 'rgb', target: buffer.id, targetHandle: 'in' },
+    ];
+
+    const [pass] = compileFeedbackPasses([buffer, sample], edges);
+    expect(pass.shader).toContain(`texture2D(${pass.uniform}, fract(((screenUv) + vec2(1.0, 0.0) / iResolution.xy))).rgb`);
+    expect(pass.shader).toContain('vec4(var_sample1, 0.0)');
+    expectValidGLSL(pass.shader, 'Sample Buffer previous-frame loop');
+  });
+
+  it('renders black when no Buffer2D resource is connected', () => {
+    const { nodes, edges } = outputGraph('sample_buffer');
+    const shader = compileGraphToGLSL(nodes, edges);
+    expect(shader).toContain('vec3 var_src1 = vec3(0.0);');
+    expectValidGLSL(shader, 'disconnected Sample Buffer');
   });
 });
 

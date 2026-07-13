@@ -28,7 +28,7 @@ export const MENU_STRUCTURE = {
     "color_preview",
     "code_glsl"
   ],
-  "Simulation": ["feedback", "impulse", "math_random"],
+  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 

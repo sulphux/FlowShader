@@ -23,6 +23,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const [floatEditing, setFloatEditing] = useState(false);
   const skipFloatCommitRef = useRef(false);
   const [showFrameBufferPreview, setShowFrameBufferPreview] = useState(false);
+  const [sampleOffsetDrafts, setSampleOffsetDrafts] = useState(() => ({
+    x: String(data.offsetX ?? 0),
+    y: String(data.offsetY ?? 0),
+  }));
   const [frameBufferPreview, setFrameBufferPreview] = useState<{
     shader: string;
     resources: ShaderRuntimeResources;
@@ -196,6 +200,14 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   };
 
   const preventDrag = (e: React.MouseEvent) => { e.stopPropagation(); };
+
+  const commitSampleOffset = (axis: 'x' | 'y') => {
+    const parsed = parseEditableFloat(sampleOffsetDrafts[axis]);
+    const value = parsed ?? Number(data[axis === 'x' ? 'offsetX' : 'offsetY'] ?? 0);
+    const formatted = formatEditableFloat(value);
+    setSampleOffsetDrafts(previous => ({ ...previous, [axis]: formatted }));
+    updateNodeData({ [axis === 'x' ? 'offsetX' : 'offsetY']: value });
+  };
 
   const commitFloatDraft = (draft = floatDraft) => {
     const parsed = parseEditableFloat(draft);
@@ -534,15 +546,21 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
               );
             })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', height: '16px', position: 'relative' }}>
-            <span style={{ fontSize: '9px', color: '#ccc', marginRight: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>Stored Image</span>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="rgb"
-              title="Stored Image"
-              style={{ background: TYPE_COLORS.vec3, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignSelf: 'flex-start' }}>
+            {def.outputs.map(output => (
+              <div key={output.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '16px', position: 'relative' }}>
+                <span style={{ fontSize: '9px', color: output.type === 'buffer2d' ? '#68d6cc' : '#ccc', marginRight: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {output.label}
+                </span>
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={output.id}
+                  title={output.label}
+                  style={{ background: TYPE_COLORS[output.type] || '#888', width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -570,6 +588,109 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             )}
           </div>
         )}
+      </div>
+    );
+  }
+
+  // --- SAMPLE BUFFER (wielokrotne próbkowanie jednego Frame Buffera) ---
+  if (def.id === 'sample_buffer') {
+    const sampleWrap = data.sampleWrap === 'clamp' ? 'clamp' : 'repeat';
+    const renderOffsetInput = (axis: 'x' | 'y', inputId: 'offsetX' | 'offsetY') => (
+      <div style={{ display: 'flex', alignItems: 'center', height: '22px', position: 'relative', gap: '6px' }}>
+        <Handle
+          type="target"
+          position={Position.Left}
+          id={inputId}
+          title={`Optional connected Offset ${axis.toUpperCase()} overrides the inline value`}
+          style={{ background: TYPE_COLORS.float, width: '10px', height: '10px', left: '-15px', border: '2px solid #1a1a1a' }}
+        />
+        <span style={{ width: '62px', fontSize: '9px', color: '#bbb' }}>Offset {axis.toUpperCase()}</span>
+        <input
+          className="nodrag"
+          data-testid={`sample-buffer-offset-${axis}`}
+          aria-label={`Offset ${axis.toUpperCase()} in pixels`}
+          value={sampleOffsetDrafts[axis]}
+          inputMode="decimal"
+          onMouseDown={preventDrag}
+          onChange={event => setSampleOffsetDrafts(previous => ({ ...previous, [axis]: event.target.value }))}
+          onBlur={() => commitSampleOffset(axis)}
+          onKeyDown={event => {
+            event.stopPropagation();
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commitSampleOffset(axis);
+              event.currentTarget.blur();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              const saved = String(data[inputId] ?? 0);
+              setSampleOffsetDrafts(previous => ({ ...previous, [axis]: saved }));
+              event.currentTarget.blur();
+            }
+          }}
+          style={{
+            width: '54px', height: '19px', boxSizing: 'border-box', background: '#111', color: '#eee',
+            border: '1px solid #444', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px',
+            textAlign: 'right', padding: '1px 4px', outline: 'none'
+          }}
+        />
+        <span style={{ fontSize: '8px', color: '#666' }}>px</span>
+      </div>
+    );
+
+    return (
+      <div style={{ ...baseStyle, width: '230px', position: 'relative', overflow: 'visible' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS.buffer2d, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '5px 8px', background: '#222', borderBottom: '1px solid #333', fontSize: '11px', fontWeight: 'bold', color: '#eee' }}>
+          SAMPLE BUFFER
+        </div>
+
+        <div className="nodrag" style={{ display: 'flex', gap: '3px', padding: '7px 9px 2px' }} onMouseDown={preventDrag}>
+          {(['repeat', 'clamp'] as const).map(mode => {
+            const active = sampleWrap === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                data-testid={`sample-buffer-wrap-${mode}`}
+                aria-pressed={active}
+                title={mode === 'repeat' ? 'Wrap across opposite edges' : 'Stop sampling at the image edge'}
+                onMouseDown={preventDrag}
+                onClick={() => updateNodeData({ sampleWrap: mode })}
+                style={{
+                  flex: 1, background: active ? '#183c39' : '#242424',
+                  border: `1px solid ${active ? TYPE_COLORS.buffer2d : '#404040'}`,
+                  borderRadius: '4px', color: active ? '#7de3d9' : '#777',
+                  fontSize: '8px', fontWeight: 700, padding: '4px 3px', cursor: 'pointer',
+                }}
+              >
+                {mode.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: '6px 10px 9px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', height: '18px', position: 'relative' }}>
+              <Handle type="target" position={Position.Left} id="buffer" title="Buffer2D from Frame Buffer"
+                style={{ background: TYPE_COLORS.buffer2d, width: '10px', height: '10px', left: '-15px', border: '2px solid #1a1a1a' }} />
+              <span style={{ fontSize: '10px', color: '#68d6cc' }}>Buffer2D</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', height: '18px', position: 'relative' }}>
+              <Handle type="target" position={Position.Left} id="uv" title="Optional UV; defaults to the current screen pixel"
+                style={{ background: TYPE_COLORS.vec2, width: '10px', height: '10px', left: '-15px', border: '2px solid #1a1a1a' }} />
+              <span style={{ fontSize: '9px', color: '#999' }}>UV (optional)</span>
+            </div>
+            {renderOffsetInput('x', 'offsetX')}
+            {renderOffsetInput('y', 'offsetY')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', height: '18px', position: 'relative' }}>
+            <span style={{ fontSize: '9px', color: '#ddd', marginRight: '4px' }}>RGB</span>
+            <Handle type="source" position={Position.Right} id="rgb" title="Sampled RGB"
+              style={{ background: TYPE_COLORS.vec3, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }} />
+          </div>
+        </div>
       </div>
     );
   }
