@@ -95,4 +95,15 @@ describe('CreateCustomNodeDialog', () => {
     expect(onCreate).toHaveBeenCalledWith('Milestone Node', 'A stable workflow');
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('explains whether creation is empty or based on selection', () => {
+    const { rerender } = render(
+      <CreateCustomNodeDialog mode="empty" onClose={onClose} onCreate={onCreate} />
+    );
+    expect(screen.getByText(/fresh Custom Input and Custom Output/i)).toBeInTheDocument();
+
+    rerender(<CreateCustomNodeDialog mode="selection" onClose={onClose} onCreate={onCreate} />);
+    expect(screen.getByText(/currently selected nodes/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /from Selection/i })).toBeInTheDocument();
+  });
 });

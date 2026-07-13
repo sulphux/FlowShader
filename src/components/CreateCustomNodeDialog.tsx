@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface Props {
   onClose: () => void;
   onCreate: (name: string, description: string) => void;
+  mode?: 'empty' | 'selection';
 }
 
-export default function CreateCustomNodeDialog({ onClose, onCreate }: Props) {
+export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empty' }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -67,8 +68,14 @@ export default function CreateCustomNodeDialog({ onClose, onCreate }: Props) {
         onClick={e => e.stopPropagation()}
       >
         <h2 style={{ margin: '0 0 16px 0', color: '#fff', fontSize: '18px' }}>
-          📦 Create Custom Node
+          {mode === 'selection' ? '📦 Create Custom Node from Selection' : '📦 Create Custom Node'}
         </h2>
+
+        <div style={{ marginBottom: '14px', padding: '8px', background: '#222', borderRadius: '4px', fontSize: '11px', color: '#aaa' }}>
+          {mode === 'selection'
+            ? 'The currently selected nodes and their internal connections will be copied into the new custom node.'
+            : 'The new custom node will start with a fresh Custom Input and Custom Output.'}
+        </div>
 
         <div style={{ marginBottom: '12px' }}>
           <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '12px' }}>

@@ -97,7 +97,7 @@ describe('ContextMenu - Pane Context Menu', () => {
         />
       );
 
-      const createButton = screen.getByText(/Create Custom Node/i);
+      const createButton = screen.getByText(/Create Custom Node \(Empty\)/i);
       expect(createButton).toBeInTheDocument();
       expect(createButton.style.opacity).toBe('1');
       expect(createButton.style.cursor).toBe('pointer');
@@ -114,7 +114,7 @@ describe('ContextMenu - Pane Context Menu', () => {
         />
       );
 
-      const createButton = screen.getByText(/Create Custom Node/i);
+      const createButton = screen.getByText(/Create Custom Node \(Empty\)/i);
       expect(createButton).toBeInTheDocument();
       expect(createButton.style.opacity).toBe('1');
       expect(createButton.style.cursor).toBe('pointer');
@@ -132,11 +132,26 @@ describe('ContextMenu - Pane Context Menu', () => {
         />
       );
 
-      const createButton = screen.getByText(/Create Custom Node/i);
+      const createButton = screen.getByText(/Create Custom Node \(Empty\)/i);
       fireEvent.click(createButton);
 
-      expect(onCreateCustom).toHaveBeenCalledTimes(1);
+      expect(onCreateCustom).toHaveBeenCalledWith('empty');
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows and dispatches a separate selection action', () => {
+      const onCreateCustom = vi.fn();
+
+      render(
+        <ContextMenu
+          {...defaultProps}
+          onCreateCustom={onCreateCustom}
+          hasSelection={true}
+        />
+      );
+
+      fireEvent.click(screen.getByText(/Create Custom Node from Selection/i));
+      expect(onCreateCustom).toHaveBeenCalledWith('selection');
     });
   });
 

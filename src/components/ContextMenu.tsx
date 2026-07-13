@@ -14,7 +14,7 @@ interface Props {
    *  'target' = z wejścia (szukamy nodów z pasującym WYJŚCIEM). */
   filterDirection?: 'source' | 'target' | null;
   onPaste?: () => void;
-  onCreateCustom?: () => void;
+  onCreateCustom?: (mode: 'empty' | 'selection') => void;
   hasClipboard?: boolean;
   hasSelection?: boolean;
 }
@@ -39,7 +39,7 @@ export const MENU_STRUCTURE = {
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 
-export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filterDirection, onPaste, onCreateCustom, hasClipboard }: Props) {
+export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filterDirection, onPaste, onCreateCustom, hasClipboard, hasSelection }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
   const [openLeft, setOpenLeft] = useState(false);
@@ -139,14 +139,26 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filt
               </div>
             )}
             {onCreateCustom && (
-              <div 
-                onClick={() => { onCreateCustom(); onClose(); }} 
-                style={{ ...itemStyle(false), opacity: 1, cursor: 'pointer' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
-              >
-                📦 Create Custom Node
-              </div>
+              <>
+                <div
+                  onClick={() => { onCreateCustom('empty'); onClose(); }}
+                  style={{ ...itemStyle(false), opacity: 1, cursor: 'pointer' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+                >
+                  📦 Create Custom Node (Empty)
+                </div>
+                {hasSelection && (
+                  <div
+                    onClick={() => { onCreateCustom('selection'); onClose(); }}
+                    style={{ ...itemStyle(false), opacity: 1, cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+                  >
+                    📦 Create Custom Node from Selection
+                  </div>
+                )}
+              </>
             )}
             <div style={{ height: '1px', background: '#333', margin: '4px 0' }}></div>
           </>

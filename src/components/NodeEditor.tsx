@@ -117,7 +117,7 @@ function EditorInner({ onChange }: Props) {
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean; type: 'pane' | 'node'; nodeId?: string } | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
-  const [showCustomDialog, setShowCustomDialog] = useState(false);
+  const [customCreationMode, setCustomCreationMode] = useState<'empty' | 'selection' | null>(null);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showCloudDialog, setShowCloudDialog] = useState(false);
   
@@ -437,16 +437,23 @@ function EditorInner({ onChange }: Props) {
     reactFlowInstance.fitView({ padding: 0.2, duration: 300 });
   }, [reactFlowInstance]);
   
-  const handleCreateCustomNode = useCallback((name: string, description: string) => {
-    const selectedNodes = nodes.filter(n => n.selected);
+  const handleCreateCustomNode = useCallback((name: string, description: string, mode: 'empty' | 'selection') => {
+    const selectedNodes = mode === 'selection' ? nodes.filter(n => n.selected) : [];
     
     // Extract selected nodes and their edges
     const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
-    const selectedEdges = edges.filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target));
+    const selectedEdges = edges
+      .filter(e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target))
+      .map(edge => ({ ...edge, selected: false }));
+    const selectedSubgraphNodes = selectedNodes.map(node => ({
+      ...node,
+      selected: false,
+      data: { ...node.data },
+    }));
     
     // Build the actual subgraph nodes FIRST — we need them to derive correct port types
-    const defaultSubgraphNodes: Node[] = selectedNodes.length > 0 
-      ? selectedNodes 
+    const defaultSubgraphNodes: Node[] = selectedSubgraphNodes.length > 0
+      ? selectedSubgraphNodes
       : [
         // Default Custom Input node
         {
@@ -510,12 +517,16 @@ function EditorInner({ onChange }: Props) {
     // Auto-place a new instance on the canvas near the viewport center
     const center = reactFlowInstance.screenToFlowPosition({ x: 400, y: 300 });
     const instanceId = `${customNodeId}_${Date.now()}`;
-    setNodes(nds => [...nds, {
-      id: instanceId,
-      type: 'shaderNode',
-      position: center,
-      data: { definition: customNode }
-    }]);
+    setNodes(nds => [
+      ...nds.map(node => ({ ...node, selected: false })),
+      {
+        id: instanceId,
+        type: 'shaderNode',
+        position: center,
+        selected: false,
+        data: { definition: customNode }
+      }
+    ]);
     
     alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom Nodes" category.`);
     
@@ -1173,7 +1184,7 @@ function EditorInner({ onChange }: Props) {
             filterType={menuFilter}
             filterDirection={menuFilterDirection}
             onPaste={clipboard ? handlePaste : undefined}
-            onCreateCustom={() => setShowCustomDialog(true)}
+            onCreateCustom={(mode) => setCustomCreationMode(mode)}
             hasClipboard={!!clipboard}
             hasSelection={nodes.some(n => n.selected)}
           />, 
@@ -1222,10 +1233,11 @@ function EditorInner({ onChange }: Props) {
           />, 
           document.body 
         )}
-        {showCustomDialog && createPortal(
+        {customCreationMode && createPortal(
           <CreateCustomNodeDialog
-            onClose={() => setShowCustomDialog(false)}
-            onCreate={handleCreateCustomNode}
+            mode={customCreationMode}
+            onClose={() => setCustomCreationMode(null)}
+            onCreate={(name, description) => handleCreateCustomNode(name, description, customCreationMode)}
           />,
           document.body
         )}
