@@ -33,6 +33,7 @@ coverage
 !package.json
 !tsconfig.json
 !package-lock.json
+!Examples/game-of-life.json
 
 # Agent session state / temp files
 files/

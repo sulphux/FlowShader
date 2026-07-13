@@ -1,0 +1,126 @@
+{
+  "nodes": [
+    {
+      "id": "life_note",
+      "type": "shaderNode",
+      "position": { "x": -720, "y": -410 },
+      "data": {
+        "definition": { "id": "special_note" },
+        "value": "Conway's Game of Life\n\nOnly two small GLSL expressions are used:\n1. count the 8 neighbours\n2. apply Conway's rule\n\nFrame Buffer stores the board. Impulse advances one generation. Change Generation interval to control speed."
+      }
+    },
+    {
+      "id": "life_neighbors",
+      "type": "shaderNode",
+      "position": { "x": -700, "y": -120 },
+      "data": {
+        "definition": { "id": "code_glsl" },
+        "label": "Count 8 neighbours",
+        "value": "step(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2(-1.0, -1.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2( 0.0, -1.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2( 1.0, -1.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2(-1.0,  0.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2( 1.0,  0.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2(-1.0,  1.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2( 0.0,  1.0) / iResolution.xy)).r) +\nstep(0.5, texture2D(u_feedback_life_buffer, fract(screenUv + vec2( 1.0,  1.0) / iResolution.xy)).r)"
+      }
+    },
+    {
+      "id": "life_rule",
+      "type": "shaderNode",
+      "position": { "x": -350, "y": -105 },
+      "data": {
+        "definition": {
+          "id": "code_glsl",
+          "inputs": [
+            { "id": "a", "label": "A", "type": "float" },
+            { "id": "b", "label": "B", "type": "float" },
+            { "id": "c", "label": "C", "type": "float" },
+            { "id": "d", "label": "D", "type": "float" }
+          ],
+          "outputs": [
+            { "id": "out", "label": "Out", "type": "vec3" }
+          ]
+        },
+        "label": "Seed + Conway rule",
+        "value": "vec3(mix(\n  step(0.72, random(floor(screenUv * iResolution.xy))),\n  clamp(1.0 - abs(a - 3.0), 0.0, 1.0) +\n    step(0.5, texture2D(u_feedback_life_buffer, screenUv).r) *\n    clamp(1.0 - abs(a - 2.0), 0.0, 1.0),\n  step(1.5, texture2D(u_feedback_life_buffer, screenUv).w)\n))"
+      }
+    },
+    {
+      "id": "life_buffer",
+      "type": "shaderNode",
+      "position": { "x": 20, "y": -95 },
+      "data": {
+        "definition": { "id": "feedback" },
+        "label": "Life board",
+        "captureMode": "snapshot"
+      }
+    },
+    {
+      "id": "life_speed",
+      "type": "shaderNode",
+      "position": { "x": -610, "y": 250 },
+      "data": {
+        "definition": { "id": "param_float" },
+        "label": "Generation interval (s)",
+        "value": 0.12,
+        "min": 0.02,
+        "max": 1,
+        "step": 0.01
+      }
+    },
+    {
+      "id": "life_impulse",
+      "type": "shaderNode",
+      "position": { "x": -310, "y": 235 },
+      "data": {
+        "definition": { "id": "impulse" },
+        "label": "Next generation"
+      }
+    },
+    {
+      "id": "life_output",
+      "type": "shaderNode",
+      "position": { "x": 340, "y": -70 },
+      "data": {
+        "definition": { "id": "output" }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "life_edge_neighbors_rule",
+      "source": "life_neighbors",
+      "sourceHandle": "out",
+      "target": "life_rule",
+      "targetHandle": "a"
+    },
+    {
+      "id": "life_edge_rule_buffer",
+      "source": "life_rule",
+      "sourceHandle": "out",
+      "target": "life_buffer",
+      "targetHandle": "in"
+    },
+    {
+      "id": "life_edge_speed_impulse",
+      "source": "life_speed",
+      "sourceHandle": "out",
+      "target": "life_impulse",
+      "targetHandle": "interval"
+    },
+    {
+      "id": "life_edge_impulse_buffer",
+      "source": "life_impulse",
+      "sourceHandle": "out",
+      "target": "life_buffer",
+      "targetHandle": "impulse"
+    },
+    {
+      "id": "life_edge_buffer_output",
+      "source": "life_buffer",
+      "sourceHandle": "rgb",
+      "target": "life_output",
+      "targetHandle": "color"
+    }
+  ],
+  "viewport": {
+    "x": 770,
+    "y": 440,
+    "zoom": 0.78
+  }
+}
