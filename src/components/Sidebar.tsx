@@ -13,9 +13,12 @@ interface Props {
 
 export const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv", "texture_2d", "audio_input"],
-  "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
-  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract", "math_step", "math_min", "math_max", "math_clamp", "math_mix_float"],
-  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_length3", "vec_normalize3", "vec_fract", "math_mix", "relay_auto"],
+  "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_mod", "math_pow", "math_sqrt", "math_inversesqrt", "math_floor", "math_ceil", "math_round", "math_sign"],
+  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_asin", "math_acos", "math_atan", "math_atan2", "math_radians", "math_degrees", "math_abs", "math_exp", "math_exp2", "math_log", "math_log2", "math_fract"],
+  "Math (Range)": ["math_step", "math_smoothstep", "math_min", "math_max", "math_clamp", "math_mix_float"],
+  "Vector (Basic)": ["vec_add2", "vec_sub2", "vec_mult2", "vec_scale2", "vec_div2", "vec_add3", "vec_sub3", "vec_mult3", "vec_scale3", "vec_div3"],
+  "Vector (Geometry)": ["vec_length", "vec_length3", "vec_normalize2", "vec_normalize3", "vec_dot2", "vec_dot3", "vec_distance2", "vec_distance3", "vec_cross3", "vec_reflect3", "vec_refract3", "vec_faceforward3"],
+  "Vector & Space": ["uv_scale", "uv_shift", "vec_fract", "math_mix", "relay_auto"],
   "Utils": [
     "special_note", "special_group",
     "smart_split",

@@ -63,6 +63,68 @@ describe('vector nodes', () => {
     });
   });
 
+  describe('vector geometry builtins', () => {
+    it('normalizes Vec2 with a safe non-zero default', () => {
+      expect(VectorNodes.NormalizeVec2Node.glslTemplate({ in: 'direction' })).toBe('normalize(direction)');
+      expect(VectorNodes.NormalizeVec2Node.glslTemplate({})).toBe('normalize(vec2(1.0, 0.0))');
+      expect(VectorNodes.NormalizeVec2Node.inputs[0].type).toBe('vec2');
+      expect(VectorNodes.NormalizeVec2Node.outputs[0].type).toBe('vec2');
+    });
+
+    const scalarGeometryCases = [
+      [VectorNodes.DotVec2Node, 'dot(a, b)', 'dot(vec2(0.0), vec2(0.0))', 'vec2'],
+      [VectorNodes.DotVec3Node, 'dot(a, b)', 'dot(vec3(0.0), vec3(0.0))', 'vec3'],
+      [VectorNodes.DistanceVec2Node, 'distance(a, b)', 'distance(vec2(0.0), vec2(0.0))', 'vec2'],
+      [VectorNodes.DistanceVec3Node, 'distance(a, b)', 'distance(vec3(0.0), vec3(0.0))', 'vec3'],
+    ] as const;
+
+    it.each(scalarGeometryCases)('%s generates a scalar geometry expression', (node, expression, fallback, inputType) => {
+      expect(node.glslTemplate({ a: 'a', b: 'b' })).toBe(expression);
+      expect(node.glslTemplate({})).toBe(fallback);
+      expect(node.inputs.every(input => input.type === inputType)).toBe(true);
+      expect(node.outputs[0].type).toBe('float');
+    });
+
+    it('generates cross, reflect, refract, and faceforward expressions', () => {
+      expect(VectorNodes.CrossVec3Node.glslTemplate({ a: 'a', b: 'b' })).toBe('cross(a, b)');
+      expect(VectorNodes.ReflectVec3Node.glslTemplate({ incident: 'i', normal: 'n' })).toBe('reflect(i, n)');
+      expect(VectorNodes.RefractVec3Node.glslTemplate({ incident: 'i', normal: 'n', eta: 'eta' }))
+        .toBe('refract(i, n, eta)');
+      expect(VectorNodes.FaceForwardVec3Node.glslTemplate({ normal: 'n', incident: 'i', reference: 'r' }))
+        .toBe('faceforward(n, i, r)');
+      [VectorNodes.CrossVec3Node, VectorNodes.ReflectVec3Node, VectorNodes.RefractVec3Node, VectorNodes.FaceForwardVec3Node]
+        .forEach(node => expect(node.outputs[0].type).toBe('vec3'));
+      expect(VectorNodes.RefractVec3Node.inputs.map(input => input.type)).toEqual(['vec3', 'vec3', 'float']);
+    });
+  });
+
+  describe('strict Vec2 and Vec3 arithmetic', () => {
+    const vectorCases = [
+      [VectorNodes.AddVec2Node, { a: 'a', b: 'b' }, '(a + b)', '(vec2(0.0) + vec2(0.0))', 'vec2'],
+      [VectorNodes.SubVec2Node, { a: 'a', b: 'b' }, '(a - b)', '(vec2(0.0) - vec2(0.0))', 'vec2'],
+      [VectorNodes.MultiplyVec2Node, { a: 'a', b: 'b' }, '(a * b)', '(vec2(0.0) * vec2(1.0))', 'vec2'],
+      [VectorNodes.ScaleVec2Node, { vector: 'v', factor: 'f' }, '(v * f)', '(vec2(0.0) * 1.0)', 'vec2'],
+      [VectorNodes.DivideVec2Node, { vector: 'v', divisor: 'd' }, '(v / d)', '(vec2(0.0) / 1.0)', 'vec2'],
+      [VectorNodes.AddVec3Node, { a: 'a', b: 'b' }, '(a + b)', '(vec3(0.0) + vec3(0.0))', 'vec3'],
+      [VectorNodes.SubVec3Node, { a: 'a', b: 'b' }, '(a - b)', '(vec3(0.0) - vec3(0.0))', 'vec3'],
+      [VectorNodes.MultiplyVec3Node, { a: 'a', b: 'b' }, '(a * b)', '(vec3(0.0) * vec3(1.0))', 'vec3'],
+      [VectorNodes.ScaleVec3Node, { vector: 'v', factor: 'f' }, '(v * f)', '(vec3(0.0) * 1.0)', 'vec3'],
+      [VectorNodes.DivideVec3Node, { vector: 'v', divisor: 'd' }, '(v / d)', '(vec3(0.0) / 1.0)', 'vec3'],
+    ] as const;
+
+    it.each(vectorCases)('%s emits the expected typed operator', (node, inputs, expression, fallback, type) => {
+      expect(node.glslTemplate(inputs)).toBe(expression);
+      expect(node.glslTemplate({})).toBe(fallback);
+      expect(node.outputs[0].type).toBe(type);
+      expect(node.inputs[0].type).toBe(type);
+    });
+
+    it('uses scalar second inputs only for scale and divide', () => {
+      [VectorNodes.ScaleVec2Node, VectorNodes.DivideVec2Node, VectorNodes.ScaleVec3Node, VectorNodes.DivideVec3Node]
+        .forEach(node => expect(node.inputs[1].type).toBe('float'));
+    });
+  });
+
   describe('FractNode', () => {
     it('should generate fract function code', () => {
       const code = VectorNodes.FractNode.glslTemplate({ in: 'uv * 10.0' });
@@ -135,7 +197,26 @@ describe('vector nodes', () => {
       VectorNodes.UVNode,
       VectorNodes.LengthNode,
       VectorNodes.LengthVec3Node,
+      VectorNodes.NormalizeVec2Node,
       VectorNodes.NormalizeVec3Node,
+      VectorNodes.DotVec2Node,
+      VectorNodes.DotVec3Node,
+      VectorNodes.DistanceVec2Node,
+      VectorNodes.DistanceVec3Node,
+      VectorNodes.CrossVec3Node,
+      VectorNodes.ReflectVec3Node,
+      VectorNodes.RefractVec3Node,
+      VectorNodes.FaceForwardVec3Node,
+      VectorNodes.AddVec2Node,
+      VectorNodes.SubVec2Node,
+      VectorNodes.MultiplyVec2Node,
+      VectorNodes.ScaleVec2Node,
+      VectorNodes.DivideVec2Node,
+      VectorNodes.AddVec3Node,
+      VectorNodes.SubVec3Node,
+      VectorNodes.MultiplyVec3Node,
+      VectorNodes.ScaleVec3Node,
+      VectorNodes.DivideVec3Node,
       VectorNodes.FractNode,
       VectorNodes.UVScaleNode,
       VectorNodes.UVShiftNode

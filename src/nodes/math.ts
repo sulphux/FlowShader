@@ -89,6 +89,129 @@ export const FractFloatNode: ShaderNodeDefinition = {
   glslTemplate: ({ in: val }) => `fract(${val || '0.0'})`
 };
 
+export const FloorNode: ShaderNodeDefinition = {
+  id: 'math_floor', label: 'FLOOR', compact: true,
+  description: 'Rounds down to the nearest integer.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Floor', type: 'float' }],
+  glslTemplate: ({ in: val }) => `floor(${val || '0.0'})`
+};
+
+export const CeilNode: ShaderNodeDefinition = {
+  id: 'math_ceil', label: 'CEIL', compact: true,
+  description: 'Rounds up to the nearest integer.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Ceil', type: 'float' }],
+  glslTemplate: ({ in: val }) => `ceil(${val || '0.0'})`
+};
+
+export const RoundNode: ShaderNodeDefinition = {
+  id: 'math_round', label: 'ROUND', compact: true,
+  description: 'Rounds to the nearest integer using a GLSL ES 1.00-compatible expression.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Round', type: 'float' }],
+  glslTemplate: ({ in: val }) => {
+    const x = val || '0.0';
+    return `(sign(${x}) * floor(abs(${x}) + 0.5))`;
+  }
+};
+
+export const SignNode: ShaderNodeDefinition = {
+  id: 'math_sign', label: 'SIGN', compact: true,
+  description: 'Returns -1, 0, or 1 according to the sign of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Sign', type: 'float' }],
+  glslTemplate: ({ in: val }) => `sign(${val || '0.0'})`
+};
+
+export const SqrtNode: ShaderNodeDefinition = {
+  id: 'math_sqrt', label: 'SQRT', compact: true,
+  description: 'Returns the square root of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Sqrt', type: 'float' }],
+  glslTemplate: ({ in: val }) => `sqrt(${val || '0.0'})`
+};
+
+export const InverseSqrtNode: ShaderNodeDefinition = {
+  id: 'math_inversesqrt', label: 'INVERSE SQRT', compact: true,
+  description: 'Returns one divided by the square root of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Inv Sqrt', type: 'float' }],
+  glslTemplate: ({ in: val }) => `inversesqrt(${val || '1.0'})`
+};
+
+export const ModNode: ShaderNodeDefinition = {
+  id: 'math_mod', label: 'MOD', compact: true,
+  description: 'Returns X modulo Y using GLSL mod semantics.',
+  inputs: [{ id: 'x', label: 'X', type: 'float' }, { id: 'y', label: 'Y', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Mod', type: 'float' }],
+  glslTemplate: ({ x, y }) => `mod(${x || '0.0'}, ${y || '1.0'})`
+};
+
+export const ASinNode: ShaderNodeDefinition = {
+  id: 'math_asin', label: 'ASIN', compact: true,
+  description: 'Returns the arc sine of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'ASin', type: 'float' }],
+  glslTemplate: ({ in: val }) => `asin(${val || '0.0'})`
+};
+
+export const ACosNode: ShaderNodeDefinition = {
+  id: 'math_acos', label: 'ACOS', compact: true,
+  description: 'Returns the arc cosine of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'ACos', type: 'float' }],
+  glslTemplate: ({ in: val }) => `acos(${val || '0.0'})`
+};
+
+export const ATan2Node: ShaderNodeDefinition = {
+  id: 'math_atan2', label: 'ATAN2', compact: true,
+  description: 'Returns the signed angle of the vector (X, Y).',
+  inputs: [{ id: 'y', label: 'Y', type: 'float' }, { id: 'x', label: 'X', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Angle', type: 'float' }],
+  glslTemplate: ({ y, x }) => `atan(${y || '0.0'}, ${x || '1.0'})`
+};
+
+export const LogNode: ShaderNodeDefinition = {
+  id: 'math_log', label: 'LOG', compact: true,
+  description: 'Returns the natural logarithm of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Log', type: 'float' }],
+  glslTemplate: ({ in: val }) => `log(${val || '1.0'})`
+};
+
+export const Log2Node: ShaderNodeDefinition = {
+  id: 'math_log2', label: 'LOG2', compact: true,
+  description: 'Returns the base-2 logarithm of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Log2', type: 'float' }],
+  glslTemplate: ({ in: val }) => `log2(${val || '1.0'})`
+};
+
+export const Exp2Node: ShaderNodeDefinition = {
+  id: 'math_exp2', label: 'EXP2', compact: true,
+  description: 'Returns two raised to the power of the input.',
+  inputs: [{ id: 'in', label: 'In', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Exp2', type: 'float' }],
+  glslTemplate: ({ in: val }) => `exp2(${val || '0.0'})`
+};
+
+export const RadiansNode: ShaderNodeDefinition = {
+  id: 'math_radians', label: 'RADIANS', compact: true,
+  description: 'Converts degrees to radians.',
+  inputs: [{ id: 'in', label: 'Degrees', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Radians', type: 'float' }],
+  glslTemplate: ({ in: val }) => `radians(${val || '0.0'})`
+};
+
+export const DegreesNode: ShaderNodeDefinition = {
+  id: 'math_degrees', label: 'DEGREES', compact: true,
+  description: 'Converts radians to degrees.',
+  inputs: [{ id: 'in', label: 'Radians', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Degrees', type: 'float' }],
+  glslTemplate: ({ in: val }) => `degrees(${val || '0.0'})`
+};
+
 export const StepNode: ShaderNodeDefinition = {
   id: 'math_step', label: 'STEP', compact: true,
   description: 'Hard threshold: returns 0 when X < Edge, otherwise 1. Unconnected Edge defaults to 0.5.',
@@ -98,6 +221,18 @@ export const StepNode: ShaderNodeDefinition = {
   ],
   outputs: [{ id: 'out', label: 'Step', type: 'float' }],
   glslTemplate: ({ edge, x }) => `step(${edge || '0.5'}, ${x || '0.0'})`
+};
+
+export const SmoothstepNode: ShaderNodeDefinition = {
+  id: 'math_smoothstep', label: 'SMOOTHSTEP', compact: true,
+  description: 'Returns a smooth Hermite transition between Edge 0 and Edge 1.',
+  inputs: [
+    { id: 'edge0', label: 'Edge 0', type: 'float' },
+    { id: 'edge1', label: 'Edge 1', type: 'float' },
+    { id: 'x', label: 'X', type: 'float' },
+  ],
+  outputs: [{ id: 'out', label: 'Smooth', type: 'float' }],
+  glslTemplate: ({ edge0, edge1, x }) => `smoothstep(${edge0 || '0.0'}, ${edge1 || '1.0'}, ${x || '0.0'})`
 };
 
 export const MinNode: ShaderNodeDefinition = {

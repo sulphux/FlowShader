@@ -171,6 +171,56 @@ describe('math nodes', () => {
     });
   });
 
+  describe('extended scalar GLSL builtins', () => {
+    const unaryCases = [
+      [MathNodes.FloorNode, 'floor(x)', 'floor(0.0)'],
+      [MathNodes.CeilNode, 'ceil(x)', 'ceil(0.0)'],
+      [MathNodes.SignNode, 'sign(x)', 'sign(0.0)'],
+      [MathNodes.SqrtNode, 'sqrt(x)', 'sqrt(0.0)'],
+      [MathNodes.InverseSqrtNode, 'inversesqrt(x)', 'inversesqrt(1.0)'],
+      [MathNodes.ASinNode, 'asin(x)', 'asin(0.0)'],
+      [MathNodes.ACosNode, 'acos(x)', 'acos(0.0)'],
+      [MathNodes.LogNode, 'log(x)', 'log(1.0)'],
+      [MathNodes.Log2Node, 'log2(x)', 'log2(1.0)'],
+      [MathNodes.Exp2Node, 'exp2(x)', 'exp2(0.0)'],
+      [MathNodes.RadiansNode, 'radians(x)', 'radians(0.0)'],
+      [MathNodes.DegreesNode, 'degrees(x)', 'degrees(0.0)'],
+    ] as const;
+
+    it.each(unaryCases)('%s generates a typed unary expression', (node, expression, fallback) => {
+      expect(node.glslTemplate({ in: 'x' })).toBe(expression);
+      expect(node.glslTemplate({})).toBe(fallback);
+      expect(node.inputs).toEqual([expect.objectContaining({ type: 'float' })]);
+      expect(node.outputs[0].type).toBe('float');
+    });
+
+    it('provides GLSL ES 1.00-compatible round semantics', () => {
+      expect(MathNodes.RoundNode.glslTemplate({ in: 'x' }))
+        .toBe('(sign(x) * floor(abs(x) + 0.5))');
+      expect(MathNodes.RoundNode.glslTemplate({}))
+        .toBe('(sign(0.0) * floor(abs(0.0) + 0.5))');
+    });
+
+    it('generates modulo, atan2, and smoothstep expressions with safe defaults', () => {
+      expect(MathNodes.ModNode.glslTemplate({ x: 'x', y: 'y' })).toBe('mod(x, y)');
+      expect(MathNodes.ModNode.glslTemplate({})).toBe('mod(0.0, 1.0)');
+      expect(MathNodes.ATan2Node.glslTemplate({ y: 'y', x: 'x' })).toBe('atan(y, x)');
+      expect(MathNodes.ATan2Node.glslTemplate({})).toBe('atan(0.0, 1.0)');
+      expect(MathNodes.SmoothstepNode.glslTemplate({ edge0: 'lo', edge1: 'hi', x: 'x' }))
+        .toBe('smoothstep(lo, hi, x)');
+      expect(MathNodes.SmoothstepNode.glslTemplate({}))
+        .toBe('smoothstep(0.0, 1.0, 0.0)');
+    });
+
+    it('keeps multi-input scalar builtins strictly float typed', () => {
+      [MathNodes.RoundNode, MathNodes.ModNode, MathNodes.ATan2Node, MathNodes.SmoothstepNode]
+        .forEach(node => {
+          expect(node.inputs.every(input => input.type === 'float')).toBe(true);
+          expect(node.outputs[0].type).toBe('float');
+        });
+    });
+  });
+
   describe('ColorAddNode', () => {
     it('should generate color addition GLSL code', () => {
       const code = MathNodes.ColorAddNode.glslTemplate({ 
@@ -221,16 +271,37 @@ describe('math nodes', () => {
       MathNodes.DivNode,
       MathNodes.SinNode,
       MathNodes.CosNode,
+      MathNodes.TanNode,
+      MathNodes.CotNode,
+      MathNodes.ATanNode,
+      MathNodes.ASinNode,
+      MathNodes.ACosNode,
+      MathNodes.ATan2Node,
       MathNodes.AbsNode,
       MathNodes.ExpNode,
+      MathNodes.Exp2Node,
+      MathNodes.LogNode,
+      MathNodes.Log2Node,
       MathNodes.PowNode,
+      MathNodes.FractFloatNode,
+      MathNodes.FloorNode,
+      MathNodes.CeilNode,
+      MathNodes.RoundNode,
+      MathNodes.SignNode,
+      MathNodes.SqrtNode,
+      MathNodes.InverseSqrtNode,
+      MathNodes.ModNode,
+      MathNodes.RadiansNode,
+      MathNodes.DegreesNode,
       MathNodes.StepNode,
+      MathNodes.SmoothstepNode,
       MathNodes.MinNode,
       MathNodes.MaxNode,
       MathNodes.ClampNode,
       MathNodes.MixFloatNode,
       MathNodes.ColorAddNode,
-      MathNodes.ColorMultNode
+      MathNodes.ColorMultNode,
+      MathNodes.MonoNode,
     ];
 
     it('should all have unique IDs', () => {

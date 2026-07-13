@@ -21,6 +21,15 @@ const NEW_NODE_IDS = [
   'vec_length3', 'vec_normalize3', 'math_tan', 'math_cot', 'math_atan',
   'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random',
 ];
+const BASIC_BUILTIN_NODE_IDS = [
+  'math_floor', 'math_ceil', 'math_round', 'math_sign', 'math_sqrt', 'math_inversesqrt', 'math_mod',
+  'math_asin', 'math_acos', 'math_atan2', 'math_log', 'math_log2', 'math_exp2', 'math_radians',
+  'math_degrees', 'math_smoothstep',
+  'vec_normalize2', 'vec_dot2', 'vec_dot3', 'vec_distance2', 'vec_distance3', 'vec_cross3',
+  'vec_reflect3', 'vec_refract3', 'vec_faceforward3',
+  'vec_add2', 'vec_sub2', 'vec_mult2', 'vec_scale2', 'vec_div2',
+  'vec_add3', 'vec_sub3', 'vec_mult3', 'vec_scale3', 'vec_div3',
+];
 const INTERNAL_ADAPTER_IDS = ['split_vec2', 'split_vec3', 'split_vec4', 'combine_vec2', 'combine_vec3', 'combine_vec4'];
 
 describe('Menu & registry audit', () => {
@@ -37,7 +46,7 @@ describe('Menu & registry audit', () => {
   });
 
   it('new nodes are registered and available in both menus', () => {
-    NEW_NODE_IDS.forEach(id => {
+    [...NEW_NODE_IDS, ...BASIC_BUILTIN_NODE_IDS].forEach(id => {
       expect(registryIds, `"${id}" missing in registry`).toContain(id);
       expect(sidebarIds, `"${id}" missing in sidebar menu`).toContain(id);
       expect(contextIds, `"${id}" missing in context menu`).toContain(id);
