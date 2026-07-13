@@ -35,7 +35,7 @@ describe('param nodes', () => {
       expect(ParamNodes.FloatNode.controls).toBeDefined();
       expect(ParamNodes.FloatNode.controls?.type).toBe('float');
       expect(ParamNodes.FloatNode.controls?.defaultValue).toBe(0.5);
-      expect(ParamNodes.FloatNode.controls?.min).toBe(0.0);
+      expect(ParamNodes.FloatNode.controls?.min).toBe(-10.0);
       expect(ParamNodes.FloatNode.controls?.max).toBe(10.0);
       expect(ParamNodes.FloatNode.controls?.step).toBe(0.01);
     });

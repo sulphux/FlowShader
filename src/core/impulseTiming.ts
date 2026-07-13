@@ -6,7 +6,64 @@ export const safeImpulseInterval = (interval: number): number =>
 
 export const isImpulsePulseActive = (time: number, interval: number, width: number): boolean => {
   const safeInterval = safeImpulseInterval(interval);
-  return (Math.max(time, 0) % safeInterval) < safeInterval * width;
+  const safeWidth = Math.min(Math.max(Number.isFinite(width) ? width : 0.05, 0), 1);
+  return (Math.max(time, 0) % safeInterval) < safeInterval * safeWidth;
+};
+
+export const impulseCycleAtTime = (time: number, interval: number): number =>
+  Math.floor(Math.max(time, 0) / safeImpulseInterval(interval));
+
+interface TimingNode {
+  id: string;
+  data?: unknown;
+}
+
+interface TimingEdge {
+  source: string;
+  target: string;
+  targetHandle?: string | null;
+}
+
+export interface ResolvedImpulseTiming {
+  interval: number;
+  width: number;
+  intervalDriven: boolean;
+  widthDriven: boolean;
+  intervalResolved: boolean;
+  widthResolved: boolean;
+}
+
+/** Resolve values that the node UI can know without evaluating arbitrary GLSL. */
+export const resolveImpulseTiming = (
+  impulseNodeId: string,
+  nodes: TimingNode[],
+  edges: TimingEdge[],
+): ResolvedImpulseTiming => {
+  const readFloatInput = (handle: 'interval' | 'width', fallback: number) => {
+    const edge = edges.find(candidate => candidate.target === impulseNodeId && candidate.targetHandle === handle);
+    if (!edge) return { value: fallback, driven: false, resolved: true };
+    const source = nodes.find(candidate => candidate.id === edge.source);
+    const sourceData = source?.data as {
+      value?: unknown;
+      definition?: { id?: string; controls?: { defaultValue?: unknown } };
+    } | undefined;
+    if (sourceData?.definition?.id === 'param_float') {
+      const parsed = Number(sourceData.value ?? sourceData.definition.controls?.defaultValue);
+      if (Number.isFinite(parsed)) return { value: parsed, driven: true, resolved: true };
+    }
+    return { value: fallback, driven: true, resolved: false };
+  };
+
+  const intervalInput = readFloatInput('interval', 1);
+  const widthInput = readFloatInput('width', 0.05);
+  return {
+    interval: safeImpulseInterval(intervalInput.value),
+    width: Math.min(Math.max(widthInput.value, 0), 1),
+    intervalDriven: intervalInput.driven,
+    widthDriven: widthInput.driven,
+    intervalResolved: intervalInput.resolved,
+    widthResolved: widthInput.resolved,
+  };
 };
 
 /**

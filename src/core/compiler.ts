@@ -1,6 +1,6 @@
 import type { ShaderNodeDefinition } from './types';
 import type { CustomNodeDefinition } from './customNodeManager';
-import { generateCustomNodeFunction, autoCast, customNodeFunctionName, sanitizeGLSLIdentifier } from './functionGenerator';
+import { generateCustomNodeFunction, autoCast, customNodeFunctionName, sanitizeGLSLIdentifier, toGLSLType } from './functionGenerator';
 import { shaderDebug } from './shaderDebug';
 import { createCompilerDebugReport } from './compilerDebugReport';
 import type { CompilerDebugReport } from './compilerDebugReport';
@@ -86,7 +86,7 @@ function emitMultiOutputCustomNode(
     // GLSL ES reserves identifiers containing "__" — collapse any run of
     // underscores from the id/port concatenation down to one.
     const varName = `var_${glslId}_o_${sanitizeGLSLIdentifier(port.id)}`.replace(/_+/g, '_');
-    const type = (!port.type || port.type === 'auto') ? 'vec3' : port.type;
+    const type = toGLSLType(port.type);
     body += `    ${type} ${varName} = ${funcName}(${callParams});\n`;
     ports[port.id] = varName;
   });
@@ -179,7 +179,11 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
 
     // Multi-output custom node used inside a subgraph (nested custom node)
     if (isMultiOutputCustomNode(def)) {
-      const callParams = def.inputs.map(inp => inputs[inp.id] || (inp.type === 'float' ? '0.0' : `${inp.type === 'auto' ? 'vec3' : inp.type}(0.0)`)).join(', ');
+      const callParams = def.inputs.map(inp => {
+        if (inputs[inp.id]) return inputs[inp.id];
+        const glslType = toGLSLType(inp.type);
+        return glslType === 'float' ? '0.0' : `${glslType}(0.0)`;
+      }).join(', ');
       body += emitMultiOutputCustomNode(node, def, callParams, multiOutputVarMap);
       nodeVarMap[node.id] = multiOutputVarMap[node.id][def.outputs[0].id];
       return;
@@ -236,7 +240,7 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
     const outputVar = `var_${node.id.replace(/-/g, '_')}`;
     nodeVarMap[node.id] = outputVar;
 
-    body += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
+    body += `    ${toGLSLType(nodeType)} ${outputVar} = ${glslCode};\n`;
   });
 
   return body;
@@ -351,7 +355,7 @@ export const compileGraphToGLSLWithReport = (
       const callParams = customDef.inputs.map(inp => {
         if (inputs[inp.id]) return inputs[inp.id];
         // Default value must match parameter type — '0.0' (float) would fail a vec3 param
-        const t = inp.type === 'auto' ? 'vec3' : inp.type;
+        const t = toGLSLType(inp.type);
         if (t === 'float') return '0.0';
         if (t === 'vec2') return 'vec2(0.0)';
         if (t === 'vec4') return 'vec4(0.0)';
@@ -429,7 +433,7 @@ export const compileGraphToGLSLWithReport = (
     // Nody czysto wizualne (pusty glslTemplate) nie emitują zmiennej —
     // emisja dałaby "vec3 var = ;" i błąd składni GLSL
     if (def.id !== 'output' && def.id !== 'preview' && def.id !== 'color_preview') {
-        mainBody += `    ${nodeType} ${outputVar} = ${glslCode};\n`;
+        mainBody += `    ${toGLSLType(nodeType)} ${outputVar} = ${glslCode};\n`;
     }
   });
 
@@ -447,7 +451,7 @@ export const compileGraphToGLSLWithReport = (
         // Unresolved custom-node port (e.g. its Custom Output was never wired
         // inside the subgraph) — same vec3 fallback as everywhere else here,
         // otherwise this silently drops the result and renders solid black.
-        const srcType = resolved.type === 'auto' ? 'vec3' : resolved.type;
+        const srcType = toGLSLType(resolved.type);
         const varName = resolved.expr;
 
         // JAWNE RZUTOWANIE NA VEC4 (Dla gl_FragColor)

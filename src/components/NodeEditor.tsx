@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
   addEdge, Background, Controls, useNodesState, useEdgesState, useReactFlow, ReactFlowProvider,
-  type Node, type Edge, type OnConnect, type NodeTypes, applyNodeChanges, getRectOfNodes, type OnConnectStartParams,
+  type Node, type Edge, type OnConnect, type NodeTypes, type EdgeTypes, applyNodeChanges, getRectOfNodes, type OnConnectStartParams,
   type NodeChange, type NodeRemoveChange
 } from 'reactflow';
 import 'reactflow/dist/style.css'; 
@@ -30,6 +30,8 @@ import { insertAutoAdapter } from '../core/autoAdapterSystem';
 import { serializeGraph, rehydrateGraph } from '../core/graphRehydration';
 import { saveProjectFile, openProjectFile, supportsFileSystemAccess, type FileHandleLike } from '../core/fileAccess';
 import { computeSmartSplitPorts } from '../core/smartSplitAdapter';
+import { isEditableKeyboardTarget } from '../core/keyboardTarget';
+import { ImpulseEdge } from './ImpulseEdge';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -58,6 +60,10 @@ const NODE_TYPES: NodeTypes = {
   previewNode: PreviewNode,
   monitorNode: MonitorNode,
   colorPreviewNode: ColorPreviewNode,
+};
+
+const EDGE_TYPES: EdgeTypes = {
+  impulse: ImpulseEdge,
 };
 
 /**
@@ -881,7 +887,13 @@ function EditorInner({ onChange }: Props) {
         
         // 6. Valid connection → proceed normally
         const edgeColor = TYPE_COLORS[sourceType] || '#fff';
-        const newEdge = { ...params, style: { stroke: edgeColor, strokeWidth: 3 }, animated: false };
+        const newEdge: Edge = {
+          id: `e_${connectionParams.source}_${connectionParams.target}_${Date.now()}`,
+          ...connectionParams,
+          type: sourceType === 'impulse' ? 'impulse' : 'default',
+          style: { stroke: edgeColor, strokeWidth: 3 },
+          animated: false,
+        };
         setEdges((eds) => addEdge(newEdge, eds));
     }, [nodes, edges, setNodes, setEdges]);
 
@@ -954,8 +966,17 @@ function EditorInner({ onChange }: Props) {
     setNodes((nds) => nds.map(n => ({...n, selected: false})).concat(newNodes)); 
     setEdges((eds) => eds.concat(newEdges)); 
   }, [clipboard, reactFlowInstance, setNodes, setEdges]);
-  useEffect(() => { 
-    const handleKeyDown = (e: KeyboardEvent) => { 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableKeyboardTarget(e.target)) {
+        // Preserve the application Save shortcut, but leave editing/history,
+        // clipboard and Backspace/Delete entirely to the focused field.
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          handleSaveFile(false);
+        }
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') handleCopy(); 
@@ -1054,7 +1075,12 @@ function EditorInner({ onChange }: Props) {
         const validation = validateConnection(sourceType, targetType);
         if (validation.valid) {
           const edgeColor = TYPE_COLORS[sourceType] || '#fff';
-          const newEdge: Edge = { id: `e_${connection.source}_${connection.target}`, ...connection, style: { stroke: edgeColor, strokeWidth: 3 } };
+          const newEdge: Edge = {
+            id: `e_${connection.source}_${connection.target}`,
+            ...connection,
+            type: sourceType === 'impulse' ? 'impulse' : 'default',
+            style: { stroke: edgeColor, strokeWidth: 3 },
+          };
           setEdges((eds) => addEdge(newEdge, eds));
         } else if (validation.requiresAdapter) {
           // Typy się nie zgadzają — wstaw Split/Combine tak jak przy ręcznym łączeniu
@@ -1109,7 +1135,7 @@ function EditorInner({ onChange }: Props) {
       />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleFileChange} />
       <ReactFlow
-        nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={NODE_TYPES} minZoom={0.1} maxZoom={4} fitView
+        nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} minZoom={0.1} maxZoom={4} fitView
         onPaneContextMenu={onPaneContextMenu} onNodeContextMenu={onNodeContextMenu} onNodeDoubleClick={onNodeDoubleClick} onEdgeContextMenu={onEdgeContextMenu} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd} onPaneClick={() => setMenu(null)} selectionOnDrag={true} panOnDrag={[1]} selectionKeyCode="Shift" multiSelectionKeyCode="Control" defaultEdgeOptions={{ type: 'default', interactionWidth: 25, style: { strokeWidth: 3 }}}
         onDragOver={onDragOver} onDrop={onDrop}
       >

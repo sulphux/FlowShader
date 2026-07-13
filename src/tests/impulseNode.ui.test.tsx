@@ -24,7 +24,7 @@ describe('Impulse node UI', () => {
 
     await waitFor(() => expect(screen.getByText('seconds between pulses')).toBeInTheDocument());
     expect(screen.getByText('on-time fraction · 0–1')).toBeInTheDocument();
-    expect(screen.getByText('Pulse · 0/1')).toBeInTheDocument();
+    expect(screen.getByText('Event · IMPULSE')).toBeInTheDocument();
     expect(NODE_REGISTRY.impulse.compact).not.toBe(true);
 
     const handles = [...container.querySelectorAll('.react-flow__handle')];

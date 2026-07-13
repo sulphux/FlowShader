@@ -13,7 +13,7 @@ export const FeedbackNode: ShaderNodeDefinition = {
   label: 'Frame Buffer',
   inputs: [
     { id: 'in', label: 'Image In', type: 'vec3' },
-    { id: 'impulse', label: 'Snapshot', type: 'float' },
+    { id: 'impulse', label: 'Snapshot', type: 'impulse|float' },
     { id: 'uv', label: 'Sample UV (Advanced)', type: 'vec2' },
   ],
   outputs: [{ id: 'rgb', label: 'Stored Image', type: 'vec3' }],
@@ -36,13 +36,15 @@ export const ImpulseNode: ShaderNodeDefinition = {
     { id: 'interval', label: 'Interval', type: 'float' },
     { id: 'width', label: 'Pulse Width', type: 'float' },
   ],
-  outputs: [{ id: 'out', label: 'Pulse', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Event', type: 'impulse' }],
+  // Semantic impulse is represented by a scalar in generated GLSL.
+  varType: 'float',
   glslTemplate: (inputs) => {
     const interval = inputs.interval || '1.0';
     const width = inputs.width || '0.05';
-    return `((mod(iTime, max(${interval}, 0.001)) < (${interval} * ${width})) ? 1.0 : 0.0)`;
+    return `((mod(iTime, max(${interval}, 0.001)) < (${interval} * clamp(${width}, 0.0, 1.0))) ? 1.0 : 0.0)`;
   },
-  description: 'Emits a brief 1.0 pulse every "Interval" seconds, 0.0 otherwise. When connected directly to Frame Buffer Snapshot, the engine latches each interval boundary so even a pulse shorter than one frame cannot be missed.',
+  description: 'Emits an event every "Interval" seconds. Pulse Width may be any fraction from 0 to 1, including values below 0.05. Frame Buffer latches interval boundaries, so even an event shorter than one rendered frame cannot be missed.',
 };
 
 export const RandomNode: ShaderNodeDefinition = {

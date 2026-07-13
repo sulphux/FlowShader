@@ -3,6 +3,7 @@ import { NODE_REGISTRY } from '../nodes';
 import { loadCustomNodes, collectUsedCustomNodes, importEmbeddedCustomNodes, type CustomNodeDefinition } from './customNodeManager';
 import type { ShaderNodeDefinition } from './types';
 import { computeSmartSplitPorts } from './smartSplitAdapter';
+import { TYPE_COLORS } from './theme';
 
 /**
  * Wspólna serializacja/rehydracja grafu.
@@ -34,6 +35,7 @@ interface SerializedNode {
     label?: string;
     min?: number;
     max?: number;
+    step?: number;
     detectedType?: string;
     forcedType?: string;
   };
@@ -103,6 +105,7 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           label: n.data.label,
           min: n.data.min,
           max: n.data.max,
+          step: n.data.step,
           // Custom Input/Output type resolution — dropping these while keeping
           // the adapted port types in the definition made the compiler and the
           // nodes' glslTemplates disagree about the variable type after reload
@@ -240,5 +243,21 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
     nodesWithSavedPorts.has(node.id) ? node : adaptAutoNode(node, restoredNodes, edges)
   );
 
-  return { nodes: adaptedNodes, edges, viewport: parsed.viewport };
+  // Edge rendering is derived from the restored source port. This upgrades
+  // older project files automatically when a former float output becomes the
+  // semantic impulse type.
+  const decoratedEdges = edges.map(edge => {
+    const sourceNode = adaptedNodes.find(node => node.id === edge.source);
+    const sourceDef = sourceNode?.data?.definition as ShaderNodeDefinition | undefined;
+    const sourcePort = sourceDef?.outputs.find(output => output.id === edge.sourceHandle);
+    if (sourcePort?.type !== 'impulse') return edge;
+    return {
+      ...edge,
+      type: 'impulse',
+      animated: false,
+      style: { ...edge.style, stroke: TYPE_COLORS.impulse, strokeWidth: 3 },
+    };
+  });
+
+  return { nodes: adaptedNodes, edges: decoratedEdges, viewport: parsed.viewport };
 }

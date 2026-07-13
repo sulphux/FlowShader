@@ -5,7 +5,7 @@ import type { DataType } from './types';
 describe('Theme System', () => {
   describe('TYPE_COLORS', () => {
     it('should have colors for all data types', () => {
-      const types: DataType[] = ['float', 'vec2', 'vec3', 'vec4', 'auto'];
+      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
       
       types.forEach(type => {
         expect(TYPE_COLORS[type]).toBeDefined();
@@ -17,8 +17,7 @@ describe('Theme System', () => {
       const colors = Object.values(TYPE_COLORS).filter(c => c !== '#ffffff');
       const uniqueColors = new Set(colors);
       
-      // At least float, vec2, vec3, vec4, auto should be unique
-      expect(uniqueColors.size).toBeGreaterThanOrEqual(5);
+      expect(uniqueColors.size).toBeGreaterThanOrEqual(6);
     });
 
     it('should have default fallback color', () => {
@@ -28,7 +27,7 @@ describe('Theme System', () => {
 
   describe('TYPE_NAMES', () => {
     it('should have human-readable names for all types', () => {
-      const types: DataType[] = ['float', 'vec2', 'vec3', 'vec4', 'auto'];
+      const types: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto'];
       
       types.forEach(type => {
         expect(TYPE_NAMES[type]).toBeDefined();
@@ -41,6 +40,7 @@ describe('Theme System', () => {
       expect(TYPE_NAMES.vec3).toContain('RGB');
       expect(TYPE_NAMES.vec4).toContain('RGBA');
       expect(TYPE_NAMES.auto).toContain('Dynamic');
+      expect(TYPE_NAMES.impulse).toContain('Event');
     });
   });
 });

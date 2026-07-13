@@ -7,87 +7,99 @@ import ReactFlow, { ReactFlowProvider } from 'reactflow';
 import { ShaderNode } from '../components/ShaderNode';
 import { NODE_REGISTRY } from '../nodes';
 
-/**
- * Regresja: Float Param miał dwa mechanizmy inkrementacji wartości —
- * własne strzałki ◀▶ oraz natywne spinnery input[type=number].
- * Zostaje jeden: strzałki ◀▶ (natywne spinnery ukryte w CSS).
- */
+const renderFloatParam = (value?: unknown) => render(
+  <ReactFlowProvider>
+    <ReactFlow
+      defaultNodes={[{
+        id: 'p1',
+        type: 'shaderNode',
+        position: { x: 0, y: 0 },
+        data: { definition: NODE_REGISTRY.param_float, value },
+      }]}
+      nodeTypes={{ shaderNode: ShaderNode }}
+    />
+  </ReactFlowProvider>
+);
 
-const renderFloatParam = (value?: unknown) => {
-  return render(
-    <ReactFlowProvider>
-      <ReactFlow
-        defaultNodes={[{
-          id: 'p1',
-          type: 'shaderNode',
-          position: { x: 0, y: 0 },
-          data: { definition: NODE_REGISTRY.param_float, value },
-        }]}
-        nodeTypes={{ shaderNode: ShaderNode }}
-      />
-    </ReactFlowProvider>
-  );
-};
+const valueInput = () => screen.getByLabelText('Float value') as HTMLInputElement;
 
-describe('Float Param - single increment mechanism', () => {
-  it('renders exactly one pair of ◀/▶ arrows and one number input', async () => {
+describe('Float Param editor', () => {
+  it('has one explicit value field and one accessible decrement/increment pair', async () => {
     renderFloatParam(0.5);
-    await waitFor(() => expect(screen.getByText('◀')).toBeInTheDocument());
+    await waitFor(() => expect(valueInput()).toBeInTheDocument());
 
-    expect(screen.getAllByText('◀')).toHaveLength(1);
-    expect(screen.getAllByText('▶')).toHaveLength(1);
-    expect(document.querySelectorAll('input[type="number"]')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Decrease float')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Increase float')).toHaveLength(1);
+    expect(valueInput()).toHaveAttribute('type', 'text');
+    expect(valueInput()).toHaveAttribute('inputmode', 'decimal');
   });
 
-  it('▶ increments the value by step', async () => {
+  it('increments and decrements without forcing two decimal places', async () => {
+    renderFloatParam(0.001);
+    await waitFor(() => expect(valueInput()).toHaveValue('0.001'));
+
+    fireEvent.click(screen.getByLabelText('Increase float'));
+    await waitFor(() => expect(valueInput()).toHaveValue('0.011'));
+
+    fireEvent.click(screen.getByLabelText('Decrease float'));
+    await waitFor(() => expect(valueInput()).toHaveValue('0.001'));
+  });
+
+  it('accepts values below 0.05 and a decimal comma, committing on Enter', async () => {
     renderFloatParam(0.5);
-    await waitFor(() => expect(screen.getByText('▶')).toBeInTheDocument());
+    await waitFor(() => expect(valueInput()).toBeInTheDocument());
 
-    fireEvent.click(screen.getByText('▶'));
+    fireEvent.change(valueInput(), { target: { value: '0,001' } });
+    expect(valueInput()).toHaveValue('0,001');
+    fireEvent.keyDown(valueInput(), { key: 'Enter' });
 
-    await waitFor(() => {
-      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
-      expect(parseFloat(input.value)).toBeCloseTo(0.51, 5);
-    });
+    await waitFor(() => expect(valueInput()).toHaveValue('0.001'));
   });
 
-  it('◀ decrements the value by step', async () => {
-    renderFloatParam(0.5);
-    await waitFor(() => expect(screen.getByText('◀')).toBeInTheDocument());
+  it('allows a temporarily empty draft and Backspace without losing the node', async () => {
+    const { container } = renderFloatParam(0.5);
+    await waitFor(() => expect(valueInput()).toBeInTheDocument());
 
-    fireEvent.click(screen.getByText('◀'));
+    fireEvent.change(valueInput(), { target: { value: '' } });
+    fireEvent.keyDown(valueInput(), { key: 'Backspace' });
 
-    await waitFor(() => {
-      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
-      expect(parseFloat(input.value)).toBeCloseTo(0.49, 5);
-    });
+    expect(valueInput()).toHaveValue('');
+    expect(container.querySelector('[data-testid="rf__node-p1"]')).toBeInTheDocument();
   });
 
-  it('clamps at min when decrementing', async () => {
-    renderFloatParam(0.0); // min = 0.0
-    await waitFor(() => expect(screen.getByText('◀')).toBeInTheDocument());
+  it('supports Arrow step, Shift ×10 and Alt ×0.1', async () => {
+    renderFloatParam(0);
+    await waitFor(() => expect(valueInput()).toHaveValue('0'));
 
-    fireEvent.click(screen.getByText('◀'));
-
-    await waitFor(() => {
-      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
-      expect(parseFloat(input.value)).toBe(0);
-    });
+    fireEvent.keyDown(valueInput(), { key: 'ArrowUp' });
+    expect(valueInput()).toHaveValue('0.01');
+    fireEvent.keyDown(valueInput(), { key: 'ArrowUp', shiftKey: true });
+    expect(valueInput()).toHaveValue('0.11');
+    fireEvent.keyDown(valueInput(), { key: 'ArrowDown', altKey: true });
+    expect(valueInput()).toHaveValue('0.109');
   });
 
-  it('clamps at max when incrementing', async () => {
-    renderFloatParam(10.0); // max = 10.0
-    await waitFor(() => expect(screen.getByText('▶')).toBeInTheDocument());
+  it('lets the step be changed to 0.001 from settings', async () => {
+    renderFloatParam(0);
+    await waitFor(() => expect(valueInput()).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Float settings'));
 
-    fireEvent.click(screen.getByText('▶'));
+    const stepInput = screen.getByLabelText('Float step') as HTMLInputElement;
+    fireEvent.change(stepInput, { target: { value: '0.001' } });
+    await waitFor(() => expect(stepInput).toHaveValue(0.001));
 
-    await waitFor(() => {
-      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
-      expect(parseFloat(input.value)).toBe(10);
-    });
+    fireEvent.keyDown(valueInput(), { key: 'ArrowUp' });
+    await waitFor(() => expect(valueInput()).toHaveValue('0.001'));
   });
 
-  it('global CSS hides native number-input spinners (no second mechanism)', () => {
+  it('clamps button nudges at the configured range', async () => {
+    renderFloatParam(-10);
+    await waitFor(() => expect(valueInput()).toHaveValue('-10'));
+    fireEvent.click(screen.getByLabelText('Decrease float'));
+    expect(valueInput()).toHaveValue('-10');
+  });
+
+  it('keeps native number spinners hidden on numeric settings fields', () => {
     const css = readFileSync(join(process.cwd(), 'src', 'index.css'), 'utf8');
     expect(css).toContain('input[type="number"]::-webkit-inner-spin-button');
     expect(css).toContain('input[type="number"]::-webkit-outer-spin-button');

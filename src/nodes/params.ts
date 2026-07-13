@@ -22,7 +22,7 @@ export const FloatNode: ShaderNodeDefinition = {
   controls: {
     type: 'float',
     defaultValue: 0.5,
-    min: 0.0,
+    min: -10.0,
     max: 10.0,
     step: 0.01
   },

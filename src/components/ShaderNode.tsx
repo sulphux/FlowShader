@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'reactflow';
 import type { ShaderNodeDefinition } from '../core/types';
 import { TYPE_COLORS } from '../core/theme';
@@ -6,7 +6,8 @@ import { MultiTypeIndicator } from './MultiTypeIndicator';
 import { loadAudioFile, playAudio, stopAudio, isAudioPlaying } from '../core/audioManager';
 import { computeSmartSplitPorts, SMART_SPLIT_TYPE_CYCLE } from '../core/smartSplitAdapter';
 import { getRuntimeTimeSeconds } from '../core/runtimeClock';
-import { isImpulsePulseActive } from '../core/impulseTiming';
+import { isImpulsePulseActive, resolveImpulseTiming } from '../core/impulseTiming';
+import { formatEditableFloat, parseEditableFloat, stepFloatValue } from '../core/floatEditing';
 import { compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
 import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
@@ -17,6 +18,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const { setNodes, getNodes, getEdges } = useReactFlow();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [floatDraft, setFloatDraft] = useState(() => String(data.value ?? def.controls?.defaultValue ?? 0));
+  const [floatEditing, setFloatEditing] = useState(false);
+  const skipFloatCommitRef = useRef(false);
   const [showFrameBufferPreview, setShowFrameBufferPreview] = useState(false);
   const [frameBufferPreview, setFrameBufferPreview] = useState<{
     shader: string;
@@ -35,40 +39,16 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   useEffect(() => {
     if (def.id !== 'impulse') return;
 
-    const readFloatInput = (handle: 'interval' | 'width', fallback: number) => {
-      const edge = getEdges().find(candidate => candidate.target === id && candidate.targetHandle === handle);
-      if (!edge) return { value: fallback, driven: false, resolved: true };
-      const source = getNodes().find(candidate => candidate.id === edge.source);
-      if (source?.data?.definition?.id === 'param_float') {
-        const parsed = Number(source.data.value ?? source.data.definition.controls?.defaultValue);
-        if (Number.isFinite(parsed)) return { value: parsed, driven: true, resolved: true };
-      }
-      // Arbitrary shader expressions cannot be evaluated cheaply in React;
-      // keep the LED useful with the documented default timing and mark the
-      // field as externally driven.
-      return { value: fallback, driven: true, resolved: false };
-    };
-
     const tick = () => {
-      const intervalInput = readFloatInput('interval', 1);
-      const widthInput = readFloatInput('width', 0.05);
-      const interval = Math.max(intervalInput.value, 0.001);
-      const width = widthInput.value;
+      const nextTiming = resolveImpulseTiming(id, getNodes(), getEdges());
       const elapsed = getRuntimeTimeSeconds();
-      const active = isImpulsePulseActive(elapsed, interval, width);
+      const active = isImpulsePulseActive(elapsed, nextTiming.interval, nextTiming.width);
       setImpulseActive(previous => previous === active ? previous : active);
       setImpulseTiming(previous => (
-        previous.interval === intervalInput.value && previous.width === width &&
-        previous.intervalDriven === intervalInput.driven && previous.widthDriven === widthInput.driven &&
-        previous.intervalResolved === intervalInput.resolved && previous.widthResolved === widthInput.resolved
-      ) ? previous : {
-        interval: intervalInput.value,
-        width,
-        intervalDriven: intervalInput.driven,
-        widthDriven: widthInput.driven,
-        intervalResolved: intervalInput.resolved,
-        widthResolved: widthInput.resolved,
-      });
+        previous.interval === nextTiming.interval && previous.width === nextTiming.width &&
+        previous.intervalDriven === nextTiming.intervalDriven && previous.widthDriven === nextTiming.widthDriven &&
+        previous.intervalResolved === nextTiming.intervalResolved && previous.widthResolved === nextTiming.widthResolved
+      ) ? previous : nextTiming);
     };
 
     tick();
@@ -145,7 +125,8 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const currentLabel = data.label ?? def.label;
   const currentMin = data.min ?? def.controls?.min ?? 0;
   const currentMax = data.max ?? def.controls?.max ?? 1;
-  const currentStep = def.controls?.step ?? 0.01;
+  const configuredStep = parseEditableFloat(data.step ?? def.controls?.step) ?? 0.01;
+  const currentStep = configuredStep > 0 ? configuredStep : 0.01;
 
   const isNote = def.id === 'special_note';
   const isGroup = def.id === 'special_group';
@@ -154,6 +135,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const isFloatParam = def.controls?.type === 'float' && def.inputs.length === 0;
   const isCustomNode = Boolean('isCustom' in def && def.isCustom);
   const isCustomPort = def.id === 'custom_input' || def.id === 'custom_output';
+  const displayedFloatValue = floatEditing ? floatDraft : String(currentValue);
 
   // Custom Input/Output: force a fixed type instead of relying on auto-detection
   // from whatever gets connected. Forced type wins over detectedType everywhere
@@ -210,6 +192,49 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   };
 
   const preventDrag = (e: React.MouseEvent) => { e.stopPropagation(); };
+
+  const commitFloatDraft = (draft = floatDraft) => {
+    const parsed = parseEditableFloat(draft);
+    if (parsed === null) {
+      setFloatDraft(String(currentValue));
+      return;
+    }
+    const formatted = formatEditableFloat(parsed);
+    setFloatDraft(formatted);
+    updateNodeData({ value: formatted });
+  };
+
+  const nudgeFloat = (direction: -1 | 1, multiplier = 1) => {
+    const next = stepFloatValue(
+      parseEditableFloat(displayedFloatValue) ?? currentValue,
+      currentStep,
+      direction,
+      parseEditableFloat(currentMin) ?? Number.NEGATIVE_INFINITY,
+      parseEditableFloat(currentMax) ?? Number.POSITIVE_INFINITY,
+      multiplier,
+    );
+    const formatted = formatEditableFloat(next);
+    setFloatDraft(formatted);
+    updateNodeData({ value: formatted });
+  };
+
+  const handleFloatKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitFloatDraft();
+      event.currentTarget.blur();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      skipFloatCommitRef.current = true;
+      setFloatDraft(String(currentValue));
+      event.currentTarget.blur();
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      const multiplier = event.shiftKey ? 10 : event.altKey ? 0.1 : 1;
+      nudgeFloat(event.key === 'ArrowUp' ? 1 : -1, multiplier);
+    }
+  };
 
   const renderInfoIcon = () => {
       if (!def.description) return null;
@@ -434,25 +459,30 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
         <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-            {def.inputs.map(input => (
-              <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={input.id}
-                  title={input.id === 'impulse'
-                    ? 'Snapshot: manual signals capture on 0 → 1; Impulse connections latch every interval boundary'
-                    : input.label}
-                  style={{
-                    background: TYPE_COLORS[input.type] || '#888', width: '10px', height: '10px',
-                    left: '-15px', border: '2px solid #1a1a1a'
-                  }}
-                />
-                <span style={{ fontSize: input.id === 'uv' ? '9px' : '10px', color: input.id === 'uv' ? '#888' : '#ccc', whiteSpace: 'nowrap' }}>
-                  {input.label}
-                </span>
-              </div>
-            ))}
+            {def.inputs.map(input => {
+              const isMultiType = input.type.includes('|');
+              return (
+                <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={input.id}
+                    title={input.id === 'impulse'
+                      ? 'Snapshot: manual signals capture on 0 → 1; Impulse connections latch every interval boundary'
+                      : input.label}
+                    style={{
+                      background: isMultiType ? 'transparent' : (TYPE_COLORS[input.type] || '#888'), width: '10px', height: '10px',
+                      left: '-15px', border: '2px solid #1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                    }}
+                  >
+                    {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
+                  </Handle>
+                  <span style={{ fontSize: input.id === 'uv' ? '9px' : '10px', color: input.id === 'uv' ? '#888' : '#ccc', whiteSpace: 'nowrap' }}>
+                    {input.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', height: '16px', position: 'relative' }}>
             <span style={{ fontSize: '9px', color: '#ccc', marginRight: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>Stored Image</span>
@@ -691,13 +721,13 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     const ledColor = impulseActive ? '#ffeb3b' : '#4b4618';
     const ledUsesFallback = !impulseTiming.intervalResolved || !impulseTiming.widthResolved;
     const valueLabel = (value: number, driven: boolean, resolved: boolean, suffix: string) => driven
-      ? (resolved ? `input · ${value.toFixed(2)}${suffix}` : 'dynamic input')
-      : `default · ${value.toFixed(2)}${suffix}`;
+      ? (resolved ? `input · ${formatEditableFloat(value)}${suffix}` : 'dynamic input')
+      : `default · ${formatEditableFloat(value)}${suffix}`;
 
     return (
       <div style={{ ...baseStyle, width: '184px', position: 'relative', overflow: 'visible' }}>
         {renderInfoIcon()}
-        <div style={{ height: '4px', background: TYPE_COLORS.float, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ height: '4px', background: TYPE_COLORS.impulse, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
         <div style={{
           padding: '6px 9px', background: '#222', borderBottom: '1px solid #333',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
@@ -745,9 +775,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
           <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: '7px', display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
-              <span style={{ fontSize: '10px', color: impulseActive ? '#fff4a3' : '#aaa', marginRight: '6px', fontWeight: 'bold' }}>Pulse · 0/1</span>
-              <Handle type="source" position={Position.Right} id="out" title="Pulse: 1.0 while active, otherwise 0.0"
-                style={{ background: TYPE_COLORS.float, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }} />
+              <span style={{ fontSize: '10px', color: impulseActive ? '#b3e5fc' : '#aaa', marginRight: '6px', fontWeight: 'bold' }}>Event · IMPULSE</span>
+              <Handle type="source" position={Position.Right} id="out" title="Impulse event (stored as 0/1 only inside the shader)"
+                style={{ background: TYPE_COLORS.impulse, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }} />
             </div>
           </div>
         </div>
@@ -852,11 +882,18 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   if (isFloatParam) {
-    const valString = currentValue.toString();
-    const dynamicWidth = `${Math.max(3, valString.length) + 2}ch`;
+    const dynamicWidth = `${Math.min(18, Math.max(4, displayedFloatValue.length) + 2)}ch`;
+    const settingInputStyle: React.CSSProperties = {
+      background: '#111', border: '1px solid #333', borderRadius: '3px', color: '#bbb',
+      fontSize: '9px', width: '46px', textAlign: 'center', outline: 'none', padding: '2px',
+    };
+    const setFromSlider = (value: string) => {
+      setFloatDraft(value);
+      updateNodeData({ value });
+    };
 
     return (
-        <div style={{ ...baseStyle, minWidth: 'auto' }}> 
+        <div style={{ ...baseStyle, minWidth: '174px' }}>
              {renderInfoIcon()}
              <div style={{ height: '4px', background: headerColorBase, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
              
@@ -866,21 +903,48 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                     <div onClick={() => setShowSettings(!showSettings)} style={{ cursor: 'pointer', fontSize: '12px', color: showSettings ? '#ff007a' : '#666', padding: '2px', lineHeight: 1 }}>⚙️</div>
-                     <div className="nodrag" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                        <div
-                          onClick={() => updateNodeData({ value: Math.max(currentMin, parseFloat(currentValue) - currentStep).toFixed(2) })}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ff007a'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
-                          style={{ cursor: 'pointer', color: '#666', fontSize: '11px', userSelect: 'none', padding: '4px 3px', lineHeight: 1, transition: 'color 0.15s' }}
-                        >◀</div>
-                        <input type="number" value={currentValue} onChange={(e) => updateNodeData({ value: e.target.value })} style={{ background: 'transparent', border: 'none', color: '#ff007a', fontSize: '16px', fontWeight: 'bold', width: dynamicWidth, minWidth: '40px', textAlign: 'center', outline: 'none', padding: 0, margin: 0 }} onMouseDown={preventDrag} />
-                        <div
-                          onClick={() => updateNodeData({ value: Math.min(currentMax, parseFloat(currentValue) + currentStep).toFixed(2) })}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ff007a'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
-                          style={{ cursor: 'pointer', color: '#666', fontSize: '11px', userSelect: 'none', padding: '4px 3px', lineHeight: 1, transition: 'color 0.15s' }}
-                        >▶</div>
+                     <button type="button" aria-label="Float settings" onMouseDown={preventDrag} onClick={() => setShowSettings(!showSettings)} style={{ cursor: 'pointer', fontSize: '12px', color: showSettings ? '#ff007a' : '#777', padding: '2px', lineHeight: 1, background: 'transparent', border: 0 }}>⚙️</button>
+                     <div className="nodrag" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <button
+                          type="button"
+                          aria-label="Decrease float"
+                          onMouseDown={preventDrag}
+                          onClick={() => nudgeFloat(-1)}
+                          style={{ cursor: 'pointer', color: '#aaa', fontSize: '15px', userSelect: 'none', width: '22px', height: '24px', lineHeight: 1, background: '#292929', border: '1px solid #3d3d3d', borderRadius: '4px' }}
+                        >−</button>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          data-testid="float-value-input"
+                          aria-label="Float value"
+                          value={displayedFloatValue}
+                          onChange={(event) => {
+                            if (!floatEditing) setFloatEditing(true);
+                            setFloatDraft(event.target.value);
+                          }}
+                          onFocus={() => {
+                            setFloatDraft(String(currentValue));
+                            setFloatEditing(true);
+                          }}
+                          onBlur={() => {
+                            setFloatEditing(false);
+                            if (skipFloatCommitRef.current) {
+                              skipFloatCommitRef.current = false;
+                              return;
+                            }
+                            commitFloatDraft();
+                          }}
+                          onKeyDown={handleFloatKeyDown}
+                          style={{ background: '#111', border: `1px solid ${floatEditing ? '#ff007a' : '#383838'}`, borderRadius: '4px', color: '#ff4d94', fontSize: '16px', fontWeight: 'bold', width: dynamicWidth, minWidth: '54px', maxWidth: '150px', textAlign: 'center', outline: 'none', padding: '3px 5px', margin: 0, fontFamily: 'monospace' }}
+                          onMouseDown={preventDrag}
+                        />
+                        <button
+                          type="button"
+                          aria-label="Increase float"
+                          onMouseDown={preventDrag}
+                          onClick={() => nudgeFloat(1)}
+                          style={{ cursor: 'pointer', color: '#aaa', fontSize: '15px', userSelect: 'none', width: '22px', height: '24px', lineHeight: 1, background: '#292929', border: '1px solid #3d3d3d', borderRadius: '4px' }}
+                        >+</button>
                      </div>
                  </div>
                  <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative', paddingLeft: '8px' }}>
@@ -889,12 +953,17 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  </div>
              </div>
 
+             <div style={{ padding: '0 10px 5px', color: '#666', fontSize: '8px', textAlign: 'center' }}>
+               Enter applies · ↑/↓ step · Shift ×10 · Alt ×0.1
+             </div>
+
              {showSettings && (
                  <div className="nodrag" style={{ margin: '0 8px 8px 8px', background: '#222', padding: '6px', borderRadius: '4px', borderTop: '1px solid #333' }}>
-                    <input type="range" min={currentMin} max={currentMax} step={currentStep} value={currentValue} onChange={(e) => updateNodeData({ value: e.target.value })} style={{ width: '100%', cursor: 'pointer', accentColor: '#ff007a', height: '6px' }} onMouseDown={preventDrag} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                        <div style={{ display: 'flex', gap: '2px' }}><span style={{ fontSize: '8px', color: '#666' }}>MIN</span><input type="number" value={currentMin} onChange={(e) => updateNodeData({ min: parseFloat(e.target.value) })} style={{ background: '#111', border: 'none', color: '#aaa', fontSize: '9px', width: '25px', textAlign: 'center' }} onMouseDown={preventDrag} /></div>
-                        <div style={{ display: 'flex', gap: '2px' }}><span style={{ fontSize: '8px', color: '#666' }}>MAX</span><input type="number" value={currentMax} onChange={(e) => updateNodeData({ max: parseFloat(e.target.value) })} style={{ background: '#111', border: 'none', color: '#aaa', fontSize: '9px', width: '25px', textAlign: 'center' }} onMouseDown={preventDrag} /></div>
+                    <input aria-label="Float slider" type="range" min={currentMin} max={currentMax} step={currentStep} value={parseEditableFloat(currentValue) ?? 0} onChange={(e) => setFromSlider(e.target.value)} style={{ width: '100%', cursor: 'pointer', accentColor: '#ff007a', height: '6px' }} onMouseDown={preventDrag} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', marginTop: '5px' }}>
+                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '8px', color: '#777' }}>MIN</span><input aria-label="Float minimum" type="number" value={currentMin} onChange={(e) => { const value = parseEditableFloat(e.target.value); if (value !== null) updateNodeData({ min: value }); }} style={settingInputStyle} onMouseDown={preventDrag} /></label>
+                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '8px', color: '#777' }}>STEP</span><input aria-label="Float step" type="number" min="0.000000001" value={currentStep} onChange={(e) => { const value = parseEditableFloat(e.target.value); if (value !== null && value > 0) updateNodeData({ step: value }); }} style={settingInputStyle} onMouseDown={preventDrag} /></label>
+                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '8px', color: '#777' }}>MAX</span><input aria-label="Float maximum" type="number" value={currentMax} onChange={(e) => { const value = parseEditableFloat(e.target.value); if (value !== null) updateNodeData({ max: value }); }} style={settingInputStyle} onMouseDown={preventDrag} /></label>
                     </div>
                  </div>
              )}
@@ -1010,7 +1079,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             <div className="nodrag" style={{ padding: '2px 8px 6px 8px' }}>
                 <div style={{ fontSize: '8px', color: '#666', marginBottom: '3px' }}>FORCE TYPE</div>
                 <div style={{ display: 'flex', gap: '3px' }}>
-                    {['float', 'vec2', 'vec3', 'vec4'].map(t => (
+                    {['float', 'impulse', 'vec2', 'vec3', 'vec4'].map(t => (
                         <button
                             key={t}
                             onClick={() => forcePortType(t)}
@@ -1022,7 +1091,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                                 fontWeight: 'bold', borderRadius: '3px'
                             }}
                         >
-                            {t === 'float' ? '1' : t.slice(-1)}
+                            {t === 'float' ? '1' : t === 'impulse' ? '⚡' : t.slice(-1)}
                         </button>
                     ))}
                     {forcedType && (

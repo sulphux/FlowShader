@@ -10,7 +10,7 @@ import type { DataType } from './types';
 describe('connectionValidator', () => {
   describe('validateConnection', () => {
     describe('Rule 1: Same type connections (always valid)', () => {
-      const sameTypeTests: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
+      const sameTypeTests: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4'];
 
       sameTypeTests.forEach(type => {
         it(`should allow ${type} → ${type}`, () => {
@@ -18,6 +18,19 @@ describe('connectionValidator', () => {
           expect(result.valid).toBe(true);
           expect(result.reason).toBeUndefined();
         });
+      });
+    });
+
+    describe('Semantic impulse type', () => {
+      it('does not silently behave like an ordinary float at connect time', () => {
+        expect(validateConnection('impulse', 'float')).toMatchObject({ valid: false });
+        expect(validateConnection('float', 'impulse')).toMatchObject({ valid: false });
+      });
+
+      it('connects to event inputs and mixed Snapshot inputs', () => {
+        expect(validateConnection('impulse', 'impulse')).toMatchObject({ valid: true });
+        expect(validateConnection('impulse', 'impulse|float')).toMatchObject({ valid: true });
+        expect(validateConnection('float', 'impulse|float')).toMatchObject({ valid: true });
       });
     });
 
@@ -106,7 +119,7 @@ describe('connectionValidator', () => {
     });
 
     describe('Rule 5: auto type (universal adapter)', () => {
-      const concreteTypes: DataType[] = ['float', 'vec2', 'vec3', 'vec4'];
+      const concreteTypes: DataType[] = ['float', 'impulse', 'vec2', 'vec3', 'vec4'];
 
       it('should allow auto → any type', () => {
         concreteTypes.forEach(type => {
@@ -241,7 +254,7 @@ describe('connectionValidator', () => {
   describe('getValidTargetTypes', () => {
     it('should return all types for auto source', () => {
       const validTargets = getValidTargetTypes('auto');
-      expect(validTargets).toEqual(['float', 'vec2', 'vec3', 'vec4', 'auto']);
+      expect(validTargets).toEqual(['float', 'impulse', 'vec2', 'vec3', 'vec4', 'auto']);
     });
 
     it('should return only float + auto for float source', () => {
@@ -252,6 +265,10 @@ describe('connectionValidator', () => {
       expect(validTargets).not.toContain('vec3');
       expect(validTargets).not.toContain('vec4');
       expect(validTargets.length).toBe(2);
+    });
+
+    it('should return only impulse + auto for impulse source', () => {
+      expect(getValidTargetTypes('impulse')).toEqual(['impulse', 'auto']);
     });
 
     it('should return only same type + auto for vec2 source', () => {

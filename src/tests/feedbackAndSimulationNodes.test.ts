@@ -192,7 +192,9 @@ describe('Impulse node', () => {
   it('compiles to a periodic pulse expression and defaults sanely when unconnected', () => {
     const { nodes, edges } = outputGraph('impulse');
     const shader = compileGraphToGLSL(nodes, edges);
-    expect(shader).toContain('mod(iTime, max(1.0, 0.001)) < (1.0 * 0.05)');
+    expect(shader).toContain('mod(iTime, max(1.0, 0.001)) < (1.0 * clamp(0.05, 0.0, 1.0))');
+    expect(shader).toContain('float var_src1');
+    expect(shader).not.toContain('impulse var_src1');
     expectValidGLSL(shader, 'impulse -> output');
   });
 
@@ -207,7 +209,7 @@ describe('Impulse node', () => {
       { source: 'imp1', sourceHandle: 'out', target: 'out1', targetHandle: 'color' },
     ];
     const shader = compileGraphToGLSL(nodes, edges);
-    expect(shader).toContain('mod(iTime, max(var_pi, 0.001)) < (var_pi * 0.05)');
+    expect(shader).toContain('mod(iTime, max(var_pi, 0.001)) < (var_pi * clamp(0.05, 0.0, 1.0))');
     expectValidGLSL(shader, 'impulse (connected interval) -> output');
   });
 });

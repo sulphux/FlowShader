@@ -8,6 +8,13 @@ import { shaderDebug } from './shaderDebug';
 /** GLSL identifiers can't contain hyphens or other punctuation. */
 export const sanitizeGLSLIdentifier = (id: string): string => id.replace(/[^a-zA-Z0-9_]/g, '_');
 
+/** Semantic graph types mapped to their concrete GLSL representation. */
+export const toGLSLType = (type: string): string => {
+  if (!type || type === 'auto') return 'vec3';
+  if (type === 'impulse') return 'float';
+  return type;
+};
+
 /**
  * Name of the generated GLSL function for one output port of a custom node.
  * The FIRST output keeps the bare custom node id (the historical name);
@@ -42,9 +49,6 @@ export function generateCustomNodeFunction(
     inputs: inputs.map(i => ({ id: i.id, type: i.type })),
     outputs: outputs.map(o => ({ id: o.id, type: o.type })),
   });
-
-  // 'auto' is not a valid GLSL type — fall back to vec3 when type is not yet determined
-  const toGLSLType = (t: string) => (!t || t === 'auto') ? 'vec3' : t;
 
   const funcName = customNodeFunctionName(customDef, port);
   const returnType = toGLSLType(port?.type ?? '');
@@ -116,6 +120,17 @@ export function autoCast(expr: string, fromType: string, toType: string): string
   // Casts here must agree, or a raw vec2/float gets passed into a vec3
   // parameter and the shader fails to compile ("no matching overloaded
   // function found").
+  // Resolve a multi-type target to the exact semantic source type whenever
+  // possible (e.g. Frame Buffer Snapshot accepts impulse|float).
+  if (toType.includes('|')) {
+    const options = toType.split('|');
+    toType = options.includes(fromType) ? fromType : options[0];
+  }
+
+  // Impulse is distinct at graph-validation time, but it is stored as a
+  // scalar in GLSL. Conversion here does not relax connection typing.
+  if (fromType === 'impulse') fromType = 'float';
+  if (toType === 'impulse') toType = 'float';
   if (toType === 'auto') toType = 'vec3';
   if (fromType === toType) return expr;
   

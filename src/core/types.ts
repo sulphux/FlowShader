@@ -1,4 +1,9 @@
-export type DataType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'auto';
+/**
+ * `impulse` is an event signal. It is represented as a float in GLSL, but is
+ * intentionally a separate graph type so it cannot be mistaken for an
+ * ordinary numeric value or silently connected to float inputs.
+ */
+export type DataType = 'float' | 'impulse' | 'vec2' | 'vec3' | 'vec4' | 'auto';
 
 export interface PortDefinition {
   id: string;
