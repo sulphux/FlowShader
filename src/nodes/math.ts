@@ -100,6 +100,46 @@ export const StepNode: ShaderNodeDefinition = {
   glslTemplate: ({ edge, x }) => `step(${edge || '0.5'}, ${x || '0.0'})`
 };
 
+export const MinNode: ShaderNodeDefinition = {
+  id: 'math_min', label: 'MIN', compact: true,
+  description: 'Returns the smaller of A and B.',
+  inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Min', type: 'float' }],
+  glslTemplate: ({ a, b }) => `min(${a || '0.0'}, ${b || '0.0'})`
+};
+
+export const MaxNode: ShaderNodeDefinition = {
+  id: 'math_max', label: 'MAX', compact: true,
+  description: 'Returns the larger of A and B.',
+  inputs: [{ id: 'a', label: 'A', type: 'float' }, { id: 'b', label: 'B', type: 'float' }],
+  outputs: [{ id: 'out', label: 'Max', type: 'float' }],
+  glslTemplate: ({ a, b }) => `max(${a || '0.0'}, ${b || '0.0'})`
+};
+
+export const ClampNode: ShaderNodeDefinition = {
+  id: 'math_clamp', label: 'CLAMP', compact: true,
+  description: 'Constrains X to the Min..Max range.',
+  inputs: [
+    { id: 'x', label: 'X', type: 'float' },
+    { id: 'min', label: 'Min', type: 'float' },
+    { id: 'max', label: 'Max', type: 'float' },
+  ],
+  outputs: [{ id: 'out', label: 'Clamped', type: 'float' }],
+  glslTemplate: ({ x, min, max }) => `clamp(${x || '0.0'}, ${min || '0.0'}, ${max || '1.0'})`
+};
+
+export const MixFloatNode: ShaderNodeDefinition = {
+  id: 'math_mix_float', label: 'MIX (Float)', compact: true,
+  description: 'Linearly interpolates from A to B using T.',
+  inputs: [
+    { id: 'a', label: 'A', type: 'float' },
+    { id: 'b', label: 'B', type: 'float' },
+    { id: 't', label: 'T', type: 'float' },
+  ],
+  outputs: [{ id: 'out', label: 'Mix', type: 'float' }],
+  glslTemplate: ({ a, b, t }) => `mix(${a || '0.0'}, ${b || '1.0'}, ${t || '0.5'})`
+};
+
 export const PowNode: ShaderNodeDefinition = {
   id: 'math_pow', label: 'POW', compact: true, description: 'Returns Base raised to Exp',
   inputs: [{ id: 'base', label: 'Base', type: 'float' }, { id: 'exp', label: 'Exp', type: 'float' }],

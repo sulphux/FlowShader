@@ -90,6 +90,10 @@ export const NODE_REGISTRY = {
   math_pow: MathNodes.PowNode,
   math_fract: MathNodes.FractFloatNode,
   math_step: MathNodes.StepNode,
+  math_min: MathNodes.MinNode,
+  math_max: MathNodes.MaxNode,
+  math_clamp: MathNodes.ClampNode,
+  math_mix_float: MathNodes.MixFloatNode,
 
   // Color
   color_add: MathNodes.ColorAddNode,
@@ -99,6 +103,8 @@ export const NODE_REGISTRY = {
   // Vector
   uv: VecNodes.UVNode,
   vec_length: VecNodes.LengthNode,
+  vec_length3: VecNodes.LengthVec3Node,
+  vec_normalize3: VecNodes.NormalizeVec3Node,
   vec_fract: VecNodes.FractNode,
   uv_scale: VecNodes.UVScaleNode,
   uv_shift: VecNodes.UVShiftNode,

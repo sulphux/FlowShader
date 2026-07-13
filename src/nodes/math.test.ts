@@ -144,6 +144,33 @@ describe('math nodes', () => {
     });
   });
 
+  describe('scalar GLSL range builtins', () => {
+    it('should generate min and max calls', () => {
+      expect(MathNodes.MinNode.glslTemplate({ a: 'left', b: 'right' })).toBe('min(left, right)');
+      expect(MathNodes.MaxNode.glslTemplate({ a: 'left', b: 'right' })).toBe('max(left, right)');
+    });
+
+    it('should generate clamp with X, Min and Max in GLSL order', () => {
+      expect(MathNodes.ClampNode.glslTemplate({ x: 'value', min: '-1.0', max: '1.0' }))
+        .toBe('clamp(value, -1.0, 1.0)');
+      expect(MathNodes.ClampNode.glslTemplate({})).toBe('clamp(0.0, 0.0, 1.0)');
+    });
+
+    it('should generate scalar mix and useful defaults', () => {
+      expect(MathNodes.MixFloatNode.glslTemplate({ a: 'low', b: 'high', t: 'factor' }))
+        .toBe('mix(low, high, factor)');
+      expect(MathNodes.MixFloatNode.glslTemplate({})).toBe('mix(0.0, 1.0, 0.5)');
+    });
+
+    it('should keep every scalar builtin strictly float typed', () => {
+      [MathNodes.MinNode, MathNodes.MaxNode, MathNodes.ClampNode, MathNodes.MixFloatNode]
+        .forEach(node => {
+          expect(node.inputs.every(input => input.type === 'float')).toBe(true);
+          expect(node.outputs[0].type).toBe('float');
+        });
+    });
+  });
+
   describe('ColorAddNode', () => {
     it('should generate color addition GLSL code', () => {
       const code = MathNodes.ColorAddNode.glslTemplate({ 
@@ -198,6 +225,10 @@ describe('math nodes', () => {
       MathNodes.ExpNode,
       MathNodes.PowNode,
       MathNodes.StepNode,
+      MathNodes.MinNode,
+      MathNodes.MaxNode,
+      MathNodes.ClampNode,
+      MathNodes.MixFloatNode,
       MathNodes.ColorAddNode,
       MathNodes.ColorMultNode
     ];

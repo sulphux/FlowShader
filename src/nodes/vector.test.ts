@@ -39,6 +39,30 @@ describe('vector nodes', () => {
     });
   });
 
+  describe('LengthVec3Node', () => {
+    it('should generate Vec3 length code and a typed zero default', () => {
+      expect(VectorNodes.LengthVec3Node.glslTemplate({ in: 'position' })).toBe('length(position)');
+      expect(VectorNodes.LengthVec3Node.glslTemplate({})).toBe('length(vec3(0.0))');
+    });
+
+    it('should convert vec3 to float', () => {
+      expect(VectorNodes.LengthVec3Node.inputs[0].type).toBe('vec3');
+      expect(VectorNodes.LengthVec3Node.outputs[0].type).toBe('float');
+    });
+  });
+
+  describe('NormalizeVec3Node', () => {
+    it('should generate Vec3 normalize code with a safe non-zero default', () => {
+      expect(VectorNodes.NormalizeVec3Node.glslTemplate({ in: 'ray' })).toBe('normalize(ray)');
+      expect(VectorNodes.NormalizeVec3Node.glslTemplate({})).toBe('normalize(vec3(0.0, 0.0, 1.0))');
+    });
+
+    it('should preserve vec3 type', () => {
+      expect(VectorNodes.NormalizeVec3Node.inputs[0].type).toBe('vec3');
+      expect(VectorNodes.NormalizeVec3Node.outputs[0].type).toBe('vec3');
+    });
+  });
+
   describe('FractNode', () => {
     it('should generate fract function code', () => {
       const code = VectorNodes.FractNode.glslTemplate({ in: 'uv * 10.0' });
@@ -110,6 +134,8 @@ describe('vector nodes', () => {
     const vectorNodes = [
       VectorNodes.UVNode,
       VectorNodes.LengthNode,
+      VectorNodes.LengthVec3Node,
+      VectorNodes.NormalizeVec3Node,
       VectorNodes.FractNode,
       VectorNodes.UVScaleNode,
       VectorNodes.UVShiftNode
@@ -155,6 +181,16 @@ describe('vector nodes', () => {
     it('LengthNode should convert vec2 to float', () => {
       expect(VectorNodes.LengthNode.inputs[0].type).toBe('vec2');
       expect(VectorNodes.LengthNode.outputs[0].type).toBe('float');
+    });
+
+    it('LengthVec3Node should convert vec3 to float', () => {
+      expect(VectorNodes.LengthVec3Node.inputs[0].type).toBe('vec3');
+      expect(VectorNodes.LengthVec3Node.outputs[0].type).toBe('float');
+    });
+
+    it('NormalizeVec3Node should preserve vec3', () => {
+      expect(VectorNodes.NormalizeVec3Node.inputs[0].type).toBe('vec3');
+      expect(VectorNodes.NormalizeVec3Node.outputs[0].type).toBe('vec3');
     });
 
     it('FractNode should preserve vec2 type', () => {

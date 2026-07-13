@@ -16,7 +16,11 @@ const sidebarIds = Object.values(SIDEBAR_MENU).flat();
 const contextIds = Object.values(CONTEXT_MENU).flat();
 const registryIds = Object.values(NODE_REGISTRY).map(def => def.id);
 
-const NEW_NODE_IDS = ['mono', 'math_fract', 'math_step', 'math_tan', 'math_cot', 'math_atan', 'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random'];
+const NEW_NODE_IDS = [
+  'mono', 'math_fract', 'math_step', 'math_min', 'math_max', 'math_clamp', 'math_mix_float',
+  'vec_length3', 'vec_normalize3', 'math_tan', 'math_cot', 'math_atan',
+  'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random',
+];
 const INTERNAL_ADAPTER_IDS = ['split_vec2', 'split_vec3', 'split_vec4', 'combine_vec2', 'combine_vec3', 'combine_vec4'];
 
 describe('Menu & registry audit', () => {
@@ -67,6 +71,14 @@ describe('Menu & registry audit', () => {
     expect(NODE_REGISTRY.mono.inputs[0].type).toBe('float');
     expect(NODE_REGISTRY.math_fract.glslTemplate({ in: '0.5' })).toBe('fract(0.5)');
     expect(NODE_REGISTRY.math_step.glslTemplate({ edge: '0.5', x: '0.75' })).toBe('step(0.5, 0.75)');
+    expect(NODE_REGISTRY.math_min.glslTemplate({ a: '1.0', b: '2.0' })).toBe('min(1.0, 2.0)');
+    expect(NODE_REGISTRY.math_max.glslTemplate({ a: '1.0', b: '2.0' })).toBe('max(1.0, 2.0)');
+    expect(NODE_REGISTRY.math_clamp.glslTemplate({ x: '2.0', min: '0.0', max: '1.0' }))
+      .toBe('clamp(2.0, 0.0, 1.0)');
+    expect(NODE_REGISTRY.math_mix_float.glslTemplate({ a: '0.0', b: '1.0', t: '0.25' }))
+      .toBe('mix(0.0, 1.0, 0.25)');
+    expect(NODE_REGISTRY.vec_length3.glslTemplate({ in: 'p' })).toBe('length(p)');
+    expect(NODE_REGISTRY.vec_normalize3.glslTemplate({ in: 'p' })).toBe('normalize(p)');
     expect(NODE_REGISTRY.math_tan.glslTemplate({ in: '0.5' })).toBe('tan(0.5)');
     expect(NODE_REGISTRY.code_glsl.controls?.type).toBe('text');
     expect(NODE_REGISTRY.color_preview.inputs[0].id).toBe('in');

@@ -8,10 +8,26 @@ export const UVNode: ShaderNodeDefinition = {
 };
 
 export const LengthNode: ShaderNodeDefinition = {
-  id: 'vec_length', label: 'Length', compact: true,
+  id: 'vec_length', label: 'Length (Vec2)', compact: true,
   inputs: [{ id: 'in', type: 'vec2', label: 'Vec' }], // Było label: ''
   outputs: [{ id: 'out', type: 'float', label: 'Len' }],
   glslTemplate: ({ in: val }) => `length(${val || 'vec2(0.0)'})`
+};
+
+export const LengthVec3Node: ShaderNodeDefinition = {
+  id: 'vec_length3', label: 'Length (Vec3)', compact: true,
+  description: 'Returns the magnitude of a Vec3.',
+  inputs: [{ id: 'in', type: 'vec3', label: 'Vec3' }],
+  outputs: [{ id: 'out', type: 'float', label: 'Len' }],
+  glslTemplate: ({ in: val }) => `length(${val || 'vec3(0.0)'})`
+};
+
+export const NormalizeVec3Node: ShaderNodeDefinition = {
+  id: 'vec_normalize3', label: 'Normalize (Vec3)', compact: true,
+  description: 'Returns a Vec3 with length 1. The disconnected default points along +Z.',
+  inputs: [{ id: 'in', type: 'vec3', label: 'Vec3' }],
+  outputs: [{ id: 'out', type: 'vec3', label: 'Unit' }],
+  glslTemplate: ({ in: val }) => `normalize(${val || 'vec3(0.0, 0.0, 1.0)'})`
 };
 
 export const FractNode: ShaderNodeDefinition = {

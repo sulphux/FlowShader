@@ -37,6 +37,47 @@ describe('New nodes', () => {
     }
   });
 
+  it('new scalar and Vec3 builtins compile together without custom procedures', () => {
+    const nodes: GraphNode[] = [
+      { id: 'color1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#4080ff' } },
+      { id: 'zero', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_float, value: 0 } },
+      { id: 'one', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_float, value: 1 } },
+      { id: 'normalize1', type: 'shaderNode', data: { definition: NODE_REGISTRY.vec_normalize3 } },
+      { id: 'length1', type: 'shaderNode', data: { definition: NODE_REGISTRY.vec_length3 } },
+      { id: 'clamp1', type: 'shaderNode', data: { definition: NODE_REGISTRY.math_clamp } },
+      { id: 'mix1', type: 'shaderNode', data: { definition: NODE_REGISTRY.math_mix_float } },
+      { id: 'max1', type: 'shaderNode', data: { definition: NODE_REGISTRY.math_max } },
+      { id: 'min1', type: 'shaderNode', data: { definition: NODE_REGISTRY.math_min } },
+      { id: 'mono1', type: 'shaderNode', data: { definition: NODE_REGISTRY.mono } },
+      { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY.output } },
+    ];
+    const edges = [
+      { source: 'color1', sourceHandle: 'rgb', target: 'normalize1', targetHandle: 'in' },
+      { source: 'normalize1', sourceHandle: 'out', target: 'length1', targetHandle: 'in' },
+      { source: 'length1', sourceHandle: 'out', target: 'clamp1', targetHandle: 'x' },
+      { source: 'zero', sourceHandle: 'out', target: 'clamp1', targetHandle: 'min' },
+      { source: 'one', sourceHandle: 'out', target: 'clamp1', targetHandle: 'max' },
+      { source: 'zero', sourceHandle: 'out', target: 'mix1', targetHandle: 'a' },
+      { source: 'one', sourceHandle: 'out', target: 'mix1', targetHandle: 'b' },
+      { source: 'clamp1', sourceHandle: 'out', target: 'mix1', targetHandle: 't' },
+      { source: 'mix1', sourceHandle: 'out', target: 'max1', targetHandle: 'a' },
+      { source: 'zero', sourceHandle: 'out', target: 'max1', targetHandle: 'b' },
+      { source: 'max1', sourceHandle: 'out', target: 'min1', targetHandle: 'a' },
+      { source: 'one', sourceHandle: 'out', target: 'min1', targetHandle: 'b' },
+      { source: 'min1', sourceHandle: 'out', target: 'mono1', targetHandle: 'in' },
+      { source: 'mono1', sourceHandle: 'out', target: 'out1', targetHandle: 'color' },
+    ];
+    const shader = compileGraphToGLSL(nodes, edges);
+
+    ['normalize(', 'length(', 'clamp(', 'mix(', 'max(', 'min('].forEach(call => {
+      expect(shader).toContain(call);
+    });
+    if (glslangAvailable) {
+      const result = validateWithGlslangValidator(shader, 'frag');
+      expect(result.ok, `glslang rejected:\n${result.output}\n${shader}`).toBe(true);
+    }
+  });
+
   it('trig nodes generate expected GLSL', () => {
     expect(NODE_REGISTRY.math_tan.glslTemplate({ in: 'x' })).toBe('tan(x)');
     expect(NODE_REGISTRY.math_cot.glslTemplate({ in: 'x' })).toBe('(cos(x) / sin(x))');

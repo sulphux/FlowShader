@@ -14,8 +14,8 @@ interface Props {
 export const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv", "texture_2d", "audio_input"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
-  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract", "math_step"],
-  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
+  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract", "math_step", "math_min", "math_max", "math_clamp", "math_mix_float"],
+  "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_length3", "vec_normalize3", "vec_fract", "math_mix", "relay_auto"],
   "Utils": [
     "special_note", "special_group",
     "smart_split",
