@@ -1,18 +1,102 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'reactflow';
 import type { ShaderNodeDefinition } from '../core/types';
 import { TYPE_COLORS } from '../core/theme';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
 import { loadAudioFile, playAudio, stopAudio, isAudioPlaying } from '../core/audioManager';
 import { computeSmartSplitPorts, SMART_SPLIT_TYPE_CYCLE } from '../core/smartSplitAdapter';
+import { getRuntimeTimeSeconds } from '../core/runtimeClock';
+import { compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
+import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
+import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
+import ShaderPreview from './ShaderPreview';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const def = data.definition as ShaderNodeDefinition;
-  const { setNodes } = useReactFlow();
+  const { setNodes, getNodes, getEdges } = useReactFlow();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showFrameBufferPreview, setShowFrameBufferPreview] = useState(false);
+  const [frameBufferPreview, setFrameBufferPreview] = useState<{
+    shader: string;
+    resources: ShaderRuntimeResources;
+    passes: FeedbackPassDefinition[];
+  } | null>(null);
   // Wymusza rerender po zmianie stanu odtwarzania audio (stan żyje w audioManager)
   const [, setAudioRefresh] = useState(0);
+  const [impulseActive, setImpulseActive] = useState(def.id === 'impulse');
+  const [impulseTiming, setImpulseTiming] = useState({
+    interval: 1, width: 0.05,
+    intervalDriven: false, widthDriven: false,
+    intervalResolved: true, widthResolved: true,
+  });
+
+  useEffect(() => {
+    if (def.id !== 'impulse') return;
+
+    const readFloatInput = (handle: 'interval' | 'width', fallback: number) => {
+      const edge = getEdges().find(candidate => candidate.target === id && candidate.targetHandle === handle);
+      if (!edge) return { value: fallback, driven: false, resolved: true };
+      const source = getNodes().find(candidate => candidate.id === edge.source);
+      if (source?.data?.definition?.id === 'param_float') {
+        const parsed = Number(source.data.value ?? source.data.definition.controls?.defaultValue);
+        if (Number.isFinite(parsed)) return { value: parsed, driven: true, resolved: true };
+      }
+      // Arbitrary shader expressions cannot be evaluated cheaply in React;
+      // keep the LED useful with the documented default timing and mark the
+      // field as externally driven.
+      return { value: fallback, driven: true, resolved: false };
+    };
+
+    const tick = () => {
+      const intervalInput = readFloatInput('interval', 1);
+      const widthInput = readFloatInput('width', 0.05);
+      const interval = Math.max(intervalInput.value, 0.001);
+      const width = widthInput.value;
+      const elapsed = getRuntimeTimeSeconds();
+      const active = (elapsed % interval) < interval * width;
+      setImpulseActive(previous => previous === active ? previous : active);
+      setImpulseTiming(previous => (
+        previous.interval === intervalInput.value && previous.width === width &&
+        previous.intervalDriven === intervalInput.driven && previous.widthDriven === widthInput.driven &&
+        previous.intervalResolved === intervalInput.resolved && previous.widthResolved === widthInput.resolved
+      ) ? previous : {
+        interval: intervalInput.value,
+        width,
+        intervalDriven: intervalInput.driven,
+        widthDriven: widthInput.driven,
+        intervalResolved: intervalInput.resolved,
+        widthResolved: widthInput.resolved,
+      });
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 16);
+    return () => window.clearInterval(timer);
+  }, [def.id, getEdges, getNodes, id]);
+
+  useEffect(() => {
+    if (def.id !== 'feedback' || !showFrameBufferPreview) return;
+
+    const updatePreview = () => {
+      const safeNodes: GraphNode[] = getNodes().map(node => ({
+        id: node.id,
+        type: node.type || 'shaderNode',
+        data: node.data,
+      }));
+      const edges = getEdges();
+      const next = {
+        shader: compileNodeOutputToGLSL(safeNodes, edges, id, 'rgb'),
+        resources: collectRuntimeResources(safeNodes),
+        passes: compileFeedbackPasses(safeNodes, edges),
+      };
+      setFrameBufferPreview(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+    };
+
+    updatePreview();
+    const timer = window.setInterval(updatePreview, 500);
+    return () => window.clearInterval(timer);
+  }, [def.id, getEdges, getNodes, id, showFrameBufferPreview]);
 
   const updateNodeData = useCallback((changes: Record<string, unknown>) => {
     setNodes((nds) => nds.map((node) => {
@@ -318,6 +402,95 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     );
   }
 
+  // --- FRAME BUFFER (opcjonalny podgląd zapamiętanego obrazu) ---
+  if (def.id === 'feedback') {
+    return (
+      <div style={{ ...baseStyle, width: '210px', position: 'relative', overflow: 'visible' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS.vec3, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{
+          padding: '5px 8px', background: '#222', borderBottom: '1px solid #333',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#eee', whiteSpace: 'nowrap' }}>FRAME BUFFER</span>
+          <button
+            type="button"
+            className="nodrag"
+            data-testid="frame-buffer-preview-toggle"
+            aria-label={showFrameBufferPreview ? 'Hide buffer preview' : 'Show buffer preview'}
+            onMouseDown={preventDrag}
+            onClick={() => setShowFrameBufferPreview(open => !open)}
+            style={{
+              background: showFrameBufferPreview ? '#3a2740' : '#2b2b2b',
+              border: `1px solid ${showFrameBufferPreview ? '#ff007a' : '#4a4a4a'}`,
+              borderRadius: '4px', color: showFrameBufferPreview ? '#ff8fbd' : '#aaa',
+              fontSize: '9px', padding: '2px 6px', cursor: 'pointer', whiteSpace: 'nowrap'
+            }}
+          >
+            {showFrameBufferPreview ? '▾ Preview' : '▸ Preview'}
+          </button>
+        </div>
+
+        <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+            {def.inputs.map(input => (
+              <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                <Handle
+                  type="target"
+                  position={Position.Left}
+                  id={input.id}
+                  title={input.label}
+                  style={{
+                    background: TYPE_COLORS[input.type] || '#888', width: '10px', height: '10px',
+                    left: '-15px', border: '2px solid #1a1a1a'
+                  }}
+                />
+                <span style={{ fontSize: input.id === 'uv' ? '9px' : '10px', color: input.id === 'uv' ? '#888' : '#ccc', whiteSpace: 'nowrap' }}>
+                  {input.label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start', height: '16px', position: 'relative' }}>
+            <span style={{ fontSize: '9px', color: '#ccc', marginRight: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>Stored Image</span>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id="rgb"
+              title="Stored Image"
+              style={{ background: TYPE_COLORS.vec3, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }}
+            />
+          </div>
+        </div>
+
+        {showFrameBufferPreview && (
+          <div
+            data-testid="frame-buffer-preview-window"
+            className="nodrag"
+            style={{
+              height: '118px', margin: '0 8px 8px', borderRadius: '5px', overflow: 'hidden',
+              background: '#050505', border: '1px solid #3a3a3a', position: 'relative',
+              boxShadow: 'inset 0 0 12px rgba(0,0,0,0.8)'
+            }}
+            onMouseDown={preventDrag}
+          >
+            {frameBufferPreview ? (
+              <ShaderPreview
+                shaderCode={frameBufferPreview.shader}
+                resources={frameBufferPreview.resources}
+                feedbackPasses={frameBufferPreview.passes}
+              />
+            ) : (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontSize: '9px' }}>
+                Preparing preview…
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // --- TEXTURE (wgrany obraz) ---
   if (def.id === 'texture_2d') {
     const imageSrc = typeof currentValue === 'string' ? currentValue : '';
@@ -504,6 +677,75 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
               type="source" position={Position.Right} id="out"
               style={{ background: TYPE_COLORS[outType], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }}
             />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- IMPULSE (czytelny generator zdarzeń z diodą stanu) ---
+  if (def.id === 'impulse') {
+    const ledColor = impulseActive ? '#ffeb3b' : '#4b4618';
+    const ledUsesFallback = !impulseTiming.intervalResolved || !impulseTiming.widthResolved;
+    const valueLabel = (value: number, driven: boolean, resolved: boolean, suffix: string) => driven
+      ? (resolved ? `input · ${value.toFixed(2)}${suffix}` : 'dynamic input')
+      : `default · ${value.toFixed(2)}${suffix}`;
+
+    return (
+      <div style={{ ...baseStyle, width: '184px', position: 'relative', overflow: 'visible' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: TYPE_COLORS.float, borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{
+          padding: '6px 9px', background: '#222', borderBottom: '1px solid #333',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#eee' }}>IMPULSE</span>
+          <div title={`${impulseActive ? 'Pulse is HIGH (1.0)' : 'Pulse is LOW (0.0)'}${ledUsesFallback ? ' · LED preview uses default timing for a dynamic shader input' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '8px', color: impulseActive ? '#fff4a3' : '#777', letterSpacing: '0.8px' }}>PULSE</span>
+            <span
+              data-testid="impulse-led"
+              data-active={impulseActive ? 'true' : 'false'}
+              style={{
+                width: '10px', height: '10px', borderRadius: '50%', display: 'block',
+                background: ledColor, border: `1px solid ${impulseActive ? '#fff7a8' : '#625c24'}`,
+                boxShadow: impulseActive ? '0 0 5px #ffeb3b, 0 0 11px rgba(255,235,59,0.75)' : 'inset 0 0 3px rgba(0,0,0,0.8)',
+                transition: 'background 40ms, box-shadow 40ms, border-color 40ms'
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ padding: '8px 10px 9px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '25px' }}>
+            <Handle type="target" position={Position.Left} id="interval" title="Seconds between pulses"
+              style={{ background: TYPE_COLORS.float, width: '10px', height: '10px', left: '-15px', border: '2px solid #1a1a1a' }} />
+            <div>
+              <div style={{ fontSize: '10px', color: '#ddd', fontWeight: 'bold' }}>Interval</div>
+              <div style={{ fontSize: '8px', color: '#777' }}>seconds between pulses</div>
+            </div>
+            <span style={{ fontSize: '8px', color: '#999', fontFamily: 'monospace' }}>
+              {valueLabel(impulseTiming.interval, impulseTiming.intervalDriven, impulseTiming.intervalResolved, 's')}
+            </span>
+          </div>
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '25px' }}>
+            <Handle type="target" position={Position.Left} id="width" title="Fraction of the interval for which Pulse stays at 1.0"
+              style={{ background: TYPE_COLORS.float, width: '10px', height: '10px', left: '-15px', border: '2px solid #1a1a1a' }} />
+            <div>
+              <div style={{ fontSize: '10px', color: '#ddd', fontWeight: 'bold' }}>Pulse Width</div>
+              <div style={{ fontSize: '8px', color: '#777' }}>on-time fraction · 0–1</div>
+            </div>
+            <span style={{ fontSize: '8px', color: '#999', fontFamily: 'monospace' }}>
+              {valueLabel(impulseTiming.width, impulseTiming.widthDriven, impulseTiming.widthResolved, '')}
+            </span>
+          </div>
+
+          <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: '7px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+              <span style={{ fontSize: '10px', color: impulseActive ? '#fff4a3' : '#aaa', marginRight: '6px', fontWeight: 'bold' }}>Pulse · 0/1</span>
+              <Handle type="source" position={Position.Right} id="out" title="Pulse: 1.0 while active, otherwise 0.0"
+                style={{ background: TYPE_COLORS.float, width: '10px', height: '10px', right: '-15px', border: '2px solid #1a1a1a' }} />
+            </div>
           </div>
         </div>
       </div>

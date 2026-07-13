@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import ShaderPreview from './ShaderPreview';
 
 const mockGetShaderValidationReport = vi.fn();
+let renderTargetCount = 0;
 
 vi.mock('../core/validator', () => ({
   getShaderValidationReport: (...args: unknown[]) => mockGetShaderValidationReport(...args),
@@ -16,6 +17,8 @@ vi.mock('three', async () => {
     setSize() {}
     setPixelRatio() {}
     setRenderTarget() {}
+    getRenderTarget() { return null; }
+    clear() {}
     getDrawingBufferSize(target: { x: number; y: number }) {
       target.x = 4; target.y = 4;
       return target;
@@ -34,6 +37,7 @@ vi.mock('three', async () => {
 
   class MockWebGLRenderTarget {
     texture = {};
+    constructor() { renderTargetCount += 1; }
     dispose() {}
   }
 
@@ -99,38 +103,37 @@ describe('ShaderPreview debug report', () => {
 
 describe('ShaderPreview feedback (ping-pong) buffers', () => {
   beforeEach(() => {
+    renderTargetCount = 0;
     mockGetShaderValidationReport.mockReturnValue({
       valid: true, errors: [], warnings: [], source: 'heuristic',
     });
   });
 
-  const feedbackResources = { textures: [], usesAudio: false, usesFeedback: true };
+  const feedbackResources = {
+    textures: [], usesAudio: false, usesFeedback: true,
+    feedbacks: [{ nodeId: 'feedback1', uniform: 'u_feedback_feedback1' }],
+  };
+  const feedbackPasses = [{
+    nodeId: 'feedback1', uniform: 'u_feedback_feedback1', shader: 'void main(){}',
+  }];
 
-  it('isMainOutput + a feedback-using graph populates the shared texture after a frame', async () => {
-    const { sharedFeedbackTexture } = await import('../core/feedbackBuffer');
-    sharedFeedbackTexture.current = null;
+  it('allocates an independent ping-pong pair for a Feedback pass', async () => {
     vi.useFakeTimers();
     try {
-      render(<ShaderPreview shaderCode="void main(){}" resources={feedbackResources} isMainOutput />);
-      // First animate() runs synchronously during mount, before the recompile
-      // effect sets usesFeedbackRef — advance a frame so it runs again with
-      // feedback actually recognized, allocating the ping-pong buffers.
+      render(<ShaderPreview shaderCode="void main(){}" resources={feedbackResources} feedbackPasses={feedbackPasses} isMainOutput />);
       await vi.advanceTimersByTimeAsync(20);
-      expect(sharedFeedbackTexture.current).not.toBeNull();
+      expect(renderTargetCount).toBe(2);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('a non-main-output instance (e.g. a Preview node) never owns ping-pong state, even with a feedback-using graph', async () => {
-    const { sharedFeedbackTexture } = await import('../core/feedbackBuffer');
-    sharedFeedbackTexture.current = null;
+  it('a Preview node also evaluates Feedback locally so its WebGL context can display state', async () => {
     vi.useFakeTimers();
     try {
-      render(<ShaderPreview shaderCode="void main(){}" resources={feedbackResources} />);
+      render(<ShaderPreview shaderCode="void main(){}" resources={feedbackResources} feedbackPasses={feedbackPasses} />);
       await vi.advanceTimersByTimeAsync(20);
-      // Only isMainOutput writes to the shared texture — a plain Preview tap must not.
-      expect(sharedFeedbackTexture.current).toBeNull();
+      expect(renderTargetCount).toBe(2);
     } finally {
       vi.useRealTimers();
     }

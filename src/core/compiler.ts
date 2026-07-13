@@ -38,9 +38,15 @@ const sortNodesTopologically = (nodes: GraphNode[], edges: GraphEdge[], targetNo
   const visit = (nodeId: string) => {
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
-    const inputEdges = edges.filter(e => e.target === nodeId);
-    inputEdges.forEach(edge => visit(edge.source));
     const node = nodeMap.get(nodeId);
+    // Feedback is a frame boundary: its stored output never depends on its
+    // current-frame In/Impulse while compiling a consumer. UV is different —
+    // it controls where the already stored texture is sampled, so it remains
+    // a normal dependency. This deliberately makes simulation loops legal.
+    const inputEdges = edges.filter(e => e.target === nodeId && (
+      node?.data?.definition?.id !== 'feedback' || e.targetHandle === 'uv'
+    ));
+    inputEdges.forEach(edge => visit(edge.source));
     if (node) sorted.push(node);
   };
 
@@ -495,6 +501,9 @@ ${resourceUniforms}
     // visible at function scope, not a local of main().
     vec2 uv;
     vec2 uv0;
+    // Pixel-aligned 0..1 coordinates. Unlike the centered UV, these do not carry the
+    // render target's aspect ratio and are safe for screen-sized buffers.
+    vec2 screenUv;
 
     vec3 palette( in float t ) {
         vec3 a = vec3(0.5, 0.5, 0.5);
@@ -511,6 +520,7 @@ ${functionsSection}
     void main() {
         uv = (gl_FragCoord.xy * 2.0 - iResolution.xy) / iResolution.y;
         uv0 = uv;
+        screenUv = gl_FragCoord.xy / iResolution.xy;
 
         ${mainBody}
 
@@ -548,4 +558,41 @@ export const compileGraphToGLSL = (
   isSubgraph: boolean = false
 ): string => {
   return compileGraphToGLSLWithReport(nodes, edges, targetNodeId, isSubgraph).shader;
+};
+
+/**
+ * Compiles a node's output as a preview target without changing the real
+ * graph. Normal targetNodeId compilation expects a sink node (Output,
+ * Preview, Monitor); this helper adds such a sink virtually so stateful
+ * source nodes like Frame Buffer can preview their own stored output.
+ */
+export const compileNodeOutputToGLSL = (
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  sourceNodeId: string,
+  sourceHandle?: string
+): string => {
+  const sourceNode = nodes.find(node => node.id === sourceNodeId);
+  const output = sourceNode?.data?.definition?.outputs.find(port => port.id === sourceHandle)
+    ?? sourceNode?.data?.definition?.outputs[0];
+  const targetId = `frame_buffer_preview_target_${sourceNodeId}`;
+  const targetDefinition: ShaderNodeDefinition = {
+    id: 'preview',
+    label: 'Node Output Preview Target',
+    inputs: [{ id: 'in', label: 'In', type: output?.type || 'vec3' }],
+    outputs: [],
+    glslTemplate: () => '',
+  };
+  const targetNode: GraphNode = {
+    id: targetId,
+    type: 'previewNode',
+    data: { definition: targetDefinition },
+  };
+  const previewEdge: GraphEdge = {
+    source: sourceNodeId,
+    sourceHandle: output?.id || sourceHandle || null,
+    target: targetId,
+    targetHandle: 'in',
+  };
+  return compileGraphToGLSL([...nodes, targetNode], [...edges, previewEdge], targetId);
 };

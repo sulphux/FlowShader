@@ -3,8 +3,10 @@ import { Handle, Position, type NodeProps, useReactFlow } from 'reactflow';
 import * as THREE from 'three';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources } from '../core/runtimeResources';
-import { buildResourceUniforms, updateAudioUniforms, updateFeedbackUniform } from '../core/threeResources';
-import { sharedFeedbackTexture } from '../core/feedbackBuffer';
+import { buildResourceUniforms, updateAudioUniforms } from '../core/threeResources';
+import { compileFeedbackPasses } from '../core/feedbackPasses';
+import { FeedbackPassRenderer } from '../core/feedbackPassRenderer';
+import { getRuntimeTimeSeconds } from '../core/runtimeClock';
 
 /**
  * Color Preview — pokazuje próbkę koloru sygnału wejściowego.
@@ -22,6 +24,8 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
   const bufferRef = useRef<Float32Array>(new Float32Array(4));
   const requestRef = useRef<number | undefined>(undefined);
   const lastUpdateRef = useRef<number>(0);
+  const feedbackRendererRef = useRef<FeedbackPassRenderer | null>(null);
+  const shaderSignatureRef = useRef('');
 
   useEffect(() => {
     const renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -45,11 +49,16 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
     targetRef.current = target;
     sceneRef.current = scene;
     meshRef.current = mesh;
+    const feedbackRenderer = new FeedbackPassRenderer();
+    feedbackRenderer.setSize(1, 1);
+    feedbackRendererRef.current = feedbackRenderer;
 
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       renderer.dispose();
       target.dispose();
+      feedbackRenderer.dispose();
+      feedbackRendererRef.current = null;
       rendererRef.current = null;
     };
   }, []);
@@ -61,7 +70,13 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
         const safeNodes: GraphNode[] = getNodes().map(node => ({
           id: node.id, type: node.type || 'shaderNode', data: node.data
         }));
-        const code = compileGraphToGLSL(safeNodes, getEdges(), id);
+        const currentEdges = getEdges();
+        const code = compileGraphToGLSL(safeNodes, currentEdges, id);
+        const resources = collectRuntimeResources(safeNodes);
+        const passes = compileFeedbackPasses(safeNodes, currentEdges);
+        const signature = JSON.stringify({ code, resources, passes });
+        if (signature === shaderSignatureRef.current) return;
+        shaderSignatureRef.current = signature;
 
         const oldMat = meshRef.current.material as THREE.ShaderMaterial;
         const newMat = new THREE.ShaderMaterial({
@@ -70,11 +85,12 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
           uniforms: {
             iTime: { value: 0 },
             iResolution: { value: new THREE.Vector2(1, 1) },
-            ...buildResourceUniforms(collectRuntimeResources(safeNodes))
+            ...buildResourceUniforms(resources)
           }
         });
         meshRef.current.material = newMat;
         oldMat.dispose();
+        feedbackRendererRef.current?.configure(passes, resources);
       } catch {
         // Silent error handling
       }
@@ -86,7 +102,6 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
 
   useEffect(() => {
     let mounted = true;
-    const startTime = Date.now();
     const loop = () => {
       if (!mounted) return;
       requestRef.current = requestAnimationFrame(loop);
@@ -97,12 +112,15 @@ export const ColorPreviewNode = memo(({ id, selected }: NodeProps) => {
 
       if (rendererRef.current && sceneRef.current && meshRef.current && targetRef.current) {
         const mat = meshRef.current.material as THREE.ShaderMaterial;
-        mat.uniforms.iTime.value = (now - startTime) * 0.001;
+        const time = getRuntimeTimeSeconds();
+        mat.uniforms.iTime.value = time;
         updateAudioUniforms(mat);
-        updateFeedbackUniform(mat, sharedFeedbackTexture.current);
         try {
+          const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+          feedbackRendererRef.current?.renderPasses(rendererRef.current, sceneRef.current, camera, meshRef.current, time);
+          feedbackRendererRef.current?.bindCurrent(mat);
           rendererRef.current.setRenderTarget(targetRef.current);
-          rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+          rendererRef.current.render(sceneRef.current, camera);
           rendererRef.current.readRenderTargetPixels(targetRef.current, 0, 0, 1, 1, bufferRef.current);
           rendererRef.current.setRenderTarget(null);
           if (mounted) {

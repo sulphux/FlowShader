@@ -3,11 +3,13 @@ import { Handle, Position, type NodeProps, useReactFlow, NodeResizer } from 'rea
 import ShaderPreview from './ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
+import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
 
 export const PreviewNode = memo(({ id, selected }: NodeProps) => {
   const { getNodes, getEdges } = useReactFlow();
   const [shaderCode, setShaderCode] = useState<string>('');
   const [resources, setResources] = useState<ShaderRuntimeResources | undefined>(undefined);
+  const [feedbackPasses, setFeedbackPasses] = useState<FeedbackPassDefinition[]>([]);
 
   useEffect(() => {
       const updatePreview = () => {
@@ -22,6 +24,8 @@ export const PreviewNode = memo(({ id, selected }: NodeProps) => {
 
           const code = compileGraphToGLSL(safeNodes, edges, id);
           setShaderCode(code);
+          const nextPasses = compileFeedbackPasses(safeNodes, edges);
+          setFeedbackPasses(prev => JSON.stringify(prev) === JSON.stringify(nextPasses) ? prev : nextPasses);
           setResources(prev => {
             const next = collectRuntimeResources(safeNodes);
             // Nie twórz nowej referencji, gdy zasoby się nie zmieniły (unika rerenderów co 500ms)
@@ -80,7 +84,7 @@ export const PreviewNode = memo(({ id, selected }: NodeProps) => {
                 pointerEvents: 'none', // Kliknięcia przelatują do noda (selekcja)
                 zIndex: 1
             }}>
-                <ShaderPreview shaderCode={shaderCode} resources={resources} />
+                <ShaderPreview shaderCode={shaderCode} resources={resources} feedbackPasses={feedbackPasses} />
             </div>
 
             <Handle 

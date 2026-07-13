@@ -4,9 +4,11 @@ import { getShaderValidationReport } from '../core/validator';
 import { shaderDebug } from '../core/shaderDebug';
 import { buildShaderDebugText } from '../core/shaderDebugReport';
 import type { ShaderRuntimeResources } from '../core/runtimeResources';
-import { buildResourceUniforms, updateAudioUniforms, updateFeedbackUniform } from '../core/threeResources';
-import { sharedFeedbackTexture } from '../core/feedbackBuffer';
+import { buildResourceUniforms, updateAudioUniforms } from '../core/threeResources';
+import type { FeedbackPassDefinition } from '../core/feedbackPasses';
+import { FeedbackPassRenderer } from '../core/feedbackPassRenderer';
 import { getGlobalSettings, subscribeGlobalSettings, type GlobalSettings } from '../core/globalSettings';
+import { getRuntimeTimeSeconds } from '../core/runtimeClock';
 
 const DEFAULT_FRAGMENT = `
 precision mediump float;
@@ -25,31 +27,28 @@ void main() {
 }
 `;
 
+const NO_FEEDBACK_PASSES: FeedbackPassDefinition[] = [];
+
 interface Props {
   shaderCode?: string;
   /** Tekstury i audio wymagane przez shader (z collectRuntimeResources). */
   resources?: ShaderRuntimeResources;
-  /**
-   * True only for the single "real" main-screen preview (App.tsx). Only that
-   * instance owns the feedback ping-pong buffers and drives a simulation
-   * forward — every other consumer (Preview-tap nodes) reads the shared
-   * previous-frame texture read-only, otherwise each Preview node dropped
-   * anywhere in the graph would run its own independent, diverging sim.
-   */
+  /** Off-screen writer shaders — one independent state buffer per Feedback. */
+  feedbackPasses?: FeedbackPassDefinition[];
+  /** Kept for compatibility; every preview now evaluates its own state. */
   isMainOutput?: boolean;
 }
 
-export default function ShaderPreview({ shaderCode, resources, isMainOutput = false }: Props) {
+export default function ShaderPreview({ shaderCode, resources, feedbackPasses = NO_FEEDBACK_PASSES }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [debugReport, setDebugReport] = useState<string | null>(null);
   const settingsRef = useRef<GlobalSettings>(getGlobalSettings());
   const resourcesRef = useRef<ShaderRuntimeResources | undefined>(resources);
   resourcesRef.current = resources;
-  const usesFeedbackRef = useRef(false);
-  // Ping-pong buffers — only ever allocated when isMainOutput && usesFeedback.
-  const bufferARef = useRef<THREE.WebGLRenderTarget | null>(null);
-  const bufferBRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const feedbackPassesRef = useRef<FeedbackPassDefinition[]>(feedbackPasses);
+  feedbackPassesRef.current = feedbackPasses;
+  const feedbackRendererRef = useRef<FeedbackPassRenderer | null>(null);
 
   const sceneRef = useRef<{
     renderer: THREE.WebGLRenderer;
@@ -89,10 +88,12 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
 
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+    const feedbackRenderer = new FeedbackPassRenderer();
+    feedbackRenderer.setSize(width * window.devicePixelRatio * settingsRef.current.resolutionScale, height * window.devicePixelRatio * settingsRef.current.resolutionScale);
+    feedbackRendererRef.current = feedbackRenderer;
 
     let animationId = 0;
     sceneRef.current = { renderer, scene, camera, mesh, animationId };
-    const startTime = Date.now();
     let lastFrameTime = 0;
     const animate = () => {
       if (!sceneRef.current) return;
@@ -105,56 +106,15 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
       if (fpsLimit > 0 && now - lastFrameTime < 1000 / fpsLimit) return;
       lastFrameTime = now;
 
-      const time = (now - startTime) * 0.001;
+      const time = getRuntimeTimeSeconds();
       const { renderer: r, mesh } = sceneRef.current;
       const mat = mesh.material as THREE.ShaderMaterial;
       if (mat.uniforms) mat.uniforms.iTime.value = time;
       updateAudioUniforms(mat);
-
-      if (!isMainOutput) {
-        // Debug tap (Preview node): read-only view of whatever the main
-        // preview last rendered — never owns ping-pong state.
-        updateFeedbackUniform(mat, sharedFeedbackTexture.current);
-        r.render(scene, camera);
-        return;
-      }
-
-      const usesFeedback = usesFeedbackRef.current;
-      if (usesFeedback && (!bufferARef.current || !bufferBRef.current)) {
-        // Sized off the actual drawing buffer (not container CSS size) so
-        // 1 feedback texel lines up with 1 on-screen pixel/gl_FragCoord.
-        const size = r.getDrawingBufferSize(new THREE.Vector2());
-        const targetOptions = {
-          type: THREE.FloatType, format: THREE.RGBAFormat,
-          // NearestFilter is required, not cosmetic — LinearFilter would
-          // blur neighbor samples into fractional values and break any
-          // simulation relying on crisp per-cell state (e.g. Game of Life).
-          minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter,
-        };
-        bufferARef.current = new THREE.WebGLRenderTarget(size.x, size.y, targetOptions);
-        bufferBRef.current = new THREE.WebGLRenderTarget(size.x, size.y, targetOptions);
-      } else if (!usesFeedback && bufferARef.current) {
-        bufferARef.current.dispose();
-        bufferBRef.current?.dispose();
-        bufferARef.current = null;
-        bufferBRef.current = null;
-        sharedFeedbackTexture.current = null;
-      }
-
-      if (usesFeedback && bufferARef.current && bufferBRef.current) {
-        const readBuffer = bufferARef.current;
-        const writeBuffer = bufferBRef.current;
-        updateFeedbackUniform(mat, readBuffer.texture);
-        r.setRenderTarget(writeBuffer);
-        r.render(scene, camera);
-        r.setRenderTarget(null);
-        r.render(scene, camera); // same material/uniforms → identical screen image
-        sharedFeedbackTexture.current = writeBuffer.texture;
-        bufferARef.current = writeBuffer;
-        bufferBRef.current = readBuffer;
-      } else {
-        r.render(scene, camera);
-      }
+      feedbackRenderer.renderPasses(r, scene, camera, mesh, time);
+      feedbackRenderer.bindCurrent(mat);
+      r.setRenderTarget(null);
+      r.render(scene, camera);
     };
     animate();
 
@@ -172,16 +132,7 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
                 mat.uniforms.iResolution.value.set(w * scale, h * scale);
             }
 
-            // Ping-pong buffers are sized to the drawing buffer — simplest
-            // correct behavior on resize is to drop them and let animate()
-            // lazily recreate at the new size next frame. This resets any
-            // running simulation, which is the intended behavior here.
-            if (bufferARef.current || bufferBRef.current) {
-                bufferARef.current?.dispose();
-                bufferBRef.current?.dispose();
-                bufferARef.current = null;
-                bufferBRef.current = null;
-            }
+            feedbackRenderer.setSize(w * scale, h * scale);
         }
     };
 
@@ -198,13 +149,8 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
       unsubscribeSettings();
       resizeObserver.disconnect();
       cancelAnimationFrame(animationId);
-      bufferARef.current?.dispose();
-      bufferBRef.current?.dispose();
-      bufferARef.current = null;
-      bufferBRef.current = null;
-      // Avoid a stale texture from a torn-down GL context leaking into
-      // Monitor/Color Preview after the main preview unmounts.
-      if (isMainOutput) sharedFeedbackTexture.current = null;
+      feedbackRenderer.dispose();
+      feedbackRendererRef.current = null;
       renderer.dispose();
       if (container) container.innerHTML = '';
       sceneRef.current = null;
@@ -257,7 +203,7 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
 
             sceneRef.current!.mesh.material = newMat;
             oldMat.dispose();
-            usesFeedbackRef.current = resourcesRef.current?.usesFeedback ?? false;
+            feedbackRendererRef.current?.configure(feedbackPassesRef.current, resourcesRef.current);
             shaderDebug.log('preview', 'Shader updated successfully');
         } catch (e) {
             const runtimeMessage = e instanceof Error ? e.message : 'Unknown Three.js shader error';
@@ -272,7 +218,7 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
     };
 
     updateShader();
-  }, [shaderCode]);
+  }, [shaderCode, feedbackPasses]);
 
   // Wgranie/zmiana obrazka nie zmienia kodu shadera (nazwa uniformu stała) —
   // aktualizujemy wartości uniformów na istniejącym materiale.
@@ -288,6 +234,7 @@ export default function ShaderPreview({ shaderCode, resources, isMainOutput = fa
         mat.uniforms[name] = uniform;
       }
     });
+    feedbackRendererRef.current?.updateResources(resources);
   }, [resources]);
 
   return (

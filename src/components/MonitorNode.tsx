@@ -3,9 +3,11 @@ import { Handle, Position, type NodeProps, useReactFlow, NodeResizer, useEdges, 
 import * as THREE from 'three';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources } from '../core/runtimeResources';
-import { buildResourceUniforms, updateAudioUniforms, updateFeedbackUniform } from '../core/threeResources';
-import { sharedFeedbackTexture } from '../core/feedbackBuffer';
+import { buildResourceUniforms, updateAudioUniforms } from '../core/threeResources';
+import { compileFeedbackPasses } from '../core/feedbackPasses';
+import { FeedbackPassRenderer } from '../core/feedbackPassRenderer';
 import { TYPE_COLORS } from '../core/theme';
+import { getRuntimeTimeSeconds } from '../core/runtimeClock';
 
 // Grid the monitor probes to detect spatial variance (e.g. a texture or
 // uv-dependent expression) — a single sample can't tell "constant value"
@@ -63,6 +65,8 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
   const bufferRef = useRef<Float32Array>(new Float32Array(SAMPLE_SIZE * SAMPLE_SIZE * 4));
+  const feedbackRendererRef = useRef<FeedbackPassRenderer | null>(null);
+  const shaderSignatureRef = useRef('');
   
   const requestRef = useRef<number | undefined>(undefined);
   const lastUpdateRef = useRef<number>(0);
@@ -106,12 +110,17 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
       targetRef.current = target;
       sceneRef.current = scene;
       meshRef.current = mesh;
+      const feedbackRenderer = new FeedbackPassRenderer();
+      feedbackRenderer.setSize(width, height);
+      feedbackRendererRef.current = feedbackRenderer;
 
       return () => {
           isMountedRef.current = false;
           if (requestRef.current) cancelAnimationFrame(requestRef.current);
           renderer.dispose();
           target.dispose();
+          feedbackRenderer.dispose();
+          feedbackRendererRef.current = null;
           rendererRef.current = null;
       };
   }, []);
@@ -126,6 +135,11 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
                 id: node.id, type: node.type || 'shaderNode', data: node.data
               }));
               const code = compileGraphToGLSL(safeNodes, currentEdges, id);
+              const resources = collectRuntimeResources(safeNodes);
+              const passes = compileFeedbackPasses(safeNodes, currentEdges);
+              const signature = JSON.stringify({ code, resources, passes });
+              if (signature === shaderSignatureRef.current) return;
+              shaderSignatureRef.current = signature;
 
               const oldMat = meshRef.current.material as THREE.ShaderMaterial;
               const newMat = new THREE.ShaderMaterial({
@@ -134,11 +148,12 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
                   uniforms: {
                       iTime: { value: 0 },
                       iResolution: { value: new THREE.Vector2(SAMPLE_SIZE, SAMPLE_SIZE) },
-                      ...buildResourceUniforms(collectRuntimeResources(safeNodes))
+                      ...buildResourceUniforms(resources)
                   }
               });
               meshRef.current.material = newMat;
               oldMat.dispose();
+              feedbackRendererRef.current?.configure(passes, resources);
           } catch {
               // Silent error handling
           }
@@ -150,7 +165,6 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
 
   useEffect(() => {
       let mounted = true;
-      const startTime = Date.now();
       const loop = () => {
           if (!mounted) return;
           requestRef.current = requestAnimationFrame(loop);
@@ -161,12 +175,15 @@ export const MonitorNode = memo(({ id, selected }: NodeProps) => {
 
           if(rendererRef.current && sceneRef.current && meshRef.current && targetRef.current) {
               const mat = meshRef.current.material as THREE.ShaderMaterial;
-              mat.uniforms.iTime.value = (now - startTime) * 0.001;
+              const time = getRuntimeTimeSeconds();
+              mat.uniforms.iTime.value = time;
               updateAudioUniforms(mat);
-              updateFeedbackUniform(mat, sharedFeedbackTexture.current);
               try {
+                  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+                  feedbackRendererRef.current?.renderPasses(rendererRef.current, sceneRef.current, camera, meshRef.current, time);
+                  feedbackRendererRef.current?.bindCurrent(mat);
                   rendererRef.current.setRenderTarget(targetRef.current);
-                  rendererRef.current.render(sceneRef.current, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+                  rendererRef.current.render(sceneRef.current, camera);
                   rendererRef.current.readRenderTargetPixels(targetRef.current, 0, 0, SAMPLE_SIZE, SAMPLE_SIZE, bufferRef.current);
                   rendererRef.current.setRenderTarget(null);
                   if (mounted) setStats(computeChannelStats(bufferRef.current));

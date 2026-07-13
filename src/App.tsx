@@ -3,12 +3,14 @@ import NodeEditor from './components/NodeEditor';
 import ShaderPreview from './components/ShaderPreview';
 import { compileGraphToGLSL, type GraphNode } from './core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from './core/runtimeResources';
+import { compileFeedbackPasses, type FeedbackPassDefinition } from './core/feedbackPasses';
 import { VERSION_LABEL, versionTooltip } from './core/version';
 import type { Node, Edge } from 'reactflow';
 
 function App() {
   const [shaderCode, setShaderCode] = useState<string | undefined>(undefined);
   const [shaderResources, setShaderResources] = useState<ShaderRuntimeResources | undefined>(undefined);
+  const [feedbackPasses, setFeedbackPasses] = useState<FeedbackPassDefinition[]>([]);
   
   // --- LAYOUT STATE ---
   const [splitPercent, setSplitPercent] = useState(60);
@@ -27,7 +29,10 @@ function App() {
 
     const glsl = compileGraphToGLSL(safeNodes, edges);
     setShaderCode(glsl);
-    setShaderResources(collectRuntimeResources(safeNodes));
+    const nextResources = collectRuntimeResources(safeNodes);
+    setShaderResources(prev => JSON.stringify(prev) === JSON.stringify(nextResources) ? prev : nextResources);
+    const nextPasses = compileFeedbackPasses(safeNodes, edges);
+    setFeedbackPasses(prev => JSON.stringify(prev) === JSON.stringify(nextPasses) ? prev : nextPasses);
   }, []);
 
   const startResizing = useCallback(() => setIsResizing(true), []);
@@ -146,7 +151,7 @@ function App() {
               ✕
             </button>
 
-            <ShaderPreview shaderCode={shaderCode} resources={shaderResources} isMainOutput />
+            <ShaderPreview shaderCode={shaderCode} resources={shaderResources} feedbackPasses={feedbackPasses} isMainOutput />
           </div>
           )}
       </div>

@@ -19,8 +19,15 @@ export interface TextureResource {
 export interface ShaderRuntimeResources {
   textures: TextureResource[];
   usesAudio: boolean;
-  /** Graf używa noda Feedback — czyta teksturę z poprzedniej klatki. */
+  /** Graf używa co najmniej jednego noda Feedback. */
   usesFeedback: boolean;
+  /** Każdy Feedback ma osobny sampler i osobny bufor stanu. */
+  feedbacks?: FeedbackResource[];
+}
+
+export interface FeedbackResource {
+  nodeId: string;
+  uniform: string;
 }
 
 /** Uniformy audio wspólne dla całego grafu (jedno źródło dźwięku). */
@@ -31,11 +38,16 @@ export const AUDIO_UNIFORMS = {
   high: 'u_audio_high',
 } as const;
 
-/** Uniform tekstury poprzedniej klatki (ping-pong bufor w ShaderPreview). */
+/** Legacy fallback used only by old callers constructing resources by hand. */
 export const FEEDBACK_UNIFORM = 'u_feedback';
 
 /** GLSL identifier nie może zawierać myślników ani kropek. */
 const sanitizeId = (nodeId: string): string => nodeId.replace(/[^a-zA-Z0-9_]/g, '_');
+
+export const feedbackUniformName = (nodeId: string): string => {
+  const safe = sanitizeId(nodeId).replace(/_+/g, '_').replace(/^_+/, '') || 'node';
+  return `u_feedback_${safe}`;
+};
 
 export const textureUniformName = (nodeId: string): string => `u_tex_${sanitizeId(nodeId)}`;
 
@@ -57,6 +69,7 @@ export function collectRuntimeResources(nodes: GraphNode[]): ShaderRuntimeResour
   const textures: TextureResource[] = [];
   let usesAudio = false;
   let usesFeedback = false;
+  const feedbacks: FeedbackResource[] = [];
 
   nodes.forEach(node => {
     if (isTextureNode(node)) {
@@ -68,10 +81,16 @@ export function collectRuntimeResources(nodes: GraphNode[]): ShaderRuntimeResour
     }
     if (isFeedbackNode(node)) {
       usesFeedback = true;
+      feedbacks.push({ nodeId: node.id, uniform: feedbackUniformName(node.id) });
     }
   });
 
-  return { textures, usesAudio, usesFeedback };
+  return { textures, usesAudio, usesFeedback, feedbacks };
+}
+
+export function feedbackUniforms(resources: ShaderRuntimeResources): string[] {
+  if (resources.feedbacks?.length) return resources.feedbacks.map(feedback => feedback.uniform);
+  return resources.usesFeedback ? [FEEDBACK_UNIFORM] : [];
 }
 
 /** Deklaracje uniformów do wstrzyknięcia w nagłówek shadera. */
@@ -85,8 +104,6 @@ export function buildUniformDeclarations(resources: ShaderRuntimeResources): str
       lines.push(`    uniform float ${name};`);
     });
   }
-  if (resources.usesFeedback) {
-    lines.push(`    uniform sampler2D ${FEEDBACK_UNIFORM};`);
-  }
+  feedbackUniforms(resources).forEach(name => lines.push(`    uniform sampler2D ${name};`));
   return lines.join('\n');
 }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { AUDIO_UNIFORMS, FEEDBACK_UNIFORM, type ShaderRuntimeResources } from './runtimeResources';
+import { AUDIO_UNIFORMS, feedbackUniforms, type ShaderRuntimeResources } from './runtimeResources';
 import { getAudioLevels } from './audioManager';
 
 /**
@@ -48,12 +48,9 @@ export function buildResourceUniforms(resources: ShaderRuntimeResources): Record
       uniforms[name] = { value: 0 };
     });
   }
-  if (resources.usesFeedback) {
-    // Placeholder — the real previous-frame texture is patched in per-frame
-    // by updateFeedbackUniform (ShaderPreview owns the ping-pong buffers;
-    // Preview/Monitor/Color Preview just read the shared texture read-only).
-    uniforms[FEEDBACK_UNIFORM] = { value: getBlackTexture() };
-  }
+  feedbackUniforms(resources).forEach(name => {
+    uniforms[name] = { value: getBlackTexture() };
+  });
   return uniforms;
 }
 
@@ -69,10 +66,17 @@ export function updateAudioUniforms(material: THREE.ShaderMaterial): void {
 }
 
 /** Aktualizacja tekstury feedbacku na materiale — wywoływana co klatkę. */
-export function updateFeedbackUniform(material: THREE.ShaderMaterial, texture: THREE.Texture | null): void {
+export function updateFeedbackUniform(material: THREE.ShaderMaterial, texture: THREE.Texture | null, uniformName = 'u_feedback'): void {
   const uniforms = material.uniforms;
-  if (!uniforms || !uniforms[FEEDBACK_UNIFORM]) return;
-  uniforms[FEEDBACK_UNIFORM].value = texture || getBlackTexture();
+  if (!uniforms || !uniforms[uniformName]) return;
+  uniforms[uniformName].value = texture || getBlackTexture();
+}
+
+export function updateFeedbackUniforms(
+  material: THREE.ShaderMaterial,
+  textures: ReadonlyMap<string, THREE.Texture>
+): void {
+  textures.forEach((texture, uniform) => updateFeedbackUniform(material, texture, uniform));
 }
 
 /** Czyszczenie cache (testy / zwolnienie pamięci). */

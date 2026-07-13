@@ -158,7 +158,8 @@ App
  │
  └─ ShaderPreview (Three.js) — also used standalone as the main preview pane
      ├─ Canvas / Scene / Camera / Mesh + ShaderMaterial
-     └─ Resource uniforms (textures, audio levels) bound per frame
+     ├─ FeedbackPassRenderer (one ping-pong buffer per Feedback node)
+     └─ Resource uniforms (textures, audio levels, feedback samplers) bound per frame
 
 ═══════════════════════════════════════════════════════════════════
                       FILE STRUCTURE
@@ -187,7 +188,8 @@ NodeShader/
     │   ├── connectionValidator.ts ← strict type rules
     │   ├── autoAdapterSystem.ts   ← Split/Combine auto-insertion
     │   ├── validator.ts / glslangValidation.ts ← shader correctness checks
-    │   ├── runtimeResources.ts / threeResources.ts ← texture/audio uniforms
+    │   ├── runtimeResources.ts / threeResources.ts ← texture/audio/feedback uniforms
+    │   ├── feedbackPasses.ts / feedbackPassRenderer.ts ← stateful multi-pass rendering
     │   ├── audioManager.ts        ← Web Audio analyser (level/bass/mid/high)
     │   ├── graphRehydration.ts    ← save/load graph (de)serialization
     │   ├── fileAccess.ts          ← File System Access save/load

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { NODE_REGISTRY } from '../nodes';
-import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
-import { collectRuntimeResources, buildUniformDeclarations, FEEDBACK_UNIFORM } from '../core/runtimeResources';
+import { compileGraphToGLSL, compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
+import { collectRuntimeResources, buildUniformDeclarations, FEEDBACK_UNIFORM, feedbackUniformName } from '../core/runtimeResources';
+import { compileFeedbackPasses } from '../core/feedbackPasses';
 import { hasGlslangValidator, validateWithGlslangValidator } from './utils/glslangValidate';
 
 /**
@@ -53,13 +54,74 @@ describe('collectRuntimeResources / buildUniformDeclarations: usesFeedback', () 
 });
 
 describe('Feedback node', () => {
-  it('compiles to a texture2D sample of the feedback uniform', () => {
+  it('exposes Image In, Snapshot and advanced Sample UV while keeping compatible port ids', () => {
     const { nodes, edges } = outputGraph('feedback');
     const shader = compileGraphToGLSL(nodes, edges);
+    const uniform = feedbackUniformName('src1');
 
-    expect(shader).toContain(`uniform sampler2D ${FEEDBACK_UNIFORM};`);
-    expect(shader).toContain(`texture2D(${FEEDBACK_UNIFORM}, (uv * 0.5 + 0.5)).rgb`);
+    expect(NODE_REGISTRY.feedback.inputs.map(input => input.id)).toEqual(['in', 'impulse', 'uv']);
+    expect(NODE_REGISTRY.feedback.label).toBe('Frame Buffer');
+    expect(NODE_REGISTRY.feedback.inputs.map(input => input.label)).toEqual(['Image In', 'Snapshot', 'Sample UV (Advanced)']);
+    expect(NODE_REGISTRY.feedback.outputs[0].label).toBe('Stored Image');
+    expect(shader).toContain(`uniform sampler2D ${uniform};`);
+    expect(shader).toContain('vec2 screenUv;');
+    expect(shader).toContain('screenUv = gl_FragCoord.xy / iResolution.xy;');
+    expect(shader).toContain(`texture2D(${uniform}, screenUv).rgb`);
+    expect(shader).not.toContain(`texture2D(${uniform}, (uv * 0.5 + 0.5)).rgb`);
     expectValidGLSL(shader, 'feedback -> output');
+  });
+
+  it('compiles a legal self-referential writer pass and snapshots every frame by default', () => {
+    const feedback = { id: 'feedback-1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } } as GraphNode;
+    const output = { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY.output } } as GraphNode;
+    const edges = [
+      { source: 'feedback-1', sourceHandle: 'rgb', target: 'feedback-1', targetHandle: 'in' },
+      { source: 'feedback-1', sourceHandle: 'rgb', target: 'out1', targetHandle: 'color' },
+    ];
+
+    const [pass] = compileFeedbackPasses([feedback, output], edges);
+    expect(pass.uniform).toBe(feedbackUniformName('feedback-1'));
+    expect(pass.shader).toContain('vec4(var_feedback_1, 0.0)');
+    expect(pass.shader).not.toContain('var__');
+    expectValidGLSL(pass.shader, 'self-referential feedback writer');
+  });
+
+  it('snapshots only on the rising edge and retains RGB for the rest of a wide pulse', () => {
+    const nodes: GraphNode[] = [
+      { id: 'color1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#ff0000' } },
+      { id: 'pulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.impulse } },
+      { id: 'feedback1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } },
+    ];
+    const edges = [
+      { source: 'color1', sourceHandle: 'out', target: 'feedback1', targetHandle: 'in' },
+      { source: 'pulse1', sourceHandle: 'out', target: 'feedback1', targetHandle: 'impulse' },
+    ];
+    const [pass] = compileFeedbackPasses(nodes, edges);
+    expect(pass.shader).toContain('step(0.000001, var_pulse1)');
+    expect(pass.shader).toContain(`texture2D(${pass.uniform}, screenUv).a`);
+    expect(pass.shader).toContain(`1.0 - step(0.000001, texture2D(${pass.uniform}, screenUv).a)`);
+    expect(pass.shader).toContain(`vec4(mix(texture2D(${pass.uniform}, screenUv).rgb, var_color1`);
+    expect(pass.shader).not.toContain(`texture2D(${pass.uniform}, (uv * 0.5 + 0.5))`);
+    expect(pass.shader).toContain('var_color1');
+    expectValidGLSL(pass.shader, 'impulse-gated feedback writer');
+  });
+
+  it('gives multiple Feedback nodes independent sampler uniforms and passes', () => {
+    const nodes: GraphNode[] = ['a', 'b'].map(id => ({
+      id, type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback },
+    }));
+    const resources = collectRuntimeResources(nodes);
+    const passes = compileFeedbackPasses(nodes, []);
+    expect(resources.feedbacks?.map(item => item.uniform)).toEqual([feedbackUniformName('a'), feedbackUniformName('b')]);
+    expect(passes.map(pass => pass.uniform)).toEqual([feedbackUniformName('a'), feedbackUniformName('b')]);
+  });
+
+  it('can compile its stored output directly for the toggleable node preview', () => {
+    const buffer = { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } } as GraphNode;
+    const shader = compileNodeOutputToGLSL([buffer], [], buffer.id, 'rgb');
+    expect(shader).toContain(`texture2D(${feedbackUniformName(buffer.id)}, screenUv).rgb`);
+    expect(shader).toContain('gl_FragColor = vec4(var_buffer1, 1.0);');
+    expectValidGLSL(shader, 'Frame Buffer stored output preview');
   });
 });
 

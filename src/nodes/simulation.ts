@@ -1,33 +1,40 @@
 import type { ShaderNodeDefinition } from '../core/types';
-import { FEEDBACK_UNIFORM } from '../core/runtimeResources';
+import { feedbackUniformName } from '../core/runtimeResources';
 
 /**
- * Nody symulacji: Feedback (stan z poprzedniej klatki), Impulse (okresowy
- * puls sterujący tym, KIEDY symulacja ma "kroczyć") i Random (szum, opcjonalnie
- * trzymany stały w oknie czasowym). Feedback wymaga silnika renderującego
- * ping-pong bufor (ShaderPreview.tsx, tylko główny podgląd) — Impulse i Random
- * są w pełni bezstanowe (czyste funkcje iTime), nie wymagają zmian w silniku.
+ * Nody symulacji: Feedback (własny pamiętany snapshot), Impulse (okresowy puls
+ * wyzwalający zapis) i Random (szum opcjonalnie trzymany w oknie czasowym).
+ * Każdy Feedback jest osobnym przebiegiem i parą buforów ping-pong; Impulse i
+ * Random pozostają bezstanowymi funkcjami iTime.
  */
 
 export const FeedbackNode: ShaderNodeDefinition = {
   id: 'feedback',
-  label: 'Feedback (Prev Frame)',
-  inputs: [{ id: 'uv', label: 'UV', type: 'vec2' }],
-  outputs: [{ id: 'rgb', label: 'RGB', type: 'vec3' }],
-  glslTemplate: (inputs) => {
-    const coords = inputs.uv || '(uv * 0.5 + 0.5)';
-    return `texture2D(${FEEDBACK_UNIFORM}, ${coords}).rgb`;
+  label: 'Frame Buffer',
+  inputs: [
+    { id: 'in', label: 'Image In', type: 'vec3' },
+    { id: 'impulse', label: 'Snapshot', type: 'float' },
+    { id: 'uv', label: 'Sample UV (Advanced)', type: 'vec2' },
+  ],
+  outputs: [{ id: 'rgb', label: 'Stored Image', type: 'vec3' }],
+  glslTemplate: (inputs, data) => {
+    // Frame Buffer targets have the same pixel dimensions as the preview.
+    // Centered `uv` is aspect-corrected for SDFs, so mapping it back with
+    // `uv * .5 + .5` stretches/clamps non-square previews. screenUv is the
+    // actual normalized framebuffer coordinate.
+    const coords = inputs.uv || 'screenUv';
+    const uniform = feedbackUniformName(String(data?.nodeId ?? 'feedback'));
+    return `texture2D(${uniform}, ${coords}).rgb`;
   },
-  description: 'Samples what was rendered to the screen last frame. Needed to build any simulation with persistent state (e.g. Game of Life). Optional UV input (defaults to screen UV).',
+  description: 'Stores Image In in its own frame buffer. Snapshot captures once on the 0 → 1 edge; keeping it high does not write again. When disconnected, it captures every frame. Sample UV is an advanced optional input for reading another location in the stored image.',
 };
 
 export const ImpulseNode: ShaderNodeDefinition = {
   id: 'impulse',
   label: 'Impulse',
-  compact: true,
   inputs: [
-    { id: 'interval', label: 'Interval (s)', type: 'float' },
-    { id: 'width', label: 'Width', type: 'float' },
+    { id: 'interval', label: 'Interval', type: 'float' },
+    { id: 'width', label: 'Pulse Width', type: 'float' },
   ],
   outputs: [{ id: 'out', label: 'Pulse', type: 'float' }],
   glslTemplate: (inputs) => {
@@ -35,7 +42,7 @@ export const ImpulseNode: ShaderNodeDefinition = {
     const width = inputs.width || '0.05';
     return `((mod(iTime, max(${interval}, 0.001)) < (${interval} * ${width})) ? 1.0 : 0.0)`;
   },
-  description: 'Emits a brief 1.0 pulse every "Interval" seconds, 0.0 otherwise. Wire into Mix to gate when a simulation step should advance (e.g. mix(Feedback, NewState, Impulse)).',
+  description: 'Emits a brief 1.0 pulse every "Interval" seconds, 0.0 otherwise. Connect it directly to Feedback Impulse to choose when a new snapshot is stored.',
 };
 
 export const RandomNode: ShaderNodeDefinition = {
