@@ -24,11 +24,13 @@ const renderFrameBuffer = () => render(
 
 describe('Frame Buffer node preview', () => {
   it('keeps the WebGL preview unmounted until the user opens it', async () => {
-    renderFrameBuffer();
+    const { container } = renderFrameBuffer();
 
     const openButton = await screen.findByTestId('frame-buffer-preview-toggle');
     expect(openButton).toHaveAttribute('aria-label', 'Show buffer preview');
     expect(screen.queryByTestId('frame-buffer-preview-window')).not.toBeInTheDocument();
+    expect(container.querySelector('.react-flow__handle[title*="latch every interval boundary"]'))
+      .toBeInTheDocument();
     expect(screen.queryByTestId('mock-buffer-shader-preview')).not.toBeInTheDocument();
 
     fireEvent.click(openButton);

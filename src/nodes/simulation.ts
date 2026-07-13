@@ -42,7 +42,7 @@ export const ImpulseNode: ShaderNodeDefinition = {
     const width = inputs.width || '0.05';
     return `((mod(iTime, max(${interval}, 0.001)) < (${interval} * ${width})) ? 1.0 : 0.0)`;
   },
-  description: 'Emits a brief 1.0 pulse every "Interval" seconds, 0.0 otherwise. Connect it directly to Feedback Impulse to choose when a new snapshot is stored.',
+  description: 'Emits a brief 1.0 pulse every "Interval" seconds, 0.0 otherwise. When connected directly to Frame Buffer Snapshot, the engine latches each interval boundary so even a pulse shorter than one frame cannot be missed.',
 };
 
 export const RandomNode: ShaderNodeDefinition = {

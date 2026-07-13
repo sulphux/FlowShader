@@ -6,6 +6,7 @@ import { MultiTypeIndicator } from './MultiTypeIndicator';
 import { loadAudioFile, playAudio, stopAudio, isAudioPlaying } from '../core/audioManager';
 import { computeSmartSplitPorts, SMART_SPLIT_TYPE_CYCLE } from '../core/smartSplitAdapter';
 import { getRuntimeTimeSeconds } from '../core/runtimeClock';
+import { isImpulsePulseActive } from '../core/impulseTiming';
 import { compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
 import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
 import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
@@ -54,7 +55,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       const interval = Math.max(intervalInput.value, 0.001);
       const width = widthInput.value;
       const elapsed = getRuntimeTimeSeconds();
-      const active = (elapsed % interval) < interval * width;
+      const active = isImpulsePulseActive(elapsed, interval, width);
       setImpulseActive(previous => previous === active ? previous : active);
       setImpulseTiming(previous => (
         previous.interval === intervalInput.value && previous.width === width &&
@@ -439,7 +440,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                   type="target"
                   position={Position.Left}
                   id={input.id}
-                  title={input.label}
+                  title={input.id === 'impulse'
+                    ? 'Snapshot: manual signals capture on 0 → 1; Impulse connections latch every interval boundary'
+                    : input.label}
                   style={{
                     background: TYPE_COLORS[input.type] || '#888', width: '10px', height: '10px',
                     left: '-15px', border: '2px solid #1a1a1a'

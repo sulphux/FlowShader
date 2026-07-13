@@ -86,10 +86,10 @@ describe('Feedback node', () => {
     expectValidGLSL(pass.shader, 'self-referential feedback writer');
   });
 
-  it('snapshots only on the rising edge and retains RGB for the rest of a wide pulse', () => {
+  it('keeps 0 -> 1 edge semantics for an ordinary manual Snapshot gate', () => {
     const nodes: GraphNode[] = [
       { id: 'color1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_color, value: '#ff0000' } },
-      { id: 'pulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.impulse } },
+      { id: 'pulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_float, value: 0 } },
       { id: 'feedback1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } },
     ];
     const edges = [
@@ -98,12 +98,43 @@ describe('Feedback node', () => {
     ];
     const [pass] = compileFeedbackPasses(nodes, edges);
     expect(pass.shader).toContain('step(0.000001, var_pulse1)');
+    expect(pass.shader).toContain('(1.0 - step(1.5, var_pulse1))');
     expect(pass.shader).toContain(`texture2D(${pass.uniform}, screenUv).a`);
     expect(pass.shader).toContain(`1.0 - step(0.000001, texture2D(${pass.uniform}, screenUv).a)`);
     expect(pass.shader).toContain(`vec4(mix(texture2D(${pass.uniform}, screenUv).rgb, var_color1`);
     expect(pass.shader).not.toContain(`texture2D(${pass.uniform}, (uv * 0.5 + 0.5))`);
     expect(pass.shader).toContain('var_color1');
     expectValidGLSL(pass.shader, 'impulse-gated feedback writer');
+  });
+
+  it('latches a connected Impulse by interval event instead of sampling its short pulse', () => {
+    const nodes: GraphNode[] = [
+      { id: 'interval1', type: 'shaderNode', data: { definition: NODE_REGISTRY.param_float, value: 0.05 } },
+      { id: 'impulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.impulse } },
+      { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } },
+    ];
+    const edges = [
+      { source: 'interval1', sourceHandle: 'out', target: 'impulse1', targetHandle: 'interval' },
+      { source: 'impulse1', sourceHandle: 'out', target: 'buffer1', targetHandle: 'impulse' },
+    ];
+
+    const [pass] = compileFeedbackPasses(nodes, edges);
+    expect(pass.shader).toContain('(2.0 + floor(iTime / max(var_interval1, 0.001)))');
+    expect(pass.shader).toContain('step(1.5, var_feedback_event_buffer1)');
+    expect(pass.shader).toContain(`abs(var_feedback_event_buffer1 - texture2D(${pass.uniform}, screenUv).a)`);
+    expect(pass.shader).not.toContain('mod(iTime, max(var_interval1, 0.001))');
+    expectValidGLSL(pass.shader, 'latched Impulse -> Frame Buffer writer');
+  });
+
+  it('latches an unconfigured Impulse with its one-second default interval', () => {
+    const impulse = { id: 'impulse1', type: 'shaderNode', data: { definition: NODE_REGISTRY.impulse } } as GraphNode;
+    const buffer = { id: 'buffer1', type: 'shaderNode', data: { definition: NODE_REGISTRY.feedback } } as GraphNode;
+    const [pass] = compileFeedbackPasses([impulse, buffer], [
+      { source: impulse.id, sourceHandle: 'out', target: buffer.id, targetHandle: 'impulse' },
+    ]);
+
+    expect(pass.shader).toContain('(2.0 + floor(iTime / max(1.0, 0.001)))');
+    expectValidGLSL(pass.shader, 'default latched Impulse -> Frame Buffer writer');
   });
 
   it('gives multiple Feedback nodes independent sampler uniforms and passes', () => {

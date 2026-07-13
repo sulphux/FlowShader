@@ -159,6 +159,7 @@ App
  └─ ShaderPreview (Three.js) — also used standalone as the main preview pane
      ├─ Canvas / Scene / Camera / Mesh + ShaderMaterial
      ├─ FeedbackPassRenderer (one ping-pong buffer per Feedback node)
+     │   └─ Impulse links use a persistent interval event id; manual Snapshot links use a 0 → 1 edge
      └─ Resource uniforms (textures, audio levels, feedback samplers) bound per frame
 
 ═══════════════════════════════════════════════════════════════════
