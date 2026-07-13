@@ -89,6 +89,7 @@ export const NODE_REGISTRY = {
   math_exp: MathNodes.ExpNode,
   math_pow: MathNodes.PowNode,
   math_fract: MathNodes.FractFloatNode,
+  math_step: MathNodes.StepNode,
 
   // Color
   color_add: MathNodes.ColorAddNode,

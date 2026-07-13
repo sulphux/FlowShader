@@ -29,7 +29,7 @@ export const MENU_STRUCTURE = {
   "Output & Inputs": ["output", "time", "param_float", "param_color", "uv", "texture_2d", "audio_input"],
   "Custom Nodes": ["custom_input", "custom_output"],
   "Math (Basic)": ["math_add", "math_sub", "math_mult", "math_div", "math_negate", "math_pow"],
-  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract"],
+  "Math (Trig/Func)": ["math_sin", "math_cos", "math_tan", "math_cot", "math_atan", "math_abs", "math_exp", "math_fract", "math_step"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_length", "vec_fract", "math_mix", "relay_auto"],
   "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl"],
   "Simulation": ["feedback", "impulse", "math_random"],

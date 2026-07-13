@@ -89,6 +89,17 @@ export const FractFloatNode: ShaderNodeDefinition = {
   glslTemplate: ({ in: val }) => `fract(${val || '0.0'})`
 };
 
+export const StepNode: ShaderNodeDefinition = {
+  id: 'math_step', label: 'STEP', compact: true,
+  description: 'Hard threshold: returns 0 when X < Edge, otherwise 1. Unconnected Edge defaults to 0.5.',
+  inputs: [
+    { id: 'edge', label: 'Edge', type: 'float' },
+    { id: 'x', label: 'X', type: 'float' },
+  ],
+  outputs: [{ id: 'out', label: 'Step', type: 'float' }],
+  glslTemplate: ({ edge, x }) => `step(${edge || '0.5'}, ${x || '0.0'})`
+};
+
 export const PowNode: ShaderNodeDefinition = {
   id: 'math_pow', label: 'POW', compact: true, description: 'Returns Base raised to Exp',
   inputs: [{ id: 'base', label: 'Base', type: 'float' }, { id: 'exp', label: 'Exp', type: 'float' }],

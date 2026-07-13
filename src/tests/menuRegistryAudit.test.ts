@@ -16,7 +16,7 @@ const sidebarIds = Object.values(SIDEBAR_MENU).flat();
 const contextIds = Object.values(CONTEXT_MENU).flat();
 const registryIds = Object.values(NODE_REGISTRY).map(def => def.id);
 
-const NEW_NODE_IDS = ['mono', 'math_fract', 'math_tan', 'math_cot', 'math_atan', 'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random'];
+const NEW_NODE_IDS = ['mono', 'math_fract', 'math_step', 'math_tan', 'math_cot', 'math_atan', 'color_preview', 'code_glsl', 'feedback', 'impulse', 'math_random'];
 const INTERNAL_ADAPTER_IDS = ['split_vec2', 'split_vec3', 'split_vec4', 'combine_vec2', 'combine_vec3', 'combine_vec4'];
 
 describe('Menu & registry audit', () => {
@@ -66,6 +66,7 @@ describe('Menu & registry audit', () => {
     expect(NODE_REGISTRY.mono.outputs[0].type).toBe('vec3');
     expect(NODE_REGISTRY.mono.inputs[0].type).toBe('float');
     expect(NODE_REGISTRY.math_fract.glslTemplate({ in: '0.5' })).toBe('fract(0.5)');
+    expect(NODE_REGISTRY.math_step.glslTemplate({ edge: '0.5', x: '0.75' })).toBe('step(0.5, 0.75)');
     expect(NODE_REGISTRY.math_tan.glslTemplate({ in: '0.5' })).toBe('tan(0.5)');
     expect(NODE_REGISTRY.code_glsl.controls?.type).toBe('text');
     expect(NODE_REGISTRY.color_preview.inputs[0].id).toBe('in');

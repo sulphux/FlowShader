@@ -124,6 +124,26 @@ describe('math nodes', () => {
     });
   });
 
+  describe('StepNode', () => {
+    it('should generate a GLSL hard threshold with Edge before X', () => {
+      const code = MathNodes.StepNode.glslTemplate({ edge: '0.25', x: 'value' });
+      expect(code).toBe('step(0.25, value)');
+    });
+
+    it('should default to a useful 0.5 threshold and zero input', () => {
+      const code = MathNodes.StepNode.glslTemplate({});
+      expect(code).toBe('step(0.5, 0.0)');
+    });
+
+    it('should expose two strictly typed float inputs and one float output', () => {
+      expect(MathNodes.StepNode.inputs.map(input => [input.id, input.type])).toEqual([
+        ['edge', 'float'],
+        ['x', 'float'],
+      ]);
+      expect(MathNodes.StepNode.outputs).toEqual([{ id: 'out', label: 'Step', type: 'float' }]);
+    });
+  });
+
   describe('ColorAddNode', () => {
     it('should generate color addition GLSL code', () => {
       const code = MathNodes.ColorAddNode.glslTemplate({ 
@@ -177,6 +197,7 @@ describe('math nodes', () => {
       MathNodes.AbsNode,
       MathNodes.ExpNode,
       MathNodes.PowNode,
+      MathNodes.StepNode,
       MathNodes.ColorAddNode,
       MathNodes.ColorMultNode
     ];

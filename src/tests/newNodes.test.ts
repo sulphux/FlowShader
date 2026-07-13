@@ -14,6 +14,29 @@ describe('New nodes', () => {
     expect(NODE_REGISTRY.math_fract.glslTemplate({ in: 'x' })).toBe('fract(x)');
   });
 
+  it('math_step applies a hard threshold and compiles in a float graph', () => {
+    expect(NODE_REGISTRY.math_step.glslTemplate({ edge: '0.5', x: 'x' })).toBe('step(0.5, x)');
+
+    const nodes: GraphNode[] = [
+      { id: 'time1', type: 'shaderNode', data: { definition: NODE_REGISTRY.time } },
+      { id: 'step1', type: 'shaderNode', data: { definition: NODE_REGISTRY.math_step } },
+      { id: 'mono1', type: 'shaderNode', data: { definition: NODE_REGISTRY.mono } },
+      { id: 'out1', type: 'shaderNode', data: { definition: NODE_REGISTRY.output } },
+    ];
+    const edges = [
+      { source: 'time1', sourceHandle: 't', target: 'step1', targetHandle: 'x' },
+      { source: 'step1', sourceHandle: 'out', target: 'mono1', targetHandle: 'in' },
+      { source: 'mono1', sourceHandle: 'out', target: 'out1', targetHandle: 'color' },
+    ];
+    const shader = compileGraphToGLSL(nodes, edges);
+
+    expect(shader).toContain('step(0.5, var_time1)');
+    if (glslangAvailable) {
+      const result = validateWithGlslangValidator(shader, 'frag');
+      expect(result.ok, `glslang rejected:\n${result.output}\n${shader}`).toBe(true);
+    }
+  });
+
   it('trig nodes generate expected GLSL', () => {
     expect(NODE_REGISTRY.math_tan.glslTemplate({ in: 'x' })).toBe('tan(x)');
     expect(NODE_REGISTRY.math_cot.glslTemplate({ in: 'x' })).toBe('(cos(x) / sin(x))');
