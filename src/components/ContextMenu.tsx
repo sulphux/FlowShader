@@ -3,6 +3,7 @@ import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { NODE_REGISTRY } from '../nodes';
 import { TYPE_COLORS } from '../core/theme';
 import { validateConnection } from '../core/connectionValidator';
+import { useI18n } from '../core/i18n';
 
 interface Props {
   x: number;
@@ -34,12 +35,13 @@ export const MENU_STRUCTURE = {
   "Vector (Basic)": ["vec_add2", "vec_sub2", "vec_mult2", "vec_scale2", "vec_div2", "vec_add3", "vec_sub3", "vec_mult3", "vec_scale3", "vec_div3"],
   "Vector (Geometry)": ["vec_length", "vec_length3", "vec_normalize2", "vec_normalize3", "vec_dot2", "vec_dot3", "vec_distance2", "vec_distance3", "vec_cross3", "vec_reflect3", "vec_refract3", "vec_faceforward3"],
   "Vector & Space": ["uv_scale", "uv_shift", "vec_fract", "math_mix", "relay_auto"],
-  "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl"],
-  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random"],
+  "Utils": ["special_note", "special_group", "smart_split", "smart_compose", "monitor", "preview", "color_preview", "code_glsl", "code_block"],
+  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random", "loop_iterate"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 
 export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filterDirection, onPaste, onCreateCustom, hasClipboard, hasSelection }: Props) {
+  const { text } = useI18n();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x, y });
   const [openLeft, setOpenLeft] = useState(false);
@@ -135,7 +137,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filt
                 onMouseEnter={(e) => { if (hasClipboard) { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
               >
-                📋 Paste (Ctrl+V)
+                📋 {text('Paste', 'Wklej')} (Ctrl+V)
               </div>
             )}
             {onCreateCustom && (
@@ -146,7 +148,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filt
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
                 >
-                  📦 Create Custom Node (Empty)
+                  📦 {text('Create Custom Node (Empty)', 'Utwórz Custom Node (pusty)')}
                 </div>
                 {hasSelection && (
                   <div
@@ -155,7 +157,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filt
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
                   >
-                    📦 Create Custom Node from Selection
+                    📦 {text('Create Custom Node from Selection', 'Utwórz Custom Node z zaznaczenia')}
                   </div>
                 )}
               </>
@@ -166,14 +168,20 @@ export default function ContextMenu({ x, y, onClose, onAddNode, filterType, filt
         
         {filterType && (
             <div style={{ padding: '4px 8px', fontSize: '10px', color: '#888', borderBottom: '1px solid #333', marginBottom: '4px' }}>
-                Compatible with: <strong style={{color: TYPE_COLORS[filterType] || '#fff'}}>{filterType}</strong>
+                {text('Compatible with:', 'Zgodne z:')} <strong style={{color: TYPE_COLORS[filterType] || '#fff'}}>{filterType}</strong>
             </div>
         )}
 
         {Object.entries(filteredStructure).map(([category, items]) => (
           <div key={category} onMouseEnter={() => setActiveCategory(category)} style={{ position: 'relative' }}>
             <div style={itemStyle(activeCategory === category)}>
-              <span>{category}</span>
+              <span>{text(category, ({
+                'Output & Inputs': 'Wyjście i wejścia', 'Math (Basic)': 'Matematyka (podstawy)',
+                'Math (Trig/Func)': 'Matematyka (funkcje)', 'Math (Range)': 'Matematyka (zakres)',
+                'Vector (Basic)': 'Wektory (podstawy)', 'Vector (Geometry)': 'Wektory (geometria)',
+                'Vector & Space': 'Wektory i przestrzeń', Utils: 'Narzędzia', Simulation: 'Symulacja',
+                'Color & Shapes': 'Kolor i kształty', 'Custom Nodes': 'Custom Nody',
+              } as Record<string, string>)[category])}</span>
               <span style={{ fontSize: '10px', opacity: 0.7 }}>{openLeft ? '◀' : '▶'}</span>
             </div>
             

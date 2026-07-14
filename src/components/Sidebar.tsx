@@ -4,6 +4,7 @@ import { TYPE_COLORS } from '../core/theme';
 import type { Node } from 'reactflow';
 import { MultiTypeIndicator } from './MultiTypeIndicator';
 import { loadCustomNodes, deleteCustomNode } from '../core/customNodeManager';
+import { useI18n } from '../core/i18n';
 
 interface Props {
     nodes: Node[];
@@ -26,13 +27,15 @@ export const MENU_STRUCTURE = {
     "monitor",
     "preview",
     "color_preview",
-    "code_glsl"
+    "code_glsl",
+    "code_block"
   ],
-  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random"],
+  "Simulation": ["feedback", "sample_buffer", "impulse", "math_random", "loop_iterate"],
   "Color & Shapes": ["palette", "color_add", "color_mult", "mono", "sdf_circle"]
 };
 
 export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Props) {
+  const { text } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'lib' | 'params'>('lib');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -97,7 +100,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
     console.log('Node exists in library:', nodeExists);
     
     if (!nodeExists) {
-      alert(`❌ Custom node "${nodeId}" not found!`);
+      alert(text(`❌ Custom node "${nodeId}" not found!`, `❌ Nie znaleziono custom noda „${nodeId}”!`));
       setContextMenu(null);
       return;
     }
@@ -113,7 +116,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
     
     if (usedOnCanvas) {
       const confirmed = window.confirm(
-        `⚠️ This custom node is currently used on the canvas.\n\nDelete anyway?`
+        text('⚠️ This custom node is currently used on the canvas.\n\nDelete anyway?', '⚠️ Ten custom node jest obecnie używany na canvasie.\n\nUsunąć mimo to?')
       );
       console.log('User confirmed:', confirmed);
       
@@ -139,11 +142,11 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
       window.dispatchEvent(new Event('customNodesUpdated'));
       
       console.log('✅ Deletion complete!');
-      alert(`✅ Custom node deleted successfully!`);
+      alert(text('✅ Custom node deleted successfully!', '✅ Custom node został usunięty!'));
       
     } catch (error) {
       console.error('❌ Deletion failed:', error);
-      alert(`❌ Failed to delete: ${error}`);
+      alert(text(`❌ Failed to delete: ${error}`, `❌ Nie udało się usunąć: ${error}`));
     }
     
     setContextMenu(null);
@@ -206,13 +209,13 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
             onClick={() => setActiveTab('lib')}
             style={{ flex: 1, padding: '10px', background: activeTab === 'lib' ? '#222' : 'transparent', border: 'none', color: activeTab === 'lib' ? '#fff' : '#666', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
           >
-            LIBRARY
+            {text('LIBRARY', 'BIBLIOTEKA')}
           </button>
           <button 
             onClick={() => setActiveTab('params')}
             style={{ flex: 1, padding: '10px', background: activeTab === 'params' ? '#222' : 'transparent', border: 'none', color: activeTab === 'params' ? '#fff' : '#666', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
           >
-            PARAMS ({uniqueParams.length})
+            {text('PARAMS', 'PARAMETRY')} ({uniqueParams.length})
           </button>
           <button onClick={() => setCollapsed(true)} style={{ width: '30px', background: 'transparent', border: 'none', color: '#666', cursor: 'pointer' }}>◀</button>
       </div>
@@ -224,7 +227,13 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {Object.entries(menuStructure).map(([category, items]) => (
                     <div key={category}>
-                        <div style={{ color: '#666', fontSize: '10px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>{category}</div>
+                        <div style={{ color: '#666', fontSize: '10px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>{text(category, ({
+                          'Output & Inputs': 'Wyjście i wejścia', 'Math (Basic)': 'Matematyka (podstawy)',
+                          'Math (Trig/Func)': 'Matematyka (funkcje)', 'Math (Range)': 'Matematyka (zakres)',
+                          'Vector (Basic)': 'Wektory (podstawy)', 'Vector (Geometry)': 'Wektory (geometria)',
+                          'Vector & Space': 'Wektory i przestrzeń', Utils: 'Narzędzia', Simulation: 'Symulacja',
+                          'Color & Shapes': 'Kolor i kształty', 'Custom Nodes': 'Custom Nody',
+                        } as Record<string, string>)[category])}</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {items.map(id => {
                                 const def = NODE_REGISTRY[id as keyof typeof NODE_REGISTRY];
@@ -305,7 +314,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
         {/* ZAKŁADKA PARAMETRÓW (Nowa) */}
         {activeTab === 'params' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {uniqueParams.length === 0 && <div style={{ color: '#444', fontStyle: 'italic', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>No parameters yet.<br/>Add "Float Param" node.</div>}
+                {uniqueParams.length === 0 && <div style={{ color: '#444', fontStyle: 'italic', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>{text('No parameters yet.', 'Brak parametrów.')}<br/>{text('Add a "Float Param" node.', 'Dodaj node „Float Param”.')}</div>}
                 
                 {uniqueParams.map(p => (
                     <div key={p.label} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', padding: '8px' }}>
@@ -392,7 +401,7 @@ export default function Sidebar({ nodes, setNodes, currentContext = 'Main' }: Pr
               onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2a2a'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
-              🗑️ Delete Custom Node
+              🗑️ {text('Delete Custom Node', 'Usuń Custom Node')}
             </button>
           </div>
         </>

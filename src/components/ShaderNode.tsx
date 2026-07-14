@@ -9,14 +9,32 @@ import { getRuntimeTimeSeconds } from '../core/runtimeClock';
 import { isImpulsePulseActive, resolveImpulseTiming } from '../core/impulseTiming';
 import { formatEditableFloat, parseEditableFloat, stepFloatValue } from '../core/floatEditing';
 import { compileNodeOutputToGLSL, type GraphNode } from '../core/compiler';
+import { loadCustomNodes } from '../core/customNodeManager';
 import { collectRuntimeResources, type ShaderRuntimeResources } from '../core/runtimeResources';
 import { compileFeedbackPasses, type FeedbackPassDefinition } from '../core/feedbackPasses';
 import ShaderPreview from './ShaderPreview';
 import { resolveFrameBufferMode, type FrameBufferMode } from '../core/frameBufferMode';
+import { computeSmartComposePorts, inferCodeExpressionType } from '../core/dynamicPortSystem';
+import {
+  CODE_BLOCK_TYPES,
+  codeBlockCallableName,
+  formatCodeBlockSignature,
+  isCodeBlockCallableNameAvailable,
+  sanitizeCodePortId,
+} from '../core/codeBlock';
+import {
+  clampLoopIterations,
+  isCompatibleLoopStep,
+  LOOP_DEFAULT_ITERATIONS,
+  LOOP_MAX_ITERATIONS,
+  loopStateType,
+} from '../core/loopNode';
+import { useI18n } from '../core/i18n';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
+  const { text } = useI18n();
   const def = data.definition as ShaderNodeDefinition;
-  const { setNodes, getNodes, getEdges } = useReactFlow();
+  const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
   const [showSettings, setShowSettings] = useState(false);
   const [floatDraft, setFloatDraft] = useState(() => String(data.value ?? def.controls?.defaultValue ?? 0));
@@ -27,6 +45,9 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     x: String(data.offsetX ?? 0),
     y: String(data.offsetY ?? 0),
   }));
+  const [loopIterationDraft, setLoopIterationDraft] = useState(() =>
+    String(data.iterations ?? LOOP_DEFAULT_ITERATIONS));
+  const [, setCustomLibraryVersion] = useState(0);
   const [frameBufferPreview, setFrameBufferPreview] = useState<{
     shader: string;
     resources: ShaderRuntimeResources;
@@ -84,6 +105,31 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     return () => window.clearInterval(timer);
   }, [def.id, getEdges, getNodes, id, showFrameBufferPreview]);
 
+  useEffect(() => {
+    if (def.id !== 'loop_iterate') return;
+    const refreshSteps = () => {
+      setCustomLibraryVersion(version => version + 1);
+      const stepId = String(data.loopStepId ?? '');
+      const step = loadCustomNodes().find(candidate => candidate.id === stepId && isCompatibleLoopStep(candidate));
+      if (!step) return;
+      const nextType = loopStateType(step);
+      if (def.inputs[0]?.type === nextType && def.outputs[0]?.type === nextType) return;
+      setNodes(current => current.map(node => node.id === id ? {
+        ...node,
+        data: {
+          ...node.data,
+          definition: {
+            ...node.data.definition,
+            inputs: [{ id: 'initial', label: 'Initial State', type: nextType }],
+            outputs: [{ id: 'result', label: 'Final State', type: nextType }],
+          },
+        },
+      } : node));
+    };
+    window.addEventListener('customNodesUpdated', refreshSteps);
+    return () => window.removeEventListener('customNodesUpdated', refreshSteps);
+  }, [data.loopStepId, def.id, def.inputs, def.outputs, id, setNodes]);
+
   const updateNodeData = useCallback((changes: Record<string, unknown>) => {
     setNodes((nds) => nds.map((node) => {
         if (node.id === id) {
@@ -105,24 +151,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }, [id, setNodes, def.id, def.label, data.label]);
 
   const changeComposeType = (type: 'vec2' | 'vec3' | 'vec4') => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let newInputs: any[] = [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let newOutput: any = { id: 'out', label: 'Vec3', type: 'vec3' };
-      
-      if(type === 'vec2') {
-          newInputs = [{ id: 'x', label: 'X', type: 'float' }, { id: 'y', label: 'Y', type: 'float' }];
-          newOutput = { id: 'out', label: 'Vec2', type: 'vec2' };
-      } else if (type === 'vec3') {
-          newInputs = [{ id: 'x', label: 'X', type: 'float' }, { id: 'y', label: 'Y', type: 'float' }, { id: 'z', label: 'Z', type: 'float' }];
-          newOutput = { id: 'out', label: 'Vec3', type: 'vec3' };
-      } else {
-          newInputs = [{ id: 'x', label: 'X', type: 'float' }, { id: 'y', label: 'Y', type: 'float' }, { id: 'z', label: 'Z', type: 'float' }, { id: 'w', label: 'W', type: 'float' }];
-          newOutput = { id: 'out', label: 'Vec4', type: 'vec4' };
-      }
-
-      updateNodeData({ 
-          definition: { ...def, inputs: newInputs, outputs: [newOutput] } 
+      const ports = computeSmartComposePorts(type);
+      updateNodeData({
+          forcedType: type,
+          definition: { ...def, inputs: ports.inputs, outputs: ports.outputs },
       });
   };
 
@@ -200,6 +232,11 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   };
 
   const preventDrag = (e: React.MouseEvent) => { e.stopPropagation(); };
+  const stopEditorKeyPropagation = (event: React.KeyboardEvent | React.SyntheticEvent) => {
+    // React Flow has canvas-level keyboard handlers. Editors must receive
+    // punctuation produced with Shift (notably `?` = Shift+/) unchanged.
+    event.stopPropagation();
+  };
 
   const commitSampleOffset = (axis: 'x' | 'y') => {
     const parsed = parseEditableFloat(sampleOffsetDrafts[axis]);
@@ -779,7 +816,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         <div className="nodrag" style={{ padding: '6px 8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
           <label style={{ cursor: 'pointer', flex: 1 }}>
             <div style={{ border: '1px dashed #555', borderRadius: '4px', padding: '4px', textAlign: 'center', color: '#888', fontSize: '10px', background: '#111' }}>
-              {hasFile ? 'Zmień plik…' : 'Wgraj dźwięk…'}
+              {hasFile ? text('Change file…', 'Zmień plik…') : text('Upload audio…', 'Wgraj dźwięk…')}
             </div>
             <input type="file" accept="audio/*" onChange={onAudioFile} style={{ display: 'none' }} />
           </label>
@@ -811,6 +848,268 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   // --- MINI EDYTOR KODU (Code GLSL) ---
+  if (def.id === 'code_block') {
+    const callableName = codeBlockCallableName(String(currentLabel));
+    const callableNameAvailable = isCodeBlockCallableNameAvailable(callableName);
+    const duplicateCallableName = getNodes().some(node =>
+      node.id !== id &&
+      node.data?.definition?.id === 'code_block' &&
+      codeBlockCallableName(String(node.data.label ?? node.data.definition.label)) === callableName);
+    const callableSignature = formatCodeBlockSignature(String(currentLabel), def);
+    const updatePorts = (
+      direction: 'inputs' | 'outputs',
+      ports: ShaderNodeDefinition['inputs'],
+    ) => updateNodeData({ definition: { ...def, [direction]: ports } });
+
+    const uniquePortId = (direction: 'inputs' | 'outputs', requested: string, currentIndex?: number) => {
+      const ports = def[direction];
+      const base = sanitizeCodePortId(requested, direction === 'inputs' ? 'input' : 'out');
+      let candidate = base;
+      let suffix = 2;
+      while (ports.some((port, index) => index !== currentIndex && port.id === candidate)) {
+        candidate = `${base}_${suffix}`;
+        suffix += 1;
+      }
+      return candidate;
+    };
+
+    const renamePort = (direction: 'inputs' | 'outputs', index: number) => {
+      const ports = def[direction];
+      const oldId = ports[index].id;
+      const nextId = uniquePortId(direction, ports[index].label, index);
+      const next = ports.map((port, portIndex) => portIndex === index ? { ...port, id: nextId, label: nextId } : port);
+      updatePorts(direction, next);
+      if (nextId !== oldId) {
+        setEdges(current => current.map(edge => direction === 'inputs'
+          ? (edge.target === id && edge.targetHandle === oldId ? { ...edge, targetHandle: nextId } : edge)
+          : (edge.source === id && edge.sourceHandle === oldId ? { ...edge, sourceHandle: nextId } : edge)));
+      }
+    };
+
+    const changePort = (direction: 'inputs' | 'outputs', index: number, changes: { label?: string; type?: string }) => {
+      updatePorts(direction, def[direction].map((port, portIndex) => portIndex === index ? { ...port, ...changes } : port));
+    };
+
+    const addPort = (direction: 'inputs' | 'outputs') => {
+      const ports = def[direction];
+      const base = direction === 'inputs' ? `input${ports.length + 1}` : `out${ports.length + 1}`;
+      const portId = uniquePortId(direction, base);
+      updatePorts(direction, [...ports, { id: portId, label: portId, type: 'float' }]);
+    };
+
+    const removePort = (direction: 'inputs' | 'outputs', index: number) => {
+      const port = def[direction][index];
+      if (direction === 'outputs' && def.outputs.length === 1) return;
+      updatePorts(direction, def[direction].filter((_, portIndex) => portIndex !== index));
+      setEdges(current => current.filter(edge => direction === 'inputs'
+        ? !(edge.target === id && edge.targetHandle === port.id)
+        : !(edge.source === id && edge.sourceHandle === port.id)));
+    };
+
+    const renderPortEditor = (direction: 'inputs' | 'outputs') => (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+          <span style={{ fontSize: '10px', color: '#999', fontWeight: 'bold' }}>{direction === 'inputs' ? 'INPUTS' : 'OUTPUTS'}</span>
+          <button className="nodrag" onClick={() => addPort(direction)} style={{ fontSize: '10px', cursor: 'pointer', background: '#333', color: '#ddd', border: '1px solid #555', borderRadius: '3px' }}>+</button>
+        </div>
+        {def[direction].map((port, index) => (
+          <div key={port.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '5px', position: 'relative' }}>
+            {direction === 'inputs' && <Handle type="target" position={Position.Left} id={port.id} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />}
+            <input
+              className="nodrag"
+              value={port.label}
+              onChange={event => changePort(direction, index, { label: event.target.value })}
+              onBlur={() => renamePort(direction, index)}
+              onKeyDown={event => {
+                event.stopPropagation();
+                if (event.key === 'Enter') event.currentTarget.blur();
+              }}
+              onKeyUp={stopEditorKeyPropagation}
+              spellCheck={false}
+              title={text('GLSL variable name', 'Nazwa zmiennej GLSL')}
+              style={{ width: '72px', minWidth: 0, background: '#151515', color: '#ddd', border: '1px solid #444', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px', padding: '3px' }}
+            />
+            <select
+              className="nodrag"
+              value={port.type}
+              onChange={event => changePort(direction, index, { type: event.target.value })}
+              style={{ minWidth: 0, flex: 1, background: '#222', color: TYPE_COLORS[port.type], border: '1px solid #444', borderRadius: '3px', fontSize: '9px', padding: '3px' }}
+            >
+              {CODE_BLOCK_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+            </select>
+            <button
+              className="nodrag"
+              onClick={() => removePort(direction, index)}
+              disabled={direction === 'outputs' && def.outputs.length === 1}
+              title={text('Remove port', 'Usuń port')}
+              style={{ border: 'none', background: 'transparent', color: '#888', cursor: 'pointer', padding: '1px 2px' }}
+            >×</button>
+            {direction === 'outputs' && <Handle type="source" position={Position.Right} id={port.id} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />}
+          </div>
+        ))}
+      </div>
+    );
+
+    return (
+      <div style={{ ...baseStyle, width: '410px', position: 'relative' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: '#b56cff', borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '5px 8px', background: '#222', borderBottom: '1px solid #333' }}>
+          <input
+            className="nodrag title-input"
+            value={currentLabel}
+            onChange={event => updateNodeData({ label: event.target.value })}
+            onFocus={handleTitleFocus}
+            onMouseDown={preventDrag}
+            spellCheck={false}
+            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#eee', fontWeight: 'bold', fontSize: '12px' }}
+          />
+        </div>
+        <textarea
+          className="nodrag"
+          value={currentValue ?? ''}
+          onChange={event => updateNodeData({ value: event.target.value })}
+          onMouseDown={preventDrag}
+          onKeyDown={stopEditorKeyPropagation}
+          onKeyUp={stopEditorKeyPropagation}
+          spellCheck={false}
+          placeholder="float d = length(p);\nreturn d;"
+          style={{ width: '100%', boxSizing: 'border-box', height: '220px', resize: 'vertical', background: '#0d0d0d', color: '#9cdcfe', border: 'none', borderBottom: '1px solid #333', outline: 'none', padding: '8px', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.45 }}
+        />
+        <div style={{ padding: '5px 8px', color: '#888', background: '#171717', fontSize: '9px' }}>
+          {def.outputs.length === 1
+            ? text(`Return ${def.outputs[0].type} with: return ...;`, `Zwróć ${def.outputs[0].type} przez: return ...;`)
+            : text(`Multiple outputs: assign ${def.outputs.map(port => port.id).join(', ')} (out parameters).`, `Wiele wyjść: przypisz wartości do ${def.outputs.map(port => port.id).join(', ')} (parametry out).`)}
+        </div>
+        <div
+          data-testid="code-block-signature"
+          style={{
+            padding: '6px 8px',
+            color: callableNameAvailable && !duplicateCallableName ? '#b9e6b0' : '#ffb36b',
+            background: '#121a14',
+            borderBottom: '1px solid #333',
+            fontFamily: 'monospace',
+            fontSize: '10px',
+          }}
+          title={text('Use this name inside another Code Block, including loops.', 'Tej nazwy możesz użyć wewnątrz innego Code Blocka, także w pętli.')}
+        >
+          {callableNameAvailable && !duplicateCallableName
+            ? <>{text('In other Code Blocks:', 'W innych Code Blockach:')} <strong>{callableSignature}</strong></>
+            : duplicateCallableName
+              ? <>{text(`Ambiguous function: rename the duplicate “${callableName}”.`, `Niejednoznaczna funkcja: zmień powtarzającą się nazwę „${callableName}”.`)}</>
+              : <>{text(`“${callableName}” is a GLSL built-in — rename the block to call it.`, `Nazwa „${callableName}” jest wbudowana w GLSL — zmień tytuł, aby wywoływać ten blok.`)}</>}
+        </div>
+        <div style={{ display: 'flex', gap: '14px', padding: '8px 12px 7px' }}>
+          {renderPortEditor('inputs')}
+          {renderPortEditor('outputs')}
+        </div>
+      </div>
+    );
+  }
+
+  if (def.id === 'loop_iterate') {
+    const compatibleSteps = loadCustomNodes().filter(isCompatibleLoopStep);
+    const selectedStepId = String(data.loopStepId ?? '');
+    const selectedStep = compatibleSteps.find(step => step.id === selectedStepId);
+    const stateType = selectedStep ? loopStateType(selectedStep) : (def.inputs[0]?.type || 'float');
+    const iterations = clampLoopIterations(data.iterations);
+
+    const selectStep = (stepId: string) => {
+      const step = compatibleSteps.find(candidate => candidate.id === stepId);
+      if (!step) {
+        updateNodeData({ loopStepId: '' });
+        return;
+      }
+      const nextType = loopStateType(step);
+      updateNodeData({
+        loopStepId: step.id,
+        definition: {
+          ...def,
+          inputs: [{ id: 'initial', label: 'Initial State', type: nextType }],
+          outputs: [{ id: 'result', label: 'Final State', type: nextType }],
+        },
+      });
+    };
+
+    const commitIterations = () => {
+      const next = clampLoopIterations(loopIterationDraft);
+      setLoopIterationDraft(String(next));
+      updateNodeData({ iterations: next });
+    };
+
+    return (
+      <div style={{ ...baseStyle, width: '250px', position: 'relative', overflow: 'visible' }}>
+        {renderInfoIcon()}
+        <div style={{ height: '4px', background: '#ff9f43', borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }} />
+        <div style={{ padding: '6px 9px', background: '#222', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>↻ LOOP / ITERATE</span>
+          <span style={{ fontSize: '9px', color: '#ffbf7a', fontFamily: 'monospace' }}>{stateType}</span>
+        </div>
+
+        <div className="nodrag" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', color: '#aaa' }}>
+            VISUAL STEP (CUSTOM NODE)
+            <select
+              value={selectedStepId}
+              onChange={event => selectStep(event.target.value)}
+              onKeyDown={stopEditorKeyPropagation}
+              onKeyUp={stopEditorKeyPropagation}
+              style={{ background: '#181818', color: '#eee', border: '1px solid #555', borderRadius: '4px', padding: '5px', fontSize: '11px' }}
+            >
+              <option value="">— choose Step —</option>
+              {compatibleSteps.map(step => (
+                <option key={step.id} value={step.id}>{step.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '9px', color: '#aaa' }}>
+            ITERATIONS
+            <input
+              aria-label="Loop iterations"
+              value={loopIterationDraft}
+              inputMode="numeric"
+              onChange={event => setLoopIterationDraft(event.target.value)}
+              onBlur={commitIterations}
+              onKeyDown={event => {
+                event.stopPropagation();
+                if (event.key === 'Enter') event.currentTarget.blur();
+                if (event.key === 'Escape') {
+                  setLoopIterationDraft(String(iterations));
+                  event.currentTarget.blur();
+                }
+              }}
+              onKeyUp={stopEditorKeyPropagation}
+              style={{ width: '70px', background: '#181818', color: '#fff', border: '1px solid #555', borderRadius: '4px', padding: '4px 6px', fontFamily: 'monospace', fontSize: '11px', textAlign: 'right' }}
+              title={`Integer from 1 to ${LOOP_MAX_ITERATIONS}`}
+            />
+          </label>
+
+          <div style={{ fontSize: '9px', lineHeight: 1.45, color: selectedStep ? '#9ed59e' : '#d39a6b', borderTop: '1px solid #303030', paddingTop: '7px' }}>
+            {selectedStep
+              ? <>Step: <strong>{stateType} State</strong>{selectedStep.inputs[1] ? ' · float Index' : ''}{selectedStep.inputs[2] ? ' · float Progress' : ''} → <strong>{stateType} Next</strong>{selectedStep.outputs[1] ? ' · float Stop' : ''}</>
+              : compatibleSteps.length > 0
+                ? 'Choose a compatible Custom Node to use as the iteration body.'
+                : 'Create a Custom Node: State → Next State. Optional inputs: Index, Progress; optional output: Stop.'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px 9px', borderTop: '1px solid #303030' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Handle type="target" position={Position.Left} id="initial" title={`Initial State · ${stateType}`}
+              style={{ background: TYPE_COLORS[stateType], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />
+            <span style={{ fontSize: '10px', color: '#ccc' }}>Initial State</span>
+          </div>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', color: '#fff', marginRight: '5px' }}>Final State</span>
+            <Handle type="source" position={Position.Right} id="result" title={`Final State · ${stateType}`}
+              style={{ background: TYPE_COLORS[stateType], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (def.id === 'code_glsl') {
     const outType = def.outputs[0]?.type || 'float';
     const setOutType = (t: string) => {
@@ -833,9 +1132,20 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         <textarea
           className="nodrag"
           value={currentValue ?? ''}
-          onChange={(e) => updateNodeData({ value: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            const inferredType = inferCodeExpressionType(value);
+            updateNodeData({
+              value,
+              ...(inferredType && inferredType !== outType ? {
+                definition: { ...def, outputs: [{ id: 'out', label: 'Out', type: inferredType }] },
+              } : {}),
+            });
+          }}
           spellCheck={false}
-          placeholder="np. sin(a * 6.28) + b"
+          onKeyDown={stopEditorKeyPropagation}
+          onKeyUp={stopEditorKeyPropagation}
+          placeholder={text('e.g. sin(a * 6.28) + b', 'np. sin(a * 6.28) + b')}
           style={{
             width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical',
             background: '#111', border: 'none', borderBottom: '1px solid #333',
@@ -850,7 +1160,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             <button
               key={t}
               onClick={() => setOutType(t)}
-              title={`Typ wyjścia: ${t}`}
+              title={text(`Output type: ${t}`, `Typ wyjścia: ${t}`)}
               style={{
                 fontSize: '9px', padding: '2px 4px', cursor: 'pointer',
                 background: outType === t ? (TYPE_COLORS[t] || '#ff007a') : '#333',

@@ -1,4 +1,1926 @@
 {
+  "customNodes": [
+    {
+      "id": "custom_beautynode",
+      "label": "BeautyNode",
+      "description": "Custom node: BeautyNode",
+      "compact": false,
+      "inputs": [
+        {
+          "id": "custom_input_default",
+          "label": "Image Process IN",
+          "type": "vec2"
+        },
+        {
+          "id": "custom_input_1783790190112",
+          "label": "Step",
+          "type": "float"
+        },
+        {
+          "id": "custom_input_1783790329789",
+          "label": "Color IN",
+          "type": "vec3"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "custom_output_1783790248712",
+          "label": "Image Process OUT",
+          "type": "vec2"
+        },
+        {
+          "id": "custom_output_default",
+          "label": "Color OUT",
+          "type": "vec3"
+        }
+      ],
+      "isCustom": true,
+      "subgraph": {
+        "nodes": [
+          {
+            "id": "custom_input_default",
+            "type": "shaderNode",
+            "position": {
+              "x": -230.3063604128286,
+              "y": -1223.9953218826045
+            },
+            "data": {
+              "definition": {
+                "id": "custom_input",
+                "label": "Input",
+                "compact": false,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "Value"
+                  }
+                ],
+                "controls": {
+                  "type": "text",
+                  "defaultValue": "Input"
+                },
+                "description": "Defines an input port for a custom node. Name this to set the port label."
+              },
+              "detectedType": "vec2",
+              "label": "Image Process IN",
+              "forcedType": "vec2"
+            },
+            "width": 182,
+            "height": 124,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -230.3063604128286,
+              "y": -1223.9953218826045
+            },
+            "dragging": false
+          },
+          {
+            "id": "custom_output_default",
+            "type": "shaderNode",
+            "position": {
+              "x": 1146.2466551048633,
+              "y": -387.4952438372559
+            },
+            "data": {
+              "definition": {
+                "id": "custom_output",
+                "label": "Output",
+                "compact": false,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec3",
+                    "label": "Value"
+                  }
+                ],
+                "outputs": [],
+                "controls": {
+                  "type": "text",
+                  "defaultValue": "Output"
+                },
+                "description": "Defines an output port for a custom node. Name this to set the port label."
+              },
+              "value": "Output",
+              "detectedType": "vec3",
+              "label": "Color OUT"
+            },
+            "width": 182,
+            "height": 124,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 1146.2466551048633,
+              "y": -387.4952438372559
+            },
+            "dragging": false
+          },
+          {
+            "id": "uv_scale_1783790010746_lclt2",
+            "type": "shaderNode",
+            "position": {
+              "x": 106.41025007290415,
+              "y": -1068.7559561680523
+            },
+            "data": {
+              "definition": {
+                "id": "uv_scale",
+                "label": "UV Scale (*)",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "uv",
+                    "type": "vec2",
+                    "label": "UV"
+                  },
+                  {
+                    "id": "scale",
+                    "type": "float",
+                    "label": "Scl"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "Out"
+                  }
+                ]
+              }
+            },
+            "width": 93,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 106.41025007290415,
+              "y": -1068.7559561680523
+            },
+            "dragging": false
+          },
+          {
+            "id": "param_float_1783790010746_wbghh",
+            "type": "shaderNode",
+            "position": {
+              "x": -129.01755275207,
+              "y": -1061.7120466233232
+            },
+            "data": {
+              "definition": {
+                "id": "param_float",
+                "label": "Float Param",
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Val",
+                    "type": "float"
+                  }
+                ],
+                "controls": {
+                  "type": "float",
+                  "defaultValue": 0.5,
+                  "min": 0,
+                  "max": 10,
+                  "step": 0.01
+                }
+              },
+              "value": "1.5"
+            },
+            "width": 172,
+            "height": 65,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -129.01755275207,
+              "y": -1061.7120466233232
+            },
+            "dragging": false
+          },
+          {
+            "id": "vec_fract_1783790010746_lx3ti",
+            "type": "shaderNode",
+            "position": {
+              "x": 240.0428155633054,
+              "y": -1066.9502204451317
+            },
+            "data": {
+              "definition": {
+                "id": "vec_fract",
+                "label": "Fract (Vec2)",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec2",
+                    "label": "In"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "Out"
+                  }
+                ]
+              }
+            },
+            "width": 94,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 240.0428155633054,
+              "y": -1066.9502204451317
+            },
+            "dragging": false
+          },
+          {
+            "id": "uv_shift_1783790010746_71jpw",
+            "type": "shaderNode",
+            "position": {
+              "x": 377.0648808806341,
+              "y": -1071.6310384666185
+            },
+            "data": {
+              "definition": {
+                "id": "uv_shift",
+                "label": "UV Shift (+/-)",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "uv",
+                    "type": "vec2",
+                    "label": "UV"
+                  },
+                  {
+                    "id": "shift",
+                    "type": "float",
+                    "label": "Off"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "Out"
+                  }
+                ]
+              }
+            },
+            "width": 98,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 377.0648808806341,
+              "y": -1071.6310384666185
+            },
+            "dragging": false
+          },
+          {
+            "id": "param_float_1783790010746_io4p7",
+            "type": "shaderNode",
+            "position": {
+              "x": 147.605354063966,
+              "y": -1150.1827422402444
+            },
+            "data": {
+              "definition": {
+                "id": "param_float",
+                "label": "Float Param",
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Val",
+                    "type": "float"
+                  }
+                ],
+                "controls": {
+                  "type": "float",
+                  "defaultValue": 0.5,
+                  "min": 0,
+                  "max": 10,
+                  "step": 0.01
+                }
+              },
+              "value": "0.5"
+            },
+            "width": 172,
+            "height": 65,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 147.605354063966,
+              "y": -1150.1827422402444
+            },
+            "dragging": false
+          },
+          {
+            "id": "vec_length_1783790010746_wiq4r",
+            "type": "shaderNode",
+            "position": {
+              "x": -103.76215869343508,
+              "y": -962.6922085904309
+            },
+            "data": {
+              "definition": {
+                "id": "vec_length",
+                "label": "Length",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec2",
+                    "label": "Vec"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "float",
+                    "label": "Len"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "dragging": false,
+            "positionAbsolute": {
+              "x": -103.76215869343508,
+              "y": -962.6922085904309
+            }
+          },
+          {
+            "id": "uv_1783790010746_6f8xs",
+            "type": "shaderNode",
+            "position": {
+              "x": -112.11701684200165,
+              "y": -913.7322153051743
+            },
+            "data": {
+              "definition": {
+                "id": "uv",
+                "label": "UV Coord",
+                "compact": true,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "UV"
+                  }
+                ]
+              }
+            },
+            "width": 81,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -112.11701684200165,
+              "y": -913.7322153051743
+            },
+            "dragging": false
+          },
+          {
+            "id": "vec_length_1783790010746_1l82p",
+            "type": "shaderNode",
+            "position": {
+              "x": 2.5988477127021383,
+              "y": -911.4925668353015
+            },
+            "data": {
+              "definition": {
+                "id": "vec_length",
+                "label": "Length",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec2",
+                    "label": "Vec"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "float",
+                    "label": "Len"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "dragging": false,
+            "positionAbsolute": {
+              "x": 2.5988477127021383,
+              "y": -911.4925668353015
+            }
+          },
+          {
+            "id": "math_negate_1783790010746_demzl",
+            "type": "shaderNode",
+            "position": {
+              "x": 101.9011719575588,
+              "y": -912.0804036636714
+            },
+            "data": {
+              "definition": {
+                "id": "math_negate",
+                "label": "Negate (-x)",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "label": "In",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Out",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 88,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 101.9011719575588,
+              "y": -912.0804036636714
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_exp_1783790010746_jsryo",
+            "type": "shaderNode",
+            "position": {
+              "x": 209.64261611474745,
+              "y": -915.1653022086949
+            },
+            "data": {
+              "definition": {
+                "id": "math_exp",
+                "label": "EXP",
+                "compact": true,
+                "description": "Returns e raised to the power of input",
+                "inputs": [
+                  {
+                    "id": "in",
+                    "label": "In",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Exp",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 209.64261611474745,
+              "y": -915.1653022086949
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_mult_1783790010746_t4g3f",
+            "type": "shaderNode",
+            "position": {
+              "x": 329.8651035506239,
+              "y": -985.6954650552601
+            },
+            "data": {
+              "definition": {
+                "id": "math_mult",
+                "label": "×",
+                "compact": true,
+                "description": "Multiplies two numbers",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Mul",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 329.8651035506239,
+              "y": -985.6954650552601
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_mult_1783790010746_376ns",
+            "type": "shaderNode",
+            "position": {
+              "x": 414.6227178829525,
+              "y": -916.4577328187067
+            },
+            "data": {
+              "definition": {
+                "id": "math_mult",
+                "label": "×",
+                "compact": true,
+                "description": "Multiplies two numbers",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Mul",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 414.6227178829525,
+              "y": -916.4577328187067
+            },
+            "dragging": false
+          },
+          {
+            "id": "param_float_1783790010746_59fb9",
+            "type": "shaderNode",
+            "position": {
+              "x": -12.24444795579143,
+              "y": -831.2180409181154
+            },
+            "data": {
+              "definition": {
+                "id": "param_float",
+                "label": "Float Param",
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Val",
+                    "type": "float"
+                  }
+                ],
+                "controls": {
+                  "type": "float",
+                  "defaultValue": 0.5,
+                  "min": 0,
+                  "max": 10,
+                  "step": 0.01
+                }
+              },
+              "value": "8.00"
+            },
+            "width": 172,
+            "height": 65,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -12.24444795579143,
+              "y": -831.2180409181154
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_add_1783790010746_bty1v",
+            "type": "shaderNode",
+            "position": {
+              "x": 515.453471766918,
+              "y": -874.7581526215406
+            },
+            "data": {
+              "definition": {
+                "id": "math_add",
+                "label": "+",
+                "compact": true,
+                "description": "Adds two numbers (A + B)",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Sum",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 515.453471766918,
+              "y": -874.7581526215406
+            },
+            "dragging": false
+          },
+          {
+            "id": "time_1783790010746_w2iaq",
+            "type": "shaderNode",
+            "position": {
+              "x": 363.75186544798913,
+              "y": -857.588534324287
+            },
+            "data": {
+              "definition": {
+                "id": "time",
+                "label": "Time (iTime)",
+                "compact": true,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "t",
+                    "label": "Seconds",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 96,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 363.75186544798913,
+              "y": -857.588534324287
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_sin_1783790010746_e9gip",
+            "type": "shaderNode",
+            "position": {
+              "x": 605.3915055672533,
+              "y": -867.2031368472636
+            },
+            "data": {
+              "definition": {
+                "id": "math_sin",
+                "label": "SIN",
+                "compact": true,
+                "description": "Returns sine of input",
+                "inputs": [
+                  {
+                    "id": "in",
+                    "label": "In",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Sin",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 605.3915055672533,
+              "y": -867.2031368472636
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_div_1783790010746_xxuoa",
+            "type": "shaderNode",
+            "position": {
+              "x": 418.19558691907724,
+              "y": -747.5677308735872
+            },
+            "data": {
+              "definition": {
+                "id": "math_div",
+                "label": "÷",
+                "compact": true,
+                "description": "Divides A by B",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Div",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 418.19558691907724,
+              "y": -747.5677308735872
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_abs_1783790010747_kkc25",
+            "type": "shaderNode",
+            "position": {
+              "x": 523.5629822630274,
+              "y": -737.516620267363
+            },
+            "data": {
+              "definition": {
+                "id": "math_abs",
+                "label": "ABS",
+                "compact": true,
+                "description": "Returns absolute value (positive)",
+                "inputs": [
+                  {
+                    "id": "in",
+                    "label": "In",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Abs",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 523.5629822630274,
+              "y": -737.516620267363
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_div_1783790010747_wcig8",
+            "type": "shaderNode",
+            "position": {
+              "x": 698.1411711037044,
+              "y": -658.8088107543967
+            },
+            "data": {
+              "definition": {
+                "id": "math_div",
+                "label": "÷",
+                "compact": true,
+                "description": "Divides A by B",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Div",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 698.1411711037044,
+              "y": -658.8088107543967
+            },
+            "dragging": false
+          },
+          {
+            "id": "param_float_1783790010747_vptnj",
+            "type": "shaderNode",
+            "position": {
+              "x": 777.7035686530448,
+              "y": -879.9528093027343
+            },
+            "data": {
+              "definition": {
+                "id": "param_float",
+                "label": "Float Param",
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Val",
+                    "type": "float"
+                  }
+                ],
+                "controls": {
+                  "type": "float",
+                  "defaultValue": 0.5,
+                  "min": 0,
+                  "max": 10,
+                  "step": 0.01
+                }
+              },
+              "value": "0.01"
+            },
+            "width": 172,
+            "height": 65,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 777.7035686530448,
+              "y": -879.9528093027343
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_pow_1783790010747_rf9np",
+            "type": "shaderNode",
+            "position": {
+              "x": 814.8418050278092,
+              "y": -621.4366216689277
+            },
+            "data": {
+              "definition": {
+                "id": "math_pow",
+                "label": "POW",
+                "compact": true,
+                "description": "Returns Base raised to Exp",
+                "inputs": [
+                  {
+                    "id": "base",
+                    "label": "Base",
+                    "type": "float"
+                  },
+                  {
+                    "id": "exp",
+                    "label": "Exp",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Pow",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 814.8418050278092,
+              "y": -621.4366216689277
+            },
+            "dragging": false
+          },
+          {
+            "id": "param_float_1783790010747_szfvf",
+            "type": "shaderNode",
+            "position": {
+              "x": 366.28062833797134,
+              "y": -607.7628920174186
+            },
+            "data": {
+              "definition": {
+                "id": "param_float",
+                "label": "Float Param",
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Val",
+                    "type": "float"
+                  }
+                ],
+                "controls": {
+                  "type": "float",
+                  "defaultValue": 0.5,
+                  "min": 0,
+                  "max": 10,
+                  "step": 0.01
+                }
+              },
+              "value": "1.2"
+            },
+            "width": 172,
+            "height": 65,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 366.28062833797134,
+              "y": -607.7628920174186
+            },
+            "dragging": false
+          },
+          {
+            "id": "uv_1783790010747_sn1e5",
+            "type": "shaderNode",
+            "position": {
+              "x": -188.72464065561547,
+              "y": -698.7795880766316
+            },
+            "data": {
+              "definition": {
+                "id": "uv",
+                "label": "UV Coord",
+                "compact": true,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec2",
+                    "label": "UV"
+                  }
+                ]
+              }
+            },
+            "width": 81,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -188.72464065561547,
+              "y": -698.7795880766316
+            },
+            "dragging": false
+          },
+          {
+            "id": "vec_length_1783790010747_yrkbg",
+            "type": "shaderNode",
+            "position": {
+              "x": -36.355687981353526,
+              "y": -670.2948592676526
+            },
+            "data": {
+              "definition": {
+                "id": "vec_length",
+                "label": "Length",
+                "compact": true,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec2",
+                    "label": "Vec"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "float",
+                    "label": "Len"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -36.355687981353526,
+              "y": -670.2948592676526
+            },
+            "dragging": false
+          },
+          {
+            "id": "time_1783790010747_50uey",
+            "type": "shaderNode",
+            "position": {
+              "x": -52.61575049445662,
+              "y": -603.42381079084
+            },
+            "data": {
+              "definition": {
+                "id": "time",
+                "label": "Time (iTime)",
+                "compact": true,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "t",
+                    "label": "Seconds",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 96,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": -52.61575049445662,
+              "y": -603.42381079084
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_add_1783790010747_y8vob",
+            "type": "shaderNode",
+            "position": {
+              "x": 68.94117271135849,
+              "y": -638.4708118280641
+            },
+            "data": {
+              "definition": {
+                "id": "math_add",
+                "label": "+",
+                "compact": true,
+                "description": "Adds two numbers (A + B)",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Sum",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 68.94117271135849,
+              "y": -638.4708118280641
+            },
+            "dragging": false
+          },
+          {
+            "id": "math_add_1783790010747_wruaz",
+            "type": "shaderNode",
+            "position": {
+              "x": 179.23233836681095,
+              "y": -609.0127940423806
+            },
+            "data": {
+              "definition": {
+                "id": "math_add",
+                "label": "+",
+                "compact": true,
+                "description": "Adds two numbers (A + B)",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "float"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "Sum",
+                    "type": "float"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 179.23233836681095,
+              "y": -609.0127940423806
+            },
+            "dragging": false
+          },
+          {
+            "id": "palette_1783790010747_9dkw7",
+            "type": "shaderNode",
+            "position": {
+              "x": 360.5490362556806,
+              "y": -513.752761576111
+            },
+            "data": {
+              "definition": {
+                "id": "palette",
+                "label": "Cosine Palette",
+                "inputs": [
+                  {
+                    "id": "t",
+                    "label": "t (Input)",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "color",
+                    "label": "Color",
+                    "type": "vec3"
+                  }
+                ]
+              }
+            },
+            "width": 182,
+            "height": 66,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 360.5490362556806,
+              "y": -513.752761576111
+            },
+            "dragging": false
+          },
+          {
+            "id": "color_mult_1783790010747_otfkh",
+            "type": "shaderNode",
+            "position": {
+              "x": 937.281271776119,
+              "y": -542.9007871844128
+            },
+            "data": {
+              "definition": {
+                "id": "color_mult",
+                "label": "Scale",
+                "compact": true,
+                "description": "Multiplies color by a number (darkens/brightens)",
+                "inputs": [
+                  {
+                    "id": "col",
+                    "label": "Col",
+                    "type": "vec3"
+                  },
+                  {
+                    "id": "fac",
+                    "label": "F",
+                    "type": "float"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "RGB",
+                    "type": "vec3"
+                  }
+                ]
+              }
+            },
+            "width": 66,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 937.281271776119,
+              "y": -542.9007871844128
+            },
+            "dragging": false
+          },
+          {
+            "id": "color_add_1783790010747_n2kxc",
+            "type": "shaderNode",
+            "position": {
+              "x": 943.5430952410411,
+              "y": -383.12962088516787
+            },
+            "data": {
+              "definition": {
+                "id": "color_add",
+                "label": "Add (Color)",
+                "compact": true,
+                "description": "Adds two colors together (brightens)",
+                "inputs": [
+                  {
+                    "id": "a",
+                    "label": "A",
+                    "type": "vec3"
+                  },
+                  {
+                    "id": "b",
+                    "label": "B",
+                    "type": "vec3"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "label": "RGB",
+                    "type": "vec3"
+                  }
+                ]
+              }
+            },
+            "width": 92,
+            "height": 34,
+            "selected": false,
+            "positionAbsolute": {
+              "x": 943.5430952410411,
+              "y": -383.12962088516787
+            },
+            "dragging": false
+          },
+          {
+            "id": "custom_input_1783790190112",
+            "type": "shaderNode",
+            "position": {
+              "x": -408.2053261870836,
+              "y": -428.2111297042199
+            },
+            "data": {
+              "definition": {
+                "id": "custom_input",
+                "label": "Input",
+                "compact": false,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "float",
+                    "label": "Value"
+                  }
+                ],
+                "controls": {
+                  "type": "text",
+                  "defaultValue": "Input"
+                },
+                "description": "Defines an input port for a custom node. Name this to set the port label."
+              },
+              "label": "Step",
+              "value": "Input",
+              "detectedType": "float",
+              "forcedType": "float"
+            },
+            "zIndex": 0,
+            "width": 182,
+            "height": 124,
+            "positionAbsolute": {
+              "x": -408.2053261870836,
+              "y": -428.2111297042199
+            }
+          },
+          {
+            "id": "custom_output_1783790248712",
+            "type": "shaderNode",
+            "position": {
+              "x": 578.3827651877376,
+              "y": -1170.9966077378047
+            },
+            "data": {
+              "definition": {
+                "id": "custom_output",
+                "label": "Output",
+                "compact": false,
+                "inputs": [
+                  {
+                    "id": "in",
+                    "type": "vec2",
+                    "label": "Value"
+                  }
+                ],
+                "outputs": [],
+                "controls": {
+                  "type": "text",
+                  "defaultValue": "Output"
+                },
+                "description": "Defines an output port for a custom node. Name this to set the port label."
+              },
+              "label": "Image Process OUT",
+              "value": "Output",
+              "detectedType": "vec2"
+            },
+            "zIndex": 0,
+            "width": 182,
+            "height": 124,
+            "positionAbsolute": {
+              "x": 578.3827651877376,
+              "y": -1170.9966077378047
+            }
+          },
+          {
+            "id": "custom_input_1783790329789",
+            "type": "shaderNode",
+            "position": {
+              "x": 575.7631988499598,
+              "y": -370.68857661305435
+            },
+            "data": {
+              "definition": {
+                "id": "custom_input",
+                "label": "Input",
+                "compact": false,
+                "inputs": [],
+                "outputs": [
+                  {
+                    "id": "out",
+                    "type": "vec3",
+                    "label": "Value"
+                  }
+                ],
+                "controls": {
+                  "type": "text",
+                  "defaultValue": "Input"
+                },
+                "description": "Defines an input port for a custom node. Name this to set the port label."
+              },
+              "label": "Color IN",
+              "value": "Input",
+              "detectedType": "vec3"
+            },
+            "zIndex": 0,
+            "width": 182,
+            "height": 124,
+            "positionAbsolute": {
+              "x": 575.7631988499598,
+              "y": -370.68857661305435
+            },
+            "selected": false,
+            "dragging": false
+          }
+        ],
+        "edges": [
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010746_wbghh",
+            "sourceHandle": "out",
+            "target": "uv_scale_1783790010746_lclt2",
+            "targetHandle": "scale",
+            "animated": false,
+            "id": "e_param_float_1783790010746_wbghh_uv_scale_1783790010746_lclt2_0.5343655696724501",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "uv_scale_1783790010746_lclt2",
+            "sourceHandle": "out",
+            "target": "vec_fract_1783790010746_lx3ti",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_uv_scale_1783790010746_lclt2_vec_fract_1783790010746_lx3ti_0.6926672801227303",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "vec_fract_1783790010746_lx3ti",
+            "sourceHandle": "out",
+            "target": "uv_shift_1783790010746_71jpw",
+            "targetHandle": "uv",
+            "animated": false,
+            "id": "e_vec_fract_1783790010746_lx3ti_uv_shift_1783790010746_71jpw_0.9689673998067215",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010746_io4p7",
+            "sourceHandle": "out",
+            "target": "uv_shift_1783790010746_71jpw",
+            "targetHandle": "shift",
+            "animated": false,
+            "id": "e_param_float_1783790010746_io4p7_uv_shift_1783790010746_71jpw_0.9718520930329024",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "uv_1783790010746_6f8xs",
+            "sourceHandle": "out",
+            "target": "vec_length_1783790010746_1l82p",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_uv_1783790010746_6f8xs_vec_length_1783790010746_1l82p_0.17853687003557905",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "vec_length_1783790010746_1l82p",
+            "sourceHandle": "out",
+            "target": "math_negate_1783790010746_demzl",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_vec_length_1783790010746_1l82p_math_negate_1783790010746_demzl_0.14558353242239153",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_negate_1783790010746_demzl",
+            "sourceHandle": "out",
+            "target": "math_exp_1783790010746_jsryo",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_math_negate_1783790010746_demzl_math_exp_1783790010746_jsryo_0.876652840837721",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_mult_1783790010746_t4g3f",
+            "sourceHandle": "out",
+            "target": "math_mult_1783790010746_376ns",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_math_mult_1783790010746_t4g3f_math_mult_1783790010746_376ns_0.48126259442245845",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010746_59fb9",
+            "sourceHandle": "out",
+            "target": "math_mult_1783790010746_376ns",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_param_float_1783790010746_59fb9_math_mult_1783790010746_376ns_0.42838850402866213",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_mult_1783790010746_376ns",
+            "sourceHandle": "out",
+            "target": "math_add_1783790010746_bty1v",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_math_mult_1783790010746_376ns_math_add_1783790010746_bty1v_0.9001076167796864",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "time_1783790010746_w2iaq",
+            "sourceHandle": "t",
+            "target": "math_add_1783790010746_bty1v",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_time_1783790010746_w2iaq_math_add_1783790010746_bty1v_0.22249302275705263",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010746_59fb9",
+            "sourceHandle": "out",
+            "target": "math_div_1783790010746_xxuoa",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_param_float_1783790010746_59fb9_math_div_1783790010746_xxuoa_0.93425623960896",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_add_1783790010746_bty1v",
+            "sourceHandle": "out",
+            "target": "math_sin_1783790010746_e9gip",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_math_add_1783790010746_bty1v_math_sin_1783790010746_e9gip_0.4144135920305402",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_sin_1783790010746_e9gip",
+            "sourceHandle": "out",
+            "target": "math_div_1783790010746_xxuoa",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_math_sin_1783790010746_e9gip_math_div_1783790010746_xxuoa_0.9813639520713181",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_div_1783790010746_xxuoa",
+            "sourceHandle": "out",
+            "target": "math_abs_1783790010747_kkc25",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_math_div_1783790010746_xxuoa_math_abs_1783790010747_kkc25_0.15831867937665633",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_abs_1783790010747_kkc25",
+            "sourceHandle": "out",
+            "target": "math_div_1783790010747_wcig8",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_math_abs_1783790010747_kkc25_math_div_1783790010747_wcig8_0.6637307947409332",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010747_vptnj",
+            "sourceHandle": "out",
+            "target": "math_div_1783790010747_wcig8",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_param_float_1783790010747_vptnj_math_div_1783790010747_wcig8_0.2995767944041685",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_div_1783790010747_wcig8",
+            "sourceHandle": "out",
+            "target": "math_pow_1783790010747_rf9np",
+            "targetHandle": "base",
+            "animated": false,
+            "id": "e_math_div_1783790010747_wcig8_math_pow_1783790010747_rf9np_0.5409367874597762",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "param_float_1783790010747_szfvf",
+            "sourceHandle": "out",
+            "target": "math_pow_1783790010747_rf9np",
+            "targetHandle": "exp",
+            "animated": false,
+            "id": "e_param_float_1783790010747_szfvf_math_pow_1783790010747_rf9np_0.8566668478254305",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "uv_1783790010747_sn1e5",
+            "sourceHandle": "out",
+            "target": "vec_length_1783790010747_yrkbg",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_uv_1783790010747_sn1e5_vec_length_1783790010747_yrkbg_0.26713786247888116",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "vec_length_1783790010747_yrkbg",
+            "sourceHandle": "out",
+            "target": "math_add_1783790010747_y8vob",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_vec_length_1783790010747_yrkbg_math_add_1783790010747_y8vob_0.7313245749623509",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "time_1783790010747_50uey",
+            "sourceHandle": "t",
+            "target": "math_add_1783790010747_y8vob",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_time_1783790010747_50uey_math_add_1783790010747_y8vob_0.07464082689309093",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_add_1783790010747_y8vob",
+            "sourceHandle": "out",
+            "target": "math_add_1783790010747_wruaz",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_math_add_1783790010747_y8vob_math_add_1783790010747_wruaz_0.5879270756140997",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_add_1783790010747_wruaz",
+            "sourceHandle": "out",
+            "target": "palette_1783790010747_9dkw7",
+            "targetHandle": "t",
+            "animated": false,
+            "id": "e_math_add_1783790010747_wruaz_palette_1783790010747_9dkw7_0.9599376105023252",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_pow_1783790010747_rf9np",
+            "sourceHandle": "out",
+            "target": "color_mult_1783790010747_otfkh",
+            "targetHandle": "fac",
+            "animated": false,
+            "id": "e_math_pow_1783790010747_rf9np_color_mult_1783790010747_otfkh_0.21984411449340235",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#fff176",
+              "strokeWidth": 3
+            },
+            "source": "palette_1783790010747_9dkw7",
+            "sourceHandle": "color",
+            "target": "color_mult_1783790010747_otfkh",
+            "targetHandle": "col",
+            "animated": false,
+            "id": "e_palette_1783790010747_9dkw7_color_mult_1783790010747_otfkh_0.7513193497755625",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#fff176",
+              "strokeWidth": 3
+            },
+            "source": "color_mult_1783790010747_otfkh",
+            "sourceHandle": "out",
+            "target": "color_add_1783790010747_n2kxc",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_color_mult_1783790010747_otfkh_color_add_1783790010747_n2kxc_0.22895596104020954",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "uv_shift_1783790010746_71jpw",
+            "sourceHandle": "out",
+            "target": "vec_length_1783790010746_wiq4r",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "e_uv_shift_1783790010746_71jpw_vec_length_1783790010746_wiq4r_0.5946919876425416",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "vec_length_1783790010746_wiq4r",
+            "sourceHandle": "out",
+            "target": "math_mult_1783790010746_t4g3f",
+            "targetHandle": "a",
+            "animated": false,
+            "id": "e_vec_length_1783790010746_wiq4r_math_mult_1783790010746_t4g3f_0.6303128433869443",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "math_exp_1783790010746_jsryo",
+            "sourceHandle": "out",
+            "target": "math_mult_1783790010746_t4g3f",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "e_math_exp_1783790010746_jsryo_math_mult_1783790010746_t4g3f_0.40086083183963106",
+            "selected": false
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#fff176",
+              "strokeWidth": 3
+            },
+            "source": "color_add_1783790010747_n2kxc",
+            "sourceHandle": "out",
+            "target": "custom_output_default",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "reactflow__edge-color_add_1783790010747_n2kxcout-custom_output_defaultin"
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "uv_shift_1783790010746_71jpw",
+            "sourceHandle": "out",
+            "target": "custom_output_1783790248712",
+            "targetHandle": "in",
+            "animated": false,
+            "id": "reactflow__edge-uv_shift_1783790010746_71jpwout-custom_output_1783790248712in"
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#81c784",
+              "strokeWidth": 3
+            },
+            "source": "custom_input_default",
+            "sourceHandle": "out",
+            "target": "uv_scale_1783790010746_lclt2",
+            "targetHandle": "uv",
+            "animated": false,
+            "id": "reactflow__edge-custom_input_defaultout-uv_scale_1783790010746_lclt2uv"
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#a0a0a0",
+              "strokeWidth": 3
+            },
+            "source": "custom_input_1783790190112",
+            "sourceHandle": "out",
+            "target": "math_add_1783790010747_wruaz",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "reactflow__edge-custom_input_1783790190112out-math_add_1783790010747_wruazb"
+          },
+          {
+            "type": "default",
+            "interactionWidth": 25,
+            "style": {
+              "stroke": "#fff176",
+              "strokeWidth": 3
+            },
+            "source": "custom_input_1783790329789",
+            "sourceHandle": "out",
+            "target": "color_add_1783790010747_n2kxc",
+            "targetHandle": "b",
+            "animated": false,
+            "id": "reactflow__edge-custom_input_1783790329789out-color_add_1783790010747_n2kxcb"
+          }
+        ]
+      }
+    }
+  ],
   "nodes": [
     {
       "id": "out1",
@@ -993,8 +2915,8 @@
     }
   ],
   "viewport": {
-    "x": 48.070801722900114,
-    "y": 227.9886059161243,
-    "zoom": 0.6605283353641953
+    "x": 245.69193083036208,
+    "y": 265.8145391206326,
+    "zoom": 0.4032341517478436
   }
 }

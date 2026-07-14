@@ -19,7 +19,7 @@ const registryIds = Object.values(NODE_REGISTRY).map(def => def.id);
 const NEW_NODE_IDS = [
   'mono', 'math_fract', 'math_step', 'math_min', 'math_max', 'math_clamp', 'math_mix_float',
   'vec_length3', 'vec_normalize3', 'math_tan', 'math_cot', 'math_atan',
-  'color_preview', 'code_glsl', 'feedback', 'sample_buffer', 'impulse', 'math_random',
+  'color_preview', 'code_glsl', 'code_block', 'feedback', 'sample_buffer', 'impulse', 'math_random',
 ];
 const BASIC_BUILTIN_NODE_IDS = [
   'math_floor', 'math_ceil', 'math_round', 'math_sign', 'math_sqrt', 'math_inversesqrt', 'math_mod',
@@ -90,6 +90,7 @@ describe('Menu & registry audit', () => {
     expect(NODE_REGISTRY.vec_normalize3.glslTemplate({ in: 'p' })).toBe('normalize(p)');
     expect(NODE_REGISTRY.math_tan.glslTemplate({ in: '0.5' })).toBe('tan(0.5)');
     expect(NODE_REGISTRY.code_glsl.controls?.type).toBe('text');
+    expect(NODE_REGISTRY.code_block.controls?.type).toBe('text');
     expect(NODE_REGISTRY.color_preview.inputs[0].id).toBe('in');
   });
 });

@@ -16,6 +16,7 @@ import NodeContextMenu from './NodeContextMenu';
 import CreateCustomNodeDialog from './CreateCustomNodeDialog';
 import SettingsDialog from './SettingsDialog';
 import CloudDialog from './CloudDialog';
+import ExamplesDialog from './ExamplesDialog';
 import { addCustomNode, extractCustomNodePorts, loadCustomNodes, type CustomNodeDefinition } from '../core/customNodeManager';
 import type { ShaderNodeDefinition, DataType } from '../core/types';
 import Legend from './Legend';
@@ -32,6 +33,8 @@ import { saveProjectFile, openProjectFile, supportsFileSystemAccess, type FileHa
 import { computeSmartSplitPorts } from '../core/smartSplitAdapter';
 import { isEditableKeyboardTarget } from '../core/keyboardTarget';
 import { ImpulseEdge } from './ImpulseEdge';
+import { reconcileDynamicPorts } from '../core/dynamicPortSystem';
+import { useI18n } from '../core/i18n';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -86,6 +89,7 @@ function getHandleType(node: Node | undefined, handleId: string | null): DataTyp
 }
 
 function EditorInner({ onChange }: Props) {
+  const { text } = useI18n();
 
   const getInitialData = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -105,6 +109,13 @@ function EditorInner({ onChange }: Props) {
   const initialData = getInitialData();
   const [nodes, setNodes] = useNodesState(initialData.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
+
+  // Auto ports are derived from their live neighbours. Keeping this in one
+  // shared reconciler also makes disconnects and either connection order
+  // behave the same as a project/custom-node reload.
+  useEffect(() => {
+    setNodes(current => reconcileDynamicPorts(current, edges));
+  }, [edges, setNodes]);
   const [clipboard, setClipboard] = useState<{ nodes: Node[], edges: Edge[] } | null>(null);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
@@ -120,6 +131,7 @@ function EditorInner({ onChange }: Props) {
   const [customCreationMode, setCustomCreationMode] = useState<'empty' | 'selection' | null>(null);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showCloudDialog, setShowCloudDialog] = useState(false);
+  const [showExamplesDialog, setShowExamplesDialog] = useState(false);
   
   // Navigation stack for custom nodes
   const [navigationStack, setNavigationStack] = useState<Array<{ name: string; nodes: Node[]; edges: Edge[] }>>([]);
@@ -334,7 +346,7 @@ function EditorInner({ onChange }: Props) {
       if (!supportsFileSystemAccess() && (saveAs || !currentFilePath)) {
         // Fallback bez FSA: nazwa przez prompt (jak dotychczas)
         const baseName = currentFilePath ? currentFilePath.split(/[/\\]/).pop()?.replace('.json', '') : 'shader_graph';
-        suggestedName = prompt('Save as:', baseName || 'shader_graph')?.trim() || suggestedName;
+        suggestedName = prompt(text('Save as:', 'Zapisz jako:'), baseName || 'shader_graph')?.trim() || suggestedName;
       }
       if (!suggestedName.endsWith('.json')) suggestedName += '.json';
 
@@ -343,7 +355,7 @@ function EditorInner({ onChange }: Props) {
           fileHandleRef.current = result.handle;
           setCurrentFilePath(result.fileName);
       }).catch(err => console.error('Save failed:', err));
-  }, [getProjectGraph, reactFlowInstance, currentFilePath]);
+  }, [getProjectGraph, reactFlowInstance, currentFilePath, text]);
 
   const handleLoadFileClick = useCallback(() => {
       if (supportsFileSystemAccess()) {
@@ -408,9 +420,19 @@ function EditorInner({ onChange }: Props) {
       setHistoryIndex(prev => prev + 1);
     }
   }, [history, historyIndex, setNodes, setEdges]);
+
+  const handleOpenExample = useCallback((json: string, _title: string) => {
+    saveToHistory();
+    restoreGraph(json);
+    setCurrentFilePath(null);
+    fileHandleRef.current = null;
+    setNavigationStack([]);
+    setCurrentContext('Main');
+    localStorage.removeItem(NAV_PATH_KEY);
+  }, [restoreGraph, saveToHistory]);
   
   const handleClear = useCallback(() => {
-      if(window.confirm("Clear all nodes?")) {
+      if(window.confirm(text('Clear all nodes?', 'Wyczyścić wszystkie nody?'))) {
         saveToHistory();
         setNodes(initialNodesDefault);
         setEdges([]);
@@ -418,7 +440,7 @@ function EditorInner({ onChange }: Props) {
         setCurrentFilePath(null);
         fileHandleRef.current = null;
       }
-  }, [setNodes, setEdges, saveToHistory]);
+  }, [setNodes, setEdges, saveToHistory, text]);
   
   const handleNew = useCallback(() => {
     // New project without confirmation (like "File > New")
@@ -528,12 +550,12 @@ function EditorInner({ onChange }: Props) {
       }
     ]);
     
-    alert(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom Nodes" category.`);
+    alert(text(`✅ Custom node "${name}" created!\n\nYou can now find it in the sidebar under "Custom Nodes".`, `✅ Custom node „${name}” został utworzony!\n\nZnajdziesz go w panelu bocznym w kategorii „Custom Nodes”.`));
     
     // Optionally delete selected nodes after creating custom
     // setNodes((nds) => nds.filter(n => !selectedNodeIds.has(n.id)));
     // setEdges((eds) => eds.filter(e => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)));
-  }, [nodes, edges, reactFlowInstance, setNodes]);
+  }, [nodes, edges, reactFlowInstance, setNodes, text]);
   
   /** Default Custom Input/Output pair used to seed a brand-new (empty) custom node subgraph. */
   const defaultCustomSubgraphNodes = useCallback((): Node[] => [
@@ -703,7 +725,7 @@ function EditorInner({ onChange }: Props) {
         
         if (deletingOutputs.length > 0 && outputNodesAfterDeletion.length === 0) {
           console.warn('❌ Cannot delete the last Output node');
-          alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
+          alert(text('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.', 'Nie można usunąć ostatniego noda Output!\n\nW grafie musi pozostać co najmniej jeden Output.'));
           return; // Block the deletion
         }
       }
@@ -898,7 +920,7 @@ function EditorInner({ onChange }: Props) {
         // 5. If invalid + no adapter → block (show error)
         if (!validation.valid) {
             console.warn('❌ Connection blocked:', validation.reason);
-            alert(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`);
+            alert(text(`Cannot connect ${sourceType} to ${targetType}\n\n${validation.reason}`, `Nie można połączyć ${sourceType} z ${targetType}\n\n${validation.reason}`));
             return;
         }
         
@@ -912,7 +934,7 @@ function EditorInner({ onChange }: Props) {
           animated: false,
         };
         setEdges((eds) => addEdge(newEdge, eds));
-    }, [nodes, edges, setNodes, setEdges]);
+    }, [nodes, edges, setNodes, setEdges, text]);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => { if(ref.current) { const bounds = ref.current.getBoundingClientRect(); mousePos.current = { x: e.clientX - bounds.left, y: e.clientY - bounds.top }; } }, []);
   const onConnectStart = useCallback((_: unknown, params: OnConnectStartParams) => { connectionStartRef.current = params; }, []);
@@ -1144,6 +1166,7 @@ function EditorInner({ onChange }: Props) {
       <Toolbar 
         onSave={handleSaveFile} 
         onLoad={handleLoadFileClick} 
+        onShowExamples={() => setShowExamplesDialog(true)}
         onClear={handleClear}
         onNew={handleNew}
         onFitView={handleFitView}
@@ -1176,7 +1199,7 @@ function EditorInner({ onChange }: Props) {
         />
         
         {document.getElementById('sidebar-root') && createPortal( <Sidebar nodes={nodes} setNodes={setNodes} currentContext={currentContext} />, document.getElementById('sidebar-root')! )}
-        {createPortal( <div onClick={deleteSelected} title="Delete Selected (Del)" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 99999, width: 50, height: 50, borderRadius: '50%', background: '#ff007a', color: 'white', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)', transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}>🗑️</div>, document.body )}
+        {createPortal( <div onClick={deleteSelected} title={text('Delete Selected (Del)', 'Usuń zaznaczone (Del)')} style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 99999, width: 50, height: 50, borderRadius: '50%', background: '#ff007a', color: 'white', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.5)', transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1.0)'}>🗑️</div>, document.body )}
         {menu && menu.visible && menu.type === 'pane' && createPortal(
           <ContextMenu 
             x={menu.x} 
@@ -1258,7 +1281,14 @@ function EditorInner({ onChange }: Props) {
           />,
           document.body
         )}
-        {showCode && createPortal( <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCode(false)}> <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px', border: '1px solid #444', width: '80%', height: '80%', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}> <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#fff', fontWeight: 'bold' }}> <span>GENERATED GLSL</span> <button onClick={() => setShowCode(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✕</button> </div> <textarea readOnly value={currentCode} style={{ flex: 1, background: '#111', color: '#81c784', border: 'none', fontFamily: 'monospace', padding: '10px', resize: 'none' }} /> </div> </div>, document.body )}
+        {showExamplesDialog && createPortal(
+          <ExamplesDialog
+            onClose={() => setShowExamplesDialog(false)}
+            onOpen={handleOpenExample}
+          />,
+          document.body
+        )}
+        {showCode && createPortal( <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCode(false)}> <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px', border: '1px solid #444', width: '80%', height: '80%', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}> <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#fff', fontWeight: 'bold' }}> <span>{text('GENERATED GLSL', 'WYGENEROWANY GLSL')}</span> <button onClick={() => setShowCode(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✕</button> </div> <textarea readOnly value={currentCode} style={{ flex: 1, background: '#111', color: '#81c784', border: 'none', fontFamily: 'monospace', padding: '10px', resize: 'none' }} /> </div> </div>, document.body )}
       </ReactFlow>
     </div>
   );

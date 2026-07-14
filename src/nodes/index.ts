@@ -56,6 +56,7 @@ export const NODE_REGISTRY = {
   relay_auto: RelayAutoNode,
   color_preview: Utils.ColorPreviewNodeDef,
   code_glsl: Utils.CodeNode,
+  code_block: Utils.CodeBlockNode,
 
   // Media
   texture_2d: Media.TextureNode,
@@ -158,4 +159,5 @@ export const NODE_REGISTRY = {
   sample_buffer: Simulation.SampleBufferNode,
   impulse: Simulation.ImpulseNode,
   math_random: Simulation.RandomNode,
+  loop_iterate: Simulation.LoopNode,
 };

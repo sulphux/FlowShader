@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useI18n } from '../core/i18n';
 
 interface Props {
   onClose: () => void;
@@ -7,12 +8,13 @@ interface Props {
 }
 
 export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empty' }: Props) {
+  const { text } = useI18n();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
   const handleCreate = () => {
     if (!name.trim()) {
-      alert('Please enter a name for the custom node.');
+      alert(text('Please enter a name for the custom node.', 'Podaj nazwę custom noda.'));
       return;
     }
     onCreate(name.trim(), description.trim());
@@ -68,18 +70,18 @@ export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empt
         onClick={e => e.stopPropagation()}
       >
         <h2 style={{ margin: '0 0 16px 0', color: '#fff', fontSize: '18px' }}>
-          {mode === 'selection' ? '📦 Create Custom Node from Selection' : '📦 Create Custom Node'}
+          {mode === 'selection' ? text('📦 Create Custom Node from Selection', '📦 Utwórz Custom Node z zaznaczenia') : text('📦 Create Custom Node', '📦 Utwórz Custom Node')}
         </h2>
 
         <div style={{ marginBottom: '14px', padding: '8px', background: '#222', borderRadius: '4px', fontSize: '11px', color: '#aaa' }}>
           {mode === 'selection'
-            ? 'The currently selected nodes and their internal connections will be copied into the new custom node.'
-            : 'The new custom node will start with a fresh Custom Input and Custom Output.'}
+            ? text('The currently selected nodes and their internal connections will be copied into the new custom node.', 'Aktualnie zaznaczone nody i ich wewnętrzne połączenia zostaną skopiowane do nowego custom noda.')
+            : text('The new custom node will start with a fresh Custom Input and Custom Output.', 'Nowy custom node rozpocznie się od świeżych Custom Input i Custom Output.')}
         </div>
 
         <div style={{ marginBottom: '12px' }}>
           <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '12px' }}>
-            Name *
+            {text('Name', 'Nazwa')} *
           </label>
           <input 
             type="text"
@@ -97,12 +99,12 @@ export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empt
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '12px' }}>
-            Description (optional)
+            {text('Description (optional)', 'Opis (opcjonalny)')}
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What does this custom node do?"
+            placeholder={text('What does this custom node do?', 'Co robi ten custom node?')}
             style={{ ...inputStyle, minHeight: '60px', resize: 'vertical', fontFamily: 'sans-serif' }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') onClose();
@@ -117,7 +119,7 @@ export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empt
             onMouseEnter={(e) => e.currentTarget.style.background = '#444'}
             onMouseLeave={(e) => e.currentTarget.style.background = '#333'}
           >
-            Cancel
+            {text('Cancel', 'Anuluj')}
           </button>
           <button 
             onClick={handleCreate}
@@ -125,12 +127,12 @@ export default function CreateCustomNodeDialog({ onClose, onCreate, mode = 'empt
             onMouseEnter={(e) => e.currentTarget.style.background = '#e6006d'}
             onMouseLeave={(e) => e.currentTarget.style.background = '#ff007a'}
           >
-            Create
+            {text('Create', 'Utwórz')}
           </button>
         </div>
 
         <div style={{ marginTop: '16px', padding: '8px', background: '#222', borderRadius: '4px', fontSize: '11px', color: '#888' }}>
-          💡 <strong>Tip:</strong> Use "Custom Input" and "Custom Output" nodes inside to define the interface.
+          💡 <strong>{text('Tip:', 'Wskazówka:')}</strong> {text('Use "Custom Input" and "Custom Output" nodes inside to define the interface.', 'Użyj wewnątrz nodów „Custom Input” i „Custom Output”, aby zdefiniować interfejs.')}
         </div>
       </div>
     </div>

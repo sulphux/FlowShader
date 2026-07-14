@@ -1,10 +1,19 @@
 import type { ShaderNodeDefinition } from './types';
-import type { CustomNodeDefinition } from './customNodeManager';
+import { loadCustomNodes, type CustomNodeDefinition } from './customNodeManager';
 import { generateCustomNodeFunction, autoCast, customNodeFunctionName, sanitizeGLSLIdentifier, toGLSLType } from './functionGenerator';
 import { shaderDebug } from './shaderDebug';
 import { createCompilerDebugReport } from './compilerDebugReport';
 import type { CompilerDebugReport } from './compilerDebugReport';
 import { collectRuntimeResources, buildUniformDeclarations, feedbackUniformName } from './runtimeResources';
+import {
+  buildCodeBlockFunction,
+  codeBlockCallableName,
+  codeBlockFunctionName,
+  codeBlockPrototype,
+  defaultGLSLValue,
+  isCodeBlockCallableNameAvailable,
+} from './codeBlock';
+import { clampLoopIterations, isCompatibleLoopStep, loopStateType } from './loopNode';
 
 export interface GraphNode {
   id: string;
@@ -14,11 +23,15 @@ export interface GraphNode {
     isParameter?: boolean;  // For Custom Input nodes used as function parameters
     externalInput?: string;  // External input value for Custom Input nodes
     detectedType?: string;   // Detected type for Custom Input/Output nodes
+    forcedType?: string;     // Explicit type chosen by the user; always wins
+    label?: string;          // User-visible title; Code Blocks expose it as their callable alias
     value?: unknown;         // Node value (for controls)
     captureMode?: 'snapshot' | 'last-frame'; // Frame Buffer write/display semantics
     sampleWrap?: 'repeat' | 'clamp'; // Sample Buffer edge behaviour
     offsetX?: number;        // Sample Buffer inline pixel offset
     offsetY?: number;
+    iterations?: number;
+    loopStepId?: string;
   };
 }
 
@@ -75,6 +88,23 @@ type MultiOutputVarMap = Record<string, Record<string, string>>;
 const isMultiOutputCustomNode = (def: ShaderNodeDefinition): def is CustomNodeDefinition =>
   'isCustom' in def && Boolean((def as CustomNodeDefinition).isCustom) && def.outputs.length > 1;
 
+const firstConcreteType = (...types: Array<string | undefined>): string | undefined =>
+  types.find(type => Boolean(type && type !== 'auto'));
+
+/**
+ * Custom port nodes can carry the same type in three places after years of
+ * save-format evolution. A manual choice is authoritative; the reconciled
+ * definition is next; detectedType is only a legacy/live fallback.
+ */
+const customPortType = (node: GraphNode, direction: 'input' | 'output'): string | undefined =>
+  firstConcreteType(
+    node.data.forcedType,
+    direction === 'input'
+      ? node.data.definition.inputs[0]?.type
+      : node.data.definition.outputs[0]?.type,
+    node.data.detectedType,
+  );
+
 /** Declares one variable per output port, calling that port's generated function. */
 function emitMultiOutputCustomNode(
   node: GraphNode,
@@ -96,6 +126,36 @@ function emitMultiOutputCustomNode(
   });
   multiOutputVarMap[node.id] = ports;
   return body;
+}
+
+function emitCodeBlockNode(
+  node: GraphNode,
+  inputs: Record<string, string>,
+  nodeVarMap: Record<string, string>,
+  multiOutputVarMap: MultiOutputVarMap,
+): string {
+  const def = node.data.definition;
+  const callInputs = def.inputs.map(port => inputs[port.id] || defaultGLSLValue(port.type));
+  const glslId = sanitizeGLSLIdentifier(node.id);
+
+  if (def.outputs.length <= 1) {
+    const output = def.outputs[0] ?? { id: 'out', type: 'float' };
+    const variable = `var_${glslId}`;
+    nodeVarMap[node.id] = variable;
+    return `    ${toGLSLType(output.type)} ${variable} = ${codeBlockFunctionName(node.id)}(${callInputs.join(', ')});\n`;
+  }
+
+  const ports: Record<string, string> = {};
+  let source = '';
+  def.outputs.forEach(port => {
+    const variable = `var_${glslId}_o_${sanitizeGLSLIdentifier(port.id)}`.replace(/_+/g, '_');
+    ports[port.id] = variable;
+    source += `    ${toGLSLType(port.type)} ${variable} = ${defaultGLSLValue(port.type)};\n`;
+  });
+  multiOutputVarMap[node.id] = ports;
+  nodeVarMap[node.id] = ports[def.outputs[0].id];
+  source += `    ${codeBlockFunctionName(node.id)}(${[...callInputs, ...def.outputs.map(port => ports[port.id])].join(', ')});\n`;
+  return source;
 }
 
 /**
@@ -135,9 +195,7 @@ function resolveSourceExpr(
   } else if (sourceNode?.data.definition.id.includes('split') && sourceNode.data.definition.inputs.length > 0) {
     sourceRawType = sourceNode.data.definition.inputs[0].type;
   } else if (sourceNode?.data.definition.id === 'custom_input') {
-    // Custom Input inside a subgraph: use its detected type (falls back to
-    // the port's own declared type, which self-heals stale/legacy saves)
-    sourceRawType = sourceNode.data.detectedType || sourceNode.data.definition.outputs[0]?.type || 'float';
+    sourceRawType = customPortType(sourceNode, 'output') || 'float';
   } else {
     // Fallback do pierwszego wyjścia, gdy sourceHandle nie pasuje (np. stare zapisy z 'result')
     const outputs = sourceNode?.data.definition.outputs || [];
@@ -188,6 +246,11 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
       inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
     });
 
+    if (def.id === 'code_block') {
+      body += emitCodeBlockNode(node, inputs, nodeVarMap, multiOutputVarMap);
+      return;
+    }
+
     // Multi-output custom node used inside a subgraph (nested custom node)
     if (isMultiOutputCustomNode(def)) {
       const callParams = def.inputs.map(inp => {
@@ -214,9 +277,9 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
         nodeType = inputType === 'auto' ? 'vec3' : inputType;
       }
     } else if (def.id === 'custom_output') {
-      // Custom Output: prioritize detectedType, then check incoming connection type
-      if (node.data.detectedType && node.data.detectedType !== 'auto') {
-        nodeType = node.data.detectedType;
+      const declaredType = customPortType(node, 'input');
+      if (declaredType) {
+        nodeType = declaredType;
       } else {
         // Check incoming edge to determine type
         const incomingEdge = safeEdges.find(e => e.target === node.id);
@@ -224,7 +287,7 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
           const sourceNode = nodes.find(n => n.id === incomingEdge.source);
           if (sourceNode) {
             if (sourceNode.data.definition.id === 'custom_input') {
-              nodeType = sourceNode.data.detectedType || 'vec3';
+              nodeType = customPortType(sourceNode, 'output') || 'vec3';
             } else {
               const sourceOutput = sourceNode.data.definition.outputs.find(o => o.id === incomingEdge.sourceHandle);
               nodeType = sourceOutput?.type === 'auto' ? 'vec3' : (sourceOutput?.type || 'vec3');
@@ -267,6 +330,7 @@ export const compileGraphToGLSLWithReport = (
 
   // PASS 1: Generate function declarations for custom nodes (recursive)
   const customNodeFunctions: string[] = [];
+  const customNodeDefinitions: CustomNodeDefinition[] = [];
   const processedCustomNodes = new Set<string>();
   // Tracks which custom nodes have a valid (non-empty) GLSL function declaration.
   // Nodes absent from this set are skipped in PASS 2 (compilation guard).
@@ -283,6 +347,7 @@ export const compileGraphToGLSLWithReport = (
         // Mark as processed BEFORE recursing into subgraph
         if (processedCustomNodes.has(customDef.id)) return;
         processedCustomNodes.add(customDef.id);
+        customNodeDefinitions.push(customDef);
 
         shaderDebug.log('compiler', 'Processing custom node for function generation', { customNodeId: customDef.id });
 
@@ -310,6 +375,145 @@ export const compileGraphToGLSLWithReport = (
 
   // Start collection from root nodes
   collectCustomNodes(nodes);
+
+  // A Loop references its visual Step by id instead of placing an instance of
+  // that Custom Node on the main canvas. Pull the selected definition into
+  // the normal recursive function-generation pass so nested nodes work too.
+  const loopStepDefinitions = new Map<string, CustomNodeDefinition>();
+  if (typeof localStorage !== 'undefined') {
+    const customLibrary = loadCustomNodes();
+    nodes.forEach(node => {
+      if (node.data?.definition?.id !== 'loop_iterate') return;
+      const stepId = node.data.loopStepId;
+      const step = customLibrary.find(candidate => candidate.id === stepId);
+      if (!step || !isCompatibleLoopStep(step)) return;
+      loopStepDefinitions.set(node.id, step);
+      collectCustomNodes([{
+        id: `loop_step_dependency_${node.id}`,
+        type: 'shaderNode',
+        data: { definition: step },
+      }]);
+    });
+  }
+
+  const codeBlockNodes: GraphNode[] = [];
+  const processedCodeBlocks = new Set<string>();
+  const scannedCodeBlockCustomDefs = new Set<string>();
+  const collectCodeBlocks = (nodesToScan: GraphNode[]) => {
+    nodesToScan.forEach(node => {
+      const def = node.data?.definition;
+      if (def?.id === 'code_block' && !processedCodeBlocks.has(node.id)) {
+        processedCodeBlocks.add(node.id);
+        codeBlockNodes.push(node);
+      }
+      if (def && 'isCustom' in def && def.isCustom) {
+        const customDef = def as CustomNodeDefinition;
+        if (!scannedCodeBlockCustomDefs.has(customDef.id)) {
+          scannedCodeBlockCustomDefs.add(customDef.id);
+          collectCodeBlocks(customDef.subgraph.nodes as GraphNode[]);
+        }
+      }
+    });
+  };
+  collectCodeBlocks(nodes);
+  loopStepDefinitions.forEach(step => collectCodeBlocks(step.subgraph.nodes as GraphNode[]));
+
+  // Calling `noise(p)` in a block should be enough when a custom node named
+  // Noise exists in the library. Pull in only definitions whose label/GLSL id
+  // is actually called, so an unrelated broken custom node cannot poison the
+  // shader. Embedded project definitions are imported to this library during
+  // rehydration, therefore shared save files work the same way.
+  if (typeof localStorage !== 'undefined') {
+    const customLibrary = loadCustomNodes();
+    let scannedBlockCount = 0;
+    while (scannedBlockCount < codeBlockNodes.length) {
+      const bodies = codeBlockNodes
+        .slice(scannedBlockCount)
+        .map(node => typeof node.data.value === 'string' ? node.data.value : '')
+        .join('\n');
+      scannedBlockCount = codeBlockNodes.length;
+
+      customLibrary.forEach(customDef => {
+        const aliases = [
+          sanitizeGLSLIdentifier(customDef.label).toLowerCase(),
+          sanitizeGLSLIdentifier(customDef.id),
+        ].filter(Boolean);
+        if (!aliases.some(alias => new RegExp(`\\b${alias}\\s*\\(`).test(bodies))) return;
+        collectCustomNodes([{
+          id: `dependency_${customDef.id}`,
+          type: 'shaderNode',
+          data: { definition: customDef },
+        }]);
+        collectCodeBlocks(customDef.subgraph.nodes as GraphNode[]);
+      });
+    }
+  }
+
+  const customFunctionPrototypes = (codeBlockNodes.length > 0 ? customNodeDefinitions : [])
+    .filter(customDef => generatedCustomNodeIds.has(customDef.id))
+    .flatMap(customDef => {
+    const ports = customDef.outputs.length > 1 ? customDef.outputs : [customDef.outputs[0]];
+    return ports.filter(Boolean).map(port => {
+      const params = customDef.inputs
+        .map(input => `${toGLSLType(input.type)} ${sanitizeGLSLIdentifier(input.id)}`)
+        .join(', ');
+      return `${toGLSLType(port.type)} ${customNodeFunctionName(customDef, port)}(${params});`;
+    });
+    });
+
+  const rewriteCustomFunctionAliases = (source: string): string => {
+    let rewritten = source;
+    customNodeDefinitions.forEach(customDef => {
+      const alias = sanitizeGLSLIdentifier(customDef.label).toLowerCase();
+      const actual = customNodeFunctionName(customDef);
+      if (!alias || alias === actual) return;
+      rewritten = rewritten.replace(new RegExp(`\\b${alias}\\s*\\(`, 'g'), `${actual}(`);
+    });
+    return rewritten;
+  };
+
+  // Every Code Block has a normal generated GLSL name based on its node id,
+  // but users call it by the readable node title (for example `map(p)`).
+  // Prototypes are emitted before all block bodies, so calls work regardless
+  // of canvas position or graph connection order.
+  const codeBlockAliases = new Map<string, GraphNode[]>();
+  codeBlockNodes.forEach(node => {
+    const alias = codeBlockCallableName(String(node.data.label ?? node.data.definition.label));
+    const matches = codeBlockAliases.get(alias) ?? [];
+    matches.push(node);
+    codeBlockAliases.set(alias, matches);
+  });
+  const customAliases = new Set(customNodeDefinitions.flatMap(definition => [
+    sanitizeGLSLIdentifier(definition.label).toLowerCase(),
+    sanitizeGLSLIdentifier(definition.id).toLowerCase(),
+  ]));
+
+  const rewriteCodeBlockAliases = (source: string, callerId: string): string => {
+    let rewritten = source;
+    codeBlockAliases.forEach((blocks, alias) => {
+      // Duplicate titles and collisions with custom functions are ambiguous.
+      // Leaving the call untouched gives the shader compiler an honest error
+      // instead of silently calling an arbitrary function.
+      if (blocks.length !== 1 || customAliases.has(alias) || !isCodeBlockCallableNameAvailable(alias)) return;
+      const target = blocks[0];
+      if (target.id === callerId) return;
+      rewritten = rewritten.replace(
+        new RegExp(`\\b${alias}\\s*\\(`, 'g'),
+        `${codeBlockFunctionName(target.id)}(`,
+      );
+    });
+    return rewritten;
+  };
+
+  const codeBlockPrototypes = codeBlockNodes.map(node => codeBlockPrototype(node.id, node.data.definition));
+  const codeBlockFunctions = codeBlockNodes.map(node => buildCodeBlockFunction(
+    node.id,
+    node.data.definition,
+    rewriteCodeBlockAliases(
+      rewriteCustomFunctionAliases(typeof node.data.value === 'string' ? node.data.value : ''),
+      node.id,
+    ),
+  ));
 
   shaderDebug.log('compiler', 'Generated custom node functions', { count: customNodeFunctions.length, ids: [...generatedCustomNodeIds] });
 
@@ -343,6 +547,47 @@ export const compileGraphToGLSLWithReport = (
       if (!resolved) return;
       inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
     });
+
+    if (def.id === 'code_block') {
+      mainBody += emitCodeBlockNode(node, inputs, nodeVarMap, multiOutputVarMap);
+      return;
+    }
+
+    if (def.id === 'loop_iterate') {
+      const glslId = sanitizeGLSLIdentifier(node.id);
+      const step = loopStepDefinitions.get(node.id);
+      const stateType = step ? loopStateType(step) : (def.inputs[0]?.type || 'float');
+      const initial = inputs.initial || defaultGLSLValue(stateType);
+      const stateVar = `var_${glslId}_state`;
+      const resultVar = `var_${glslId}`;
+      const loopIndex = `loop_${glslId}_i`;
+      const iterations = clampLoopIterations(node.data.iterations);
+
+      mainBody += `    ${toGLSLType(stateType)} ${stateVar} = ${initial};\n`;
+
+      if (step && generatedCustomNodeIds.has(step.id)) {
+        const progressDenominator = Math.max(iterations - 1, 1).toFixed(1);
+        const callParams = step.inputs.map((_, index) => {
+          if (index === 0) return stateVar;
+          if (index === 1) return `float(${loopIndex})`;
+          return `(float(${loopIndex}) / ${progressDenominator})`;
+        }).join(', ');
+        const nextCall = `${customNodeFunctionName(step, step.outputs[0])}(${callParams})`;
+        const stopPort = step.outputs[1];
+
+        mainBody += `    for (int ${loopIndex} = 0; ${loopIndex} < ${iterations}; ${loopIndex}++) {\n`;
+        if (stopPort) {
+          const stopCall = `${customNodeFunctionName(step, stopPort)}(${callParams})`;
+          mainBody += `        if (${stopCall} > 0.5) break;\n`;
+        }
+        mainBody += `        ${stateVar} = ${nextCall};\n`;
+        mainBody += '    }\n';
+      }
+
+      mainBody += `    ${toGLSLType(stateType)} ${resultVar} = ${stateVar};\n`;
+      nodeVarMap[node.id] = resultVar;
+      return;
+    }
 
     // === CUSTOM NODE COMPILATION ===
     // If this is a custom node, compile its subgraph instead of using glslTemplate
@@ -409,22 +654,9 @@ export const compileGraphToGLSLWithReport = (
             nodeType = inputType === 'auto' ? 'vec3' : inputType;
         }
     } else if (def.id === 'custom_input') {
-        // Custom Input: MUSI używać detectedType (wykrytego z połączenia)!
-        if (node.data.detectedType) {
-            nodeType = node.data.detectedType;
-        } else if (node.data.definition.outputs.length > 0) {
-            const outputType = node.data.definition.outputs[0].type;
-            nodeType = outputType === 'auto' ? 'vec3' : outputType;
-        }
+        nodeType = customPortType(node, 'output') || 'vec3';
     } else if (def.id === 'custom_output') {
-        // Custom Output: typ zmiennej = typ WEJŚCIA (co do niego wpływa)
-        if (node.data.definition.inputs.length > 0) {
-            const inputType = node.data.definition.inputs[0].type;
-            nodeType = inputType === 'auto' ? 'vec3' : inputType;
-        } else if (node.data.detectedType) {
-            // Fallback - użyj detectedType jeśli definition nie ma inputs
-            nodeType = node.data.detectedType;
-        }
+        nodeType = customPortType(node, 'input') || 'vec3';
     } else {
         // Dla reszty: typ zmiennej = typ pierwszego wyjścia (standard)
         if (node.data.definition.outputs.length > 0) {
@@ -500,7 +732,12 @@ export const compileGraphToGLSLWithReport = (
   }
 
   // Concatenate custom functions + main
-  const functionsSection = customNodeFunctions.join('\n');
+  const functionsSection = [
+    ...customFunctionPrototypes,
+    ...codeBlockPrototypes,
+    ...codeBlockFunctions,
+    ...customNodeFunctions,
+  ].join('\n');
 
   // Uniformy zasobów (tekstury, audio) — deklarowane tylko gdy graf ich używa
   const resourceUniforms = buildUniformDeclarations(collectRuntimeResources(nodes));

@@ -5,6 +5,7 @@ import { cleanup } from '@testing-library/react';
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  localStorage.removeItem('flowshader-language-v1');
 });
 
 // Mock ResizeObserver for ReactFlow

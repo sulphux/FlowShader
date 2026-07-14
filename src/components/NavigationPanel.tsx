@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../core/i18n';
 
 interface NavigationPanelProps {
   breadcrumbs: string[];
@@ -15,6 +16,7 @@ export default function NavigationPanel({
   onNavigateBack, 
   onNavigateToMain 
 }: NavigationPanelProps) {
+  const { text } = useI18n();
   // Don't show panel in Main view
   if (currentContext === 'Main') return null;
 
@@ -40,7 +42,7 @@ export default function NavigationPanel({
         marginBottom: '8px',
         textShadow: '0 2px 4px rgba(0,0,0,0.5)'
       }}>
-        ✏️ EDITING: {currentContext}
+        ✏️ {text('EDITING', 'EDYCJA')}: {currentContext}
       </div>
 
       {/* Breadcrumb trail */}
@@ -81,7 +83,7 @@ export default function NavigationPanel({
                   e.currentTarget.style.borderColor = '#555';
                 }
               }}
-              title={`Jump to ${crumb}`}
+              title={text(`Jump to ${crumb}`, `Przejdź do ${crumb}`)}
             >
               {index === 0 ? '🏠 ' : '🔲 '}{crumb}
             </button>
@@ -113,9 +115,9 @@ export default function NavigationPanel({
               e.currentTarget.style.background = '#333';
               e.currentTarget.style.borderColor = '#666';
             }}
-            title="Go back one level"
+            title={text('Go back one level', 'Wróć o jeden poziom')}
           >
-            ← Up One Level
+            ← {text('Up One Level', 'Poziom wyżej')}
           </button>
         )}
         
@@ -140,9 +142,9 @@ export default function NavigationPanel({
             e.currentTarget.style.background = '#222';
             e.currentTarget.style.color = '#8a2be2';
           }}
-          title="Exit to main view"
+          title={text('Exit to main view', 'Wróć do widoku głównego')}
         >
-          🏠 Exit to Main
+          🏠 {text('Exit to Main', 'Wróć do Main')}
         </button>
       </div>
     </div>

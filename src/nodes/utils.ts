@@ -181,3 +181,17 @@ export const SmartComposeNode: ShaderNodeDefinition = {
   },
   description: 'Combines floats into a vector. Click the badge to pick the output type (vec2 / vec3 / vec4).'
 };
+
+export const CodeBlockNode: ShaderNodeDefinition = {
+  id: 'code_block',
+  label: 'Code Block (GLSL)',
+  inputs: [{ id: 'p', label: 'p', type: 'vec3' }],
+  outputs: [{ id: 'result', label: 'result', type: 'float' }],
+  controls: {
+    type: 'text',
+    defaultValue: `float d = length(p);\nreturn d;`,
+  },
+  // The compiler handles this node as a complete function body.
+  glslTemplate: () => '0.0',
+  description: 'Full GLSL function body with loops, conditions and dynamic typed ports. Its title becomes a callable function name in other Code Blocks. One output uses return; multiple outputs are named out parameters.',
+};

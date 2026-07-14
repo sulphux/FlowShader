@@ -9,6 +9,7 @@ import {
   type ProjectVisibility,
   type ProjectLicense,
 } from '../core/projectStorage';
+import { useI18n } from '../core/i18n';
 
 interface Props {
   onClose: () => void;
@@ -18,24 +19,12 @@ interface Props {
   onLoadProject: (json: string, name: string) => void;
 }
 
-const VISIBILITY_LABELS: Record<ProjectVisibility, string> = {
-  private: '🔒 Prywatny',
-  unlisted: '🔗 Z linkiem',
-  public: '🌍 Publiczny',
-};
-
-const LICENSE_LABELS: Record<ProjectLicense, string> = {
-  'all-rights-reserved': 'Wszystkie prawa zastrzeżone',
-  'cc-by': 'CC BY',
-  'cc-by-nc': 'CC BY-NC',
-  'cc0': 'CC0 (domena publiczna)',
-};
-
 const formatBytes = (bytes: number): string =>
   bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`;
 
 /** Panel projektów: logowanie (chmura), lista, zapis, udostępnianie, quota. */
 export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: Props) {
+  const { text } = useI18n();
   const [provider, setProvider] = useState<ProjectStorageProvider | null>(null);
   const [user, setUser] = useState<StorageUser | null>(null);
   const [projects, setProjects] = useState<StoredProjectMeta[]>([]);
@@ -43,7 +32,18 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
-  const [saveName, setSaveName] = useState('Mój projekt');
+  const [saveName, setSaveName] = useState(text('My project', 'Mój projekt'));
+  const visibilityLabels: Record<ProjectVisibility, string> = {
+    private: text('🔒 Private', '🔒 Prywatny'),
+    unlisted: text('🔗 Unlisted', '🔗 Z linkiem'),
+    public: text('🌍 Public', '🌍 Publiczny'),
+  };
+  const licenseLabels: Record<ProjectLicense, string> = {
+    'all-rights-reserved': text('All rights reserved', 'Wszystkie prawa zastrzeżone'),
+    'cc-by': 'CC BY',
+    'cc-by-nc': 'CC BY-NC',
+    'cc0': text('CC0 (public domain)', 'CC0 (domena publiczna)'),
+  };
 
   const cloudConfigured = isCloudConfigured();
 
@@ -103,15 +103,14 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <strong style={{ fontSize: '14px' }}>
-            ☁️ Projekty {provider?.kind === 'cloud' ? '(chmura)' : '(lokalnie)'}
+            ☁️ {text('Projects', 'Projekty')} {provider?.kind === 'cloud' ? text('(cloud)', '(chmura)') : text('(local)', '(lokalnie)')}
           </strong>
           <button onClick={onClose} title="Close" style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '14px' }}>✕</button>
         </div>
 
         {!cloudConfigured && (
           <div style={{ fontSize: '11px', color: '#aaa', background: '#222', borderRadius: '6px', padding: '8px' }}>
-            Backend chmurowy nie jest skonfigurowany — projekty zapisują się lokalnie w tej przeglądarce.
-            Instrukcja podpięcia Supabase (logowanie, zapis online, limity, udostępnianie): <code>SUPABASE_SETUP.md</code>.
+            {text('The cloud backend is not configured — projects are stored locally in this browser. Supabase setup instructions (sign-in, online storage, quotas and sharing):', 'Backend chmurowy nie jest skonfigurowany — projekty zapisują się lokalnie w tej przeglądarce. Instrukcja podpięcia Supabase (logowanie, zapis online, limity, udostępnianie):')} <code>SUPABASE_SETUP.md</code>.
           </div>
         )}
 
@@ -120,19 +119,19 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ display: 'flex', gap: '6px' }}>
               <input style={inputStyle} type="email" placeholder="email" value={email} onChange={e => setEmail(e.target.value)} />
-              <input style={inputStyle} type="password" placeholder="hasło" value={password} onChange={e => setPassword(e.target.value)} />
+              <input style={inputStyle} type="password" placeholder={text('password', 'hasło')} value={password} onChange={e => setPassword(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button style={accentButton} onClick={() => run(async () => { await provider.signIn!(email, password); })}>Zaloguj</button>
-              <button style={buttonStyle} onClick={() => run(async () => { await provider.signUp!(email, password); })}>Zarejestruj</button>
+              <button style={accentButton} onClick={() => run(async () => { await provider.signIn!(email, password); })}>{text('Sign in', 'Zaloguj')}</button>
+              <button style={buttonStyle} onClick={() => run(async () => { await provider.signUp!(email, password); })}>{text('Create account', 'Zarejestruj')}</button>
             </div>
           </div>
         )}
 
         {provider?.kind === 'cloud' && user && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#ccc' }}>
-            <span>Zalogowano: <strong>{user.email ?? user.displayName}</strong></span>
-            <button style={buttonStyle} onClick={() => run(async () => { await provider.signOut!(); })}>Wyloguj</button>
+            <span>{text('Signed in:', 'Zalogowano:')} <strong>{user.email ?? user.displayName}</strong></span>
+            <button style={buttonStyle} onClick={() => run(async () => { await provider.signOut!(); })}>{text('Sign out', 'Wyloguj')}</button>
           </div>
         )}
 
@@ -140,7 +139,7 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
         {quota && (
           <div>
             <div style={{ fontSize: '10px', color: '#888', marginBottom: '3px' }}>
-              Miejsce: {formatBytes(quota.usedBytes)} / {formatBytes(quota.limitBytes)}
+              {text('Storage:', 'Miejsce:')} {formatBytes(quota.usedBytes)} / {formatBytes(quota.limitBytes)}
             </div>
             <div style={{ height: '6px', background: '#333', borderRadius: '3px', overflow: 'hidden' }}>
               <div style={{
@@ -155,21 +154,21 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
         {/* --- ZAPIS BIEŻĄCEGO --- */}
         {user && (
           <div style={{ display: 'flex', gap: '6px' }}>
-            <input style={inputStyle} value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="nazwa projektu" />
+            <input style={inputStyle} value={saveName} onChange={e => setSaveName(e.target.value)} placeholder={text('project name', 'nazwa projektu')} />
             <button
               style={accentButton}
               onClick={() => run(async () => {
-                await provider!.saveProject({ name: saveName.trim() || 'Bez nazwy', json: getProjectJson() });
+                await provider!.saveProject({ name: saveName.trim() || text('Untitled', 'Bez nazwy'), json: getProjectJson() });
               })}
             >
-              💾 Zapisz bieżący
+              💾 {text('Save current', 'Zapisz bieżący')}
             </button>
           </div>
         )}
 
         {/* --- LISTA PROJEKTÓW --- */}
         {user && projects.length === 0 && (
-          <div style={{ fontSize: '11px', color: '#666', textAlign: 'center', padding: '10px' }}>Brak zapisanych projektów.</div>
+          <div style={{ fontSize: '11px', color: '#666', textAlign: 'center', padding: '10px' }}>{text('No saved projects.', 'Brak zapisanych projektów.')}</div>
         )}
         {projects.map(project => (
           <div key={project.id} style={{ background: '#222', borderRadius: '6px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -187,16 +186,16 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
                   if (full) { onLoadProject(full.json, full.name); onClose(); }
                 })}
               >
-                📂 Wczytaj
+                📂 {text('Load', 'Wczytaj')}
               </button>
               <button
                 style={buttonStyle}
                 onClick={() => run(async () => {
                   await provider!.saveProject({ id: project.id, name: project.name, json: getProjectJson() });
                 })}
-                title="Nadpisz ten projekt bieżącym grafem"
+                title={text('Overwrite this project with the current graph', 'Nadpisz ten projekt bieżącym grafem')}
               >
-                💾 Nadpisz
+                💾 {text('Overwrite', 'Nadpisz')}
               </button>
               {/* System licencyjny: udostępniam / nie udostępniam + licencja */}
               <select
@@ -206,8 +205,8 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
                 })}
                 style={{ ...inputStyle, flex: 'none', width: 'auto', cursor: 'pointer' }}
               >
-                {(Object.keys(VISIBILITY_LABELS) as ProjectVisibility[]).map(v => (
-                  <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
+                {(Object.keys(visibilityLabels) as ProjectVisibility[]).map(v => (
+                  <option key={v} value={v}>{visibilityLabels[v]}</option>
                 ))}
               </select>
               {project.visibility !== 'private' && (
@@ -218,14 +217,14 @@ export default function CloudDialog({ onClose, getProjectJson, onLoadProject }: 
                   })}
                   style={{ ...inputStyle, flex: 'none', width: 'auto', cursor: 'pointer' }}
                 >
-                  {(Object.keys(LICENSE_LABELS) as ProjectLicense[]).map(l => (
-                    <option key={l} value={l}>{LICENSE_LABELS[l]}</option>
+                  {(Object.keys(licenseLabels) as ProjectLicense[]).map(l => (
+                    <option key={l} value={l}>{licenseLabels[l]}</option>
                   ))}
                 </select>
               )}
               <button
                 style={{ ...buttonStyle, color: '#f88', borderColor: '#722' }}
-                onClick={() => { if (confirm(`Usunąć projekt "${project.name}"?`)) void run(async () => provider!.deleteProject(project.id)); }}
+                onClick={() => { if (confirm(text(`Delete project "${project.name}"?`, `Usunąć projekt "${project.name}"?`))) void run(async () => provider!.deleteProject(project.id)); }}
               >
                 🗑️
               </button>

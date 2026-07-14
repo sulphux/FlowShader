@@ -6,8 +6,10 @@ import { collectRuntimeResources, type ShaderRuntimeResources } from './core/run
 import { compileFeedbackPasses, type FeedbackPassDefinition } from './core/feedbackPasses';
 import { VERSION_LABEL, versionTooltip } from './core/version';
 import type { Node, Edge } from 'reactflow';
+import { useI18n } from './core/i18n';
 
 function App() {
+  const { text } = useI18n();
   const [shaderCode, setShaderCode] = useState<string | undefined>(undefined);
   const [shaderResources, setShaderResources] = useState<ShaderRuntimeResources | undefined>(undefined);
   const [feedbackPasses, setFeedbackPasses] = useState<FeedbackPassDefinition[]>([]);
@@ -89,7 +91,7 @@ function App() {
           {isPreviewHidden && (
             <button
               onClick={() => setIsPreviewHidden(false)}
-              title="Show Preview"
+              title={text('Show Preview', 'Pokaż podgląd')}
               style={{
                 position: 'absolute', top: '50%', right: 0, transform: 'translateY(-50%)',
                 zIndex: 2000, background: '#1a1a1a', color: '#fff',
@@ -127,7 +129,7 @@ function App() {
           }>
             <button
               onClick={() => setIsFloating(!isFloating)}
-              title={isFloating ? "Dock to Right" : "Float Window (PiP)"}
+              title={isFloating ? text('Dock to Right', 'Dokuj po prawej') : text('Float Window (PiP)', 'Pływające okno (PiP)')}
               style={{
                 position: 'absolute', top: '10px', right: '10px', zIndex: 10,
                 background: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
@@ -140,7 +142,7 @@ function App() {
 
             <button
               onClick={() => { setIsPreviewHidden(true); setIsFloating(false); }}
-              title="Hide Preview"
+              title={text('Hide Preview', 'Ukryj podgląd')}
               style={{
                 position: 'absolute', top: '10px', right: '40px', zIndex: 10,
                 background: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)',

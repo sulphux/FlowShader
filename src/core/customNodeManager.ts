@@ -1,6 +1,7 @@
 import type { ShaderNodeDefinition } from './types';
 import type { Node, Edge } from 'reactflow';
 import { NODE_REGISTRY } from '../nodes';
+import { reconcileDynamicPorts } from './dynamicPortSystem';
 
 export interface CustomNodeDefinition extends ShaderNodeDefinition {
   isCustom: true;
@@ -24,20 +25,11 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
     
     // Restore functions and definitions lost during JSON serialization
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return parsed.map((customNode: any) => ({
-      ...customNode,
-      // Restore glslTemplate (functions can't be serialized to JSON)
-      glslTemplate: () => {
-        // Placeholder - actual compilation happens via recursive subgraph in compiler.ts
-        return 'vec3(1.0, 0.0, 1.0)';
-      },
-      subgraph: {
-        ...customNode.subgraph,
-        // Restore full node definitions from NODE_REGISTRY
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        nodes: customNode.subgraph.nodes.map((node: any) => {
+    return parsed.map((customNode: any) => {
+      const restoredNodes = customNode.subgraph.nodes.map((node: any) => {
           const defId = node.data?.definition?.id;
           const freshDef = defId ? NODE_REGISTRY[defId as keyof typeof NODE_REGISTRY] : undefined;
+          const savedDef = node.data?.definition;
 
           // forcedType (manually chosen) wins, then detectedType (set live
           // by onConnect while wiring inside the subgraph); if BOTH are
@@ -54,6 +46,8 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
               : undefined;
           const resolvedType = node.data.forcedType || node.data.detectedType || (savedType !== 'auto' ? savedType : undefined);
 
+          const hasDynamicPorts = ['code_glsl', 'code_block', 'loop_iterate', 'smart_split', 'smart_compose', 'relay_auto'].includes(defId);
+
           return {
             ...node,
             data: {
@@ -62,6 +56,10 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
               // BUT preserve the resolved type for Custom Input/Output nodes
               definition: freshDef ? {
                 ...freshDef,
+                ...(hasDynamicPorts && savedDef?.inputs && savedDef?.outputs ? {
+                  inputs: savedDef.inputs,
+                  outputs: savedDef.outputs,
+                } : {}),
                 ...(defId === 'custom_input' && resolvedType ? {
                   outputs: [{ id: 'out', type: resolvedType, label: 'Value' }]
                 } : {}),
@@ -71,9 +69,21 @@ export function loadCustomNodes(): CustomNodeDefinition[] {
               } : node.data.definition
             }
           };
-        })
-      }
-    }));
+        });
+
+      return {
+        ...customNode,
+        // Restore glslTemplate (functions can't be serialized to JSON)
+        glslTemplate: () => {
+          // Placeholder - actual compilation happens via recursive subgraph in compiler.ts
+          return 'vec3(1.0, 0.0, 1.0)';
+        },
+        subgraph: {
+          ...customNode.subgraph,
+          nodes: reconcileDynamicPorts(restoredNodes, customNode.subgraph.edges || []),
+        },
+      };
+    });
   } catch (err) {
     console.error('Error loading custom nodes:', err);
     return [];
@@ -108,6 +118,10 @@ export function addCustomNode(customNode: CustomNodeDefinition): void {
   });
   
   saveCustomNodes(updated);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('customNodesUpdated'));
+  }
   
   // Verify it was saved correctly
   const reloaded = loadCustomNodes().find(n => n.id === customNode.id);

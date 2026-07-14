@@ -1,4 +1,12 @@
 import type { GraphNode } from './compiler';
+import { loadCustomNodes, type CustomNodeDefinition } from './customNodeManager';
+import { sanitizeGLSLIdentifier } from './functionGenerator';
+
+interface ShaderNodeDefinitionWithSubgraph {
+  id: string;
+  isCustom?: boolean;
+  subgraph?: { nodes: GraphNode[] };
+}
 
 /**
  * Zasoby runtime shadera — tekstury i audio.
@@ -66,26 +74,63 @@ export const isFeedbackNode = (node: GraphNode): boolean =>
  * z domyślnej pustej tekstury bindowanej przez preview).
  */
 export function collectRuntimeResources(nodes: GraphNode[]): ShaderRuntimeResources {
-  const textures: TextureResource[] = [];
+  const texturesByUniform = new Map<string, TextureResource>();
   let usesAudio = false;
   let usesFeedback = false;
-  const feedbacks: FeedbackResource[] = [];
+  const feedbacksByUniform = new Map<string, FeedbackResource>();
+  const visitedCustomDefinitions = new Set<string>();
+  const customLibrary = typeof localStorage !== 'undefined' ? loadCustomNodes() : [];
 
-  nodes.forEach(node => {
-    if (isTextureNode(node)) {
-      const src = typeof node.data?.value === 'string' ? node.data.value : '';
-      textures.push({ uniform: textureUniformName(node.id), src });
-    }
-    if (isAudioNode(node)) {
-      usesAudio = true;
-    }
-    if (isFeedbackNode(node)) {
-      usesFeedback = true;
-      feedbacks.push({ nodeId: node.id, uniform: feedbackUniformName(node.id) });
-    }
-  });
+  const visitCustomDefinition = (definition: CustomNodeDefinition | undefined) => {
+    if (!definition?.subgraph?.nodes || visitedCustomDefinitions.has(definition.id)) return;
+    visitedCustomDefinitions.add(definition.id);
+    visit(definition.subgraph.nodes as GraphNode[]);
+  };
 
-  return { textures, usesAudio, usesFeedback, feedbacks };
+  const visitCodeDependencies = (body: unknown) => {
+    if (typeof body !== 'string') return;
+    customLibrary.forEach(definition => {
+      const aliases = [definition.label, definition.id]
+        .map(alias => sanitizeGLSLIdentifier(alias).toLowerCase())
+        .filter(Boolean);
+      if (aliases.some(alias => new RegExp(`\\b${alias}\\s*\\(`).test(body))) {
+        visitCustomDefinition(definition);
+      }
+    });
+  };
+
+  const visit = (scanNodes: GraphNode[]) => {
+    scanNodes.forEach(node => {
+      if (isTextureNode(node)) {
+        const src = typeof node.data?.value === 'string' ? node.data.value : '';
+        const uniform = textureUniformName(node.id);
+        texturesByUniform.set(uniform, { uniform, src });
+      }
+      if (isAudioNode(node)) usesAudio = true;
+      if (isFeedbackNode(node)) {
+        usesFeedback = true;
+        const uniform = feedbackUniformName(node.id);
+        feedbacksByUniform.set(uniform, { nodeId: node.id, uniform });
+      }
+
+      if (node.data?.definition?.id === 'code_block') visitCodeDependencies(node.data.value);
+      if (node.data?.definition?.id === 'loop_iterate') {
+        visitCustomDefinition(customLibrary.find(definition => definition.id === node.data.loopStepId));
+      }
+
+      const definition = node.data?.definition as ShaderNodeDefinitionWithSubgraph | undefined;
+      if (definition?.isCustom) visitCustomDefinition(definition as CustomNodeDefinition);
+    });
+  };
+
+  visit(nodes);
+
+  return {
+    textures: [...texturesByUniform.values()],
+    usesAudio,
+    usesFeedback,
+    feedbacks: [...feedbacksByUniform.values()],
+  };
 }
 
 export function feedbackUniforms(resources: ShaderRuntimeResources): string[] {

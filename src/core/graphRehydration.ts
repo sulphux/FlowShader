@@ -2,7 +2,7 @@ import type { Node, Edge, Viewport } from 'reactflow';
 import { NODE_REGISTRY } from '../nodes';
 import { loadCustomNodes, collectUsedCustomNodes, importEmbeddedCustomNodes, type CustomNodeDefinition } from './customNodeManager';
 import type { ShaderNodeDefinition } from './types';
-import { computeSmartSplitPorts } from './smartSplitAdapter';
+import { reconcileDynamicPorts } from './dynamicPortSystem';
 import { TYPE_COLORS } from './theme';
 import { resolveFrameBufferMode, type FrameBufferMode } from './frameBufferMode';
 
@@ -43,6 +43,8 @@ interface SerializedNode {
     sampleWrap?: 'repeat' | 'clamp';
     offsetX?: number;
     offsetY?: number;
+    iterations?: number;
+    loopStepId?: string;
   };
   [key: string]: unknown;
 }
@@ -120,6 +122,8 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           sampleWrap: n.data.sampleWrap,
           offsetX: n.data.offsetX,
           offsetY: n.data.offsetY,
+          iterations: n.data.iterations,
+          loopStepId: n.data.loopStepId,
         },
       } as SerializedNode;
     }),
@@ -143,59 +147,6 @@ const migrateLegacyEdges = (nodes: SerializedNode[], edges: Edge[]): Edge[] => {
     }
     return edge;
   });
-};
-
-/**
- * Adaptacja portów smart_split / relay_auto na podstawie istniejących połączeń.
- * Pomijana, gdy użytkownik ręcznie wymusił typ (data.forcedType) — wtedy ten
- * typ wygrywa niezależnie od tego, co akurat jest podłączone.
- */
-const adaptAutoNode = (node: Node, nodes: Node[], edges: Edge[]): Node => {
-  const def = node.data.definition as ShaderNodeDefinition;
-  if (def.id !== 'smart_split' && def.id !== 'relay_auto') return node;
-
-  const forcedType = node.data.forcedType as string | undefined;
-  let type = forcedType;
-
-  if (!type) {
-    const inputEdge = edges.find(e => e.target === node.id && e.targetHandle === 'in');
-    if (!inputEdge) return node;
-    const sourceNode = nodes.find(n => n.id === inputEdge.source);
-    if (!sourceNode) return node;
-
-    const sourceDef = sourceNode.data.definition as ShaderNodeDefinition;
-    const outputDef = sourceDef.outputs.find(o => o.id === inputEdge.sourceHandle) || sourceDef.outputs[0];
-    if (!outputDef) return node;
-    type = outputDef.type;
-  }
-
-  if (def.id === 'relay_auto') {
-    return {
-      ...node,
-      data: {
-        ...node.data,
-        definition: {
-          ...def,
-          inputs: [{ id: 'in', label: type, type }],
-          outputs: [{ id: 'out', label: type, type }],
-        },
-      },
-    };
-  }
-
-  // smart_split
-  const adapted = computeSmartSplitPorts(type);
-  return {
-    ...node,
-    data: {
-      ...node.data,
-      definition: {
-        ...def,
-        inputs: [{ id: 'in', label: adapted.inputLabel, type }],
-        outputs: adapted.outputs,
-      },
-    },
-  };
 };
 
 /**
@@ -223,8 +174,6 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
 
   const migratedEdges = migrateLegacyEdges(parsed.nodes || [], parsed.edges || []);
   const edges = dropOrphanedEdges(parsed.nodes || [], migratedEdges);
-  const nodesWithSavedPorts = new Set<string>();
-
   const restoredNodes: Node[] = (parsed.nodes || []).map(n => {
     const savedDef = n.data.definition;
     const baseDef = findDefinition(savedDef.id) || buildMissingDefinition(savedDef.id);
@@ -237,7 +186,6 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
     let definition: ShaderNodeDefinition = baseDef;
     if (savedDef.inputs && savedDef.outputs) {
       definition = { ...baseDef, inputs: savedDef.inputs, outputs: savedDef.outputs };
-      nodesWithSavedPorts.add(n.id);
     }
 
     const restoredData = {
@@ -255,10 +203,7 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
     } as Node;
   });
 
-  // Adaptacja tylko tam, gdzie zapis nie zawierał już zaadaptowanych portów
-  const adaptedNodes = restoredNodes.map(node =>
-    nodesWithSavedPorts.has(node.id) ? node : adaptAutoNode(node, restoredNodes, edges)
-  );
+  const adaptedNodes = reconcileDynamicPorts(restoredNodes, edges);
 
   // Edge rendering is derived from the restored source port. This upgrades
   // older project files automatically when a former float output becomes the

@@ -99,3 +99,13 @@ export const RandomNode: ShaderNodeDefinition = {
   },
   description: 'Pseudo-random value 0..1. Changes every frame by default; connect Interval to hold it steady and only jump every N seconds.',
 };
+
+export const LoopNode: ShaderNodeDefinition = {
+  id: 'loop_iterate',
+  label: 'Loop / Iterate',
+  inputs: [{ id: 'initial', label: 'Initial State', type: 'float' }],
+  outputs: [{ id: 'result', label: 'Final State', type: 'float' }],
+  // The compiler emits a statement-level GLSL for-loop for this node.
+  glslTemplate: () => '0.0',
+  description: 'Runs a visual Custom Node repeatedly. Step receives State and optional Index/Progress, then returns Next State and optional Stop.',
+};

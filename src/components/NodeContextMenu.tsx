@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../core/i18n';
 
 interface Props {
   x: number;
@@ -18,6 +19,7 @@ export default function NodeContextMenu({
   x, y, nodeName, isCustomNode, isLastOutput,
   onClose, onCopy, onCut, onDelete, onEditCustom 
 }: Props) {
+  const { text } = useI18n();
   
   const menuStyle: React.CSSProperties = {
     position: 'absolute',
@@ -65,7 +67,7 @@ export default function NodeContextMenu({
           onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
         >
-          📋 Copy (Ctrl+C)
+          📋 {text('Copy', 'Kopiuj')} (Ctrl+C)
         </div>
 
         <div 
@@ -74,7 +76,7 @@ export default function NodeContextMenu({
           onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
         >
-          ✂️ Cut (Ctrl+X)
+          ✂️ {text('Cut', 'Wytnij')} (Ctrl+X)
         </div>
 
         {isCustomNode && onEditCustom && (
@@ -86,7 +88,7 @@ export default function NodeContextMenu({
               onMouseEnter={(e) => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
             >
-              🔧 Edit Definition
+              🔧 {text('Edit Definition', 'Edytuj definicję')}
             </div>
           </>
         )}
@@ -96,7 +98,7 @@ export default function NodeContextMenu({
         <div 
           onClick={() => {
             if (isLastOutput) {
-              alert('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.');
+              alert(text('Cannot delete the last Output node!\n\nAt least one Output node must remain in the graph.', 'Nie można usunąć ostatniego noda Output!\n\nW grafie musi pozostać co najmniej jeden Output.'));
               return;
             }
             handleAction(onDelete);
@@ -105,7 +107,7 @@ export default function NodeContextMenu({
           onMouseEnter={(e) => { e.currentTarget.style.background = '#411'; e.currentTarget.style.color = '#f88'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#f88'; }}
         >
-          🗑️ Delete (Del)
+          🗑️ {text('Delete', 'Usuń')} (Del)
         </div>
       </div>
     </div>
