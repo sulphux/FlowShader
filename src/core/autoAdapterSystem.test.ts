@@ -1,232 +1,131 @@
-import { describe, it, expect } from 'vitest';
-import { insertAutoAdapter } from './autoAdapterSystem';
-import type { Node, Edge } from 'reactflow';
+import { describe, expect, it, vi } from 'vitest';
+import type { Edge, Node } from 'reactflow';
 import { NODE_REGISTRY } from '../nodes';
+import { inlinePortHandleId } from './inlinePortAdapters';
+import { insertAutoAdapter } from './autoAdapterSystem';
 
-describe('autoAdapterSystem', () => {
-  const mockNodes: Node[] = [
-    {
-      id: 'time-1',
-      type: 'shaderNode',
-      position: { x: 0, y: 0 },
-      data: { definition: NODE_REGISTRY.param_time }
-    },
-    {
-      id: 'color-1',
-      type: 'shaderNode',
-      position: { x: 400, y: 0 },
-      data: { definition: NODE_REGISTRY.param_color }
-    }
-  ];
+const node = (id: string, definition: typeof NODE_REGISTRY.param_color, x = 0): Node => ({
+  id,
+  type: 'shaderNode',
+  position: { x, y: 0 },
+  data: { definition },
+});
 
-  const mockEdges: Edge[] = [];
+describe('inline auto adapters', () => {
+  const time = node('time', NODE_REGISTRY.param_time as typeof NODE_REGISTRY.param_color);
+  const color = node('color', NODE_REGISTRY.param_color, 400);
+  const edges: Edge[] = [];
 
-  describe('insertAutoAdapter - float → vec3 (Combine)', () => {
-    it('should insert Combine Vec3 node', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'time-1', sourceHandle: 'value', target: 'color-1', targetHandle: 'color' },
-        'float',
-        'vec3'
-      );
+  it('expands a vec3 target and connects float to X without creating a node', () => {
+    const result = insertAutoAdapter(
+      [time, color], edges,
+      { source: 'time', sourceHandle: 'value', target: 'color', targetHandle: 'color' },
+      'float', 'vec3',
+    );
 
-      // Should create 1 new node (Combine Vec3)
-      expect(result.newNodes).toHaveLength(1);
-      expect(result.newNodes[0].data.definition.id).toBe('combine_vec3');
-
-      // Should create 2 new edges (time→combine, combine→color)
-      expect(result.newEdges).toHaveLength(2);
-      expect(result.newEdges[0].target).toBe(result.newNodes[0].id);
-      expect(result.newEdges[0].targetHandle).toBe('x'); // float → .x input
-      expect(result.newEdges[1].source).toBe(result.newNodes[0].id);
-    });
-
-    it('should position Combine at midpoint', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'time-1', sourceHandle: 'value', target: 'color-1', targetHandle: 'color' },
-        'float',
-        'vec3'
-      );
-
-      const combineNode = result.newNodes[0];
-      expect(combineNode.position.x).toBe(200); // midpoint of 0 and 400
-      expect(combineNode.position.y).toBe(0);
+    expect(result.newNodes).toEqual([]);
+    expect(result.updatedNodes).toHaveLength(1);
+    expect(result.updatedNodes[0].data.inlinePortExpansion.inputs).toEqual(['color']);
+    expect(result.newEdges).toHaveLength(1);
+    expect(result.newEdges[0]).toMatchObject({
+      source: 'time', sourceHandle: 'value', target: 'color',
+      targetHandle: inlinePortHandleId('input', 'color', 'x'),
     });
   });
 
-  describe('insertAutoAdapter - vec3 → float (Split)', () => {
-    it('should insert Split Vec3 node', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'color-1', sourceHandle: 'color', target: 'time-1', targetHandle: 'dummy' },
-        'vec3',
-        'float'
-      );
+  it('expands a vec3 source and connects X to a float target', () => {
+    const result = insertAutoAdapter(
+      [color, time], edges,
+      { source: 'color', sourceHandle: 'rgb', target: 'time', targetHandle: 'dummy' },
+      'vec3', 'float',
+    );
 
-      // Should create 1 new node (Split Vec3)
-      expect(result.newNodes).toHaveLength(1);
-      expect(result.newNodes[0].data.definition.id).toBe('split_vec3');
-
-      // Should create 2 new edges (color→split, split.x→time)
-      expect(result.newEdges).toHaveLength(2);
-      expect(result.newEdges[0].target).toBe(result.newNodes[0].id);
-      expect(result.newEdges[1].sourceHandle).toBe('x'); // default to .x output
+    expect(result.newNodes).toEqual([]);
+    expect(result.updatedNodes[0].data.inlinePortExpansion.outputs).toEqual(['rgb']);
+    expect(result.newEdges[0]).toMatchObject({
+      sourceHandle: inlinePortHandleId('output', 'rgb', 'x'),
+      targetHandle: 'dummy',
     });
   });
 
-  describe('insertAutoAdapter - vec2 → vec3 (Split + Combine)', () => {
-    it('should insert Split Vec2 + Combine Vec3 nodes', () => {
-      const uvNode: Node = {
-        id: 'uv-1',
-        type: 'shaderNode',
-        position: { x: 0, y: 0 },
-        data: { definition: NODE_REGISTRY.uv }
-      };
+  it('turns Color Param RGB into X/Y/Z and Add Vec2 A into X/Y inside the nodes', () => {
+    const add = node('add', NODE_REGISTRY.vec_add2 as typeof NODE_REGISTRY.param_color, 400);
+    const result = insertAutoAdapter(
+      [color, add], edges,
+      { source: 'color', sourceHandle: 'rgb', target: 'add', targetHandle: 'a' },
+      'vec3', 'vec2',
+    );
 
-      const result = insertAutoAdapter(
-        [uvNode, mockNodes[1]],
-        mockEdges,
-        { source: 'uv-1', sourceHandle: 'uv', target: 'color-1', targetHandle: 'color' },
-        'vec2',
-        'vec3'
-      );
-
-      // Should create 2 new nodes (Split Vec2, Combine Vec3)
-      expect(result.newNodes).toHaveLength(2);
-      expect(result.newNodes[0].data.definition.id).toBe('split_vec2');
-      expect(result.newNodes[1].data.definition.id).toBe('combine_vec3');
-
-      // Should create 4 edges:
-      // 1. uv → split.in
-      // 2. split.x → combine.x
-      // 3. split.y → combine.y
-      // 4. combine.out → color
-      expect(result.newEdges).toHaveLength(4);
-    });
-
-    it('should connect matching components (x→x, y→y)', () => {
-      const uvNode: Node = {
-        id: 'uv-1',
-        type: 'shaderNode',
-        position: { x: 0, y: 0 },
-        data: { definition: NODE_REGISTRY.uv }
-      };
-
-      const result = insertAutoAdapter(
-        [uvNode, mockNodes[1]],
-        mockEdges,
-        { source: 'uv-1', sourceHandle: 'uv', target: 'color-1', targetHandle: 'color' },
-        'vec2',
-        'vec3'
-      );
-
-      const edges = result.newEdges;
-      const splitId = result.newNodes[0].id;
-      const combineId = result.newNodes[1].id;
-
-      // Check component mapping
-      const xEdge = edges.find(e => e.sourceHandle === 'x' && e.source === splitId);
-      const yEdge = edges.find(e => e.sourceHandle === 'y' && e.source === splitId);
-
-      expect(xEdge?.target).toBe(combineId);
-      expect(xEdge?.targetHandle).toBe('x');
-      expect(yEdge?.target).toBe(combineId);
-      expect(yEdge?.targetHandle).toBe('y');
-    });
+    expect(result.newNodes).toEqual([]);
+    expect(result.updatedNodes).toHaveLength(2);
+    expect(result.updatedNodes[0].data.inlinePortExpansion.outputs).toEqual(['rgb']);
+    expect(result.updatedNodes[1].data.inlinePortExpansion.inputs).toEqual(['a']);
+    expect(result.newEdges).toHaveLength(2);
+    expect(result.newEdges).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sourceHandle: inlinePortHandleId('output', 'rgb', 'x'),
+        targetHandle: inlinePortHandleId('input', 'a', 'x'),
+      }),
+      expect.objectContaining({
+        sourceHandle: inlinePortHandleId('output', 'rgb', 'y'),
+        targetHandle: inlinePortHandleId('input', 'a', 'y'),
+      }),
+    ]));
   });
 
-  describe('Edge cases', () => {
-    it('should return empty result for same types', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'time-1', sourceHandle: 'value', target: 'color-1', targetHandle: 'dummy' },
-        'float',
-        'float'
-      );
+  it('maps only the common components when vector dimensions differ', () => {
+    const uv = node('uv', NODE_REGISTRY.uv as typeof NODE_REGISTRY.param_color);
+    const result = insertAutoAdapter(
+      [uv, color], edges,
+      { source: 'uv', sourceHandle: 'out', target: 'color', targetHandle: 'color' },
+      'vec2', 'vec3',
+    );
 
-      expect(result.newNodes).toHaveLength(0);
-      expect(result.newEdges).toHaveLength(0);
-    });
-
-    it('should return empty result for auto type', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'time-1', sourceHandle: 'value', target: 'color-1', targetHandle: 'dummy' },
-        'float',
-        'auto'
-      );
-
-      expect(result.newNodes).toHaveLength(0);
-      expect(result.newEdges).toHaveLength(0);
-    });
-
-    it('should handle missing source node gracefully', () => {
-      const result = insertAutoAdapter(
-        mockNodes,
-        mockEdges,
-        { source: 'nonexistent', sourceHandle: 'value', target: 'color-1', targetHandle: 'color' },
-        'float',
-        'vec3'
-      );
-
-      expect(result.newNodes).toHaveLength(0);
-      expect(result.newEdges).toHaveLength(0);
-    });
+    expect(result.newNodes).toEqual([]);
+    expect(result.newEdges).toHaveLength(2);
   });
 
-  describe('insertAutoAdapter - multi-type target (Output "float|vec3")', () => {
-    // Regresja: UV Coord (vec2) → Output nie wstawiał adaptera, bo detectAdapterType
-    // nie rozumiał typu multi 'float|vec3' i zwracał null.
-    const uvNodes: Node[] = [
-      {
-        id: 'uv-1',
-        type: 'shaderNode',
-        position: { x: 0, y: 0 },
-        data: { definition: NODE_REGISTRY.uv }
-      },
-      {
-        id: 'out-1',
-        type: 'shaderNode',
-        position: { x: 400, y: 0 },
-        data: { definition: NODE_REGISTRY.output }
-      }
-    ];
+  it('resolves a multi-type target to its vector option', () => {
+    const uv = node('uv', NODE_REGISTRY.uv as typeof NODE_REGISTRY.param_color);
+    const output = node('output', NODE_REGISTRY.output as typeof NODE_REGISTRY.param_color, 400);
+    const result = insertAutoAdapter(
+      [uv, output], edges,
+      { source: 'uv', sourceHandle: 'out', target: 'output', targetHandle: 'color' },
+      'vec2', 'float|vec3' as never,
+    );
 
-    it('vec2 → "float|vec3" inserts Split Vec2 + Combine Vec3', () => {
-      const result = insertAutoAdapter(
-        uvNodes,
-        [],
-        { source: 'uv-1', sourceHandle: 'out', target: 'out-1', targetHandle: 'color' },
-        'vec2',
-        'float|vec3' as never
-      );
+    expect(result.newNodes).toEqual([]);
+    expect(result.updatedNodes).toHaveLength(2);
+    expect(result.newEdges).toHaveLength(2);
+  });
 
-      expect(result.newNodes).toHaveLength(2);
-      expect(result.newNodes.map(n => n.data.definition.id)).toEqual(['split_vec2', 'combine_vec3']);
+  it('does nothing for an exact type match', () => {
+    const result = insertAutoAdapter(
+      [time, color], edges,
+      { source: 'time', sourceHandle: 'value', target: 'color', targetHandle: 'dummy' },
+      'float', 'float',
+    );
+    expect(result).toEqual({ newNodes: [], updatedNodes: [], newEdges: [] });
+  });
 
-      // Ostatnia krawędź: combine.out → output.color (handle 'out', nie 'result')
-      const lastEdge = result.newEdges[result.newEdges.length - 1];
-      expect(lastEdge.sourceHandle).toBe('out');
-      expect(lastEdge.target).toBe('out-1');
-      expect(lastEdge.targetHandle).toBe('color');
-    });
+  it('does nothing when a multi-type target accepts the source exactly', () => {
+    const result = insertAutoAdapter(
+      [time, color], edges,
+      { source: 'time', sourceHandle: 'value', target: 'color', targetHandle: 'dummy' },
+      'float', 'float|vec3' as never,
+    );
+    expect(result).toEqual({ newNodes: [], updatedNodes: [], newEdges: [] });
+  });
 
-    it('float → "float|vec3" resolves to exact match (no adapter needed)', () => {
-      const result = insertAutoAdapter(
-        uvNodes,
-        [],
-        { source: 'uv-1', sourceHandle: 'out', target: 'out-1', targetHandle: 'color' },
-        'float',
-        'float|vec3' as never
-      );
-
-      expect(result.newNodes).toHaveLength(0);
-    });
+  it('fails safely when an endpoint is missing', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const result = insertAutoAdapter(
+      [time, color], edges,
+      { source: 'missing', sourceHandle: 'value', target: 'color', targetHandle: 'color' },
+      'float', 'vec3',
+    );
+    expect(result).toEqual({ newNodes: [], updatedNodes: [], newEdges: [] });
+    expect(error).toHaveBeenCalledOnce();
+    error.mockRestore();
   });
 });

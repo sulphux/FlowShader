@@ -75,9 +75,9 @@ describe('Graph load regression (TESTOWO.json)', () => {
   it('preserves the W channel for monitors fed by combine_vec4', () => {
     // monitor_1783541760973 ← combine_vec4 (x=add, y=sub, z=mult, w=div)
     const shader = compileGraphToGLSL(toGraphNodes(nodes), edges, 'monitor_1783541760973');
-    // vec4 musi trafić do gl_FragColor bez obcięcia przez vec3(...)
-    expect(shader).toMatch(/gl_FragColor = var_combine_vec4_adapter_\w+;/);
-    expect(shader).not.toMatch(/gl_FragColor = vec4\(vec3\(var_combine_vec4/);
+    // Legacy Combine is folded into the monitor's local X/Y/Z/W input pins.
+    expect(nodes.some(node => node.id === 'combine_vec4_adapter_1783541820794_pl6s8guxk')).toBe(false);
+    expect(shader).toMatch(/gl_FragColor = vec4\(var_math_add_\w+, var_math_sub_\w+, var_math_mult_\w+, var_math_div_\w+\);/);
   });
 
   it('survives a save → load roundtrip with adapted ports intact', () => {

@@ -109,16 +109,16 @@ allows only:
   • multi-type ports (e.g. `float|vec3`) → any of the listed types
 
 Everything else is BLOCKED at connect time and, where a conversion is
-possible, `autoAdapterSystem.ts` automatically inserts the right node(s)
-instead of connecting directly:
+possible, `autoAdapterSystem.ts` expands the original ports into component
+pins inside their nodes instead of adding graph nodes:
 
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Auto-Adapter Insertion                        │
+│                    Inline Port Adaptation                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│   float → vecN   ⇒  insert Combine vecN (float feeds .x)         │
-│   vecN → float   ⇒  insert Split vecN (target reads .x)          │
-│   vecA → vecB    ⇒  insert Split vecA + Combine vecB,            │
+│   float → vecN   ⇒  expand target; float feeds target.x          │
+│   vecN → float   ⇒  expand source; source.x feeds target         │
+│   vecA → vecB    ⇒  expand both original ports and connect       │
 │                      matching components (x→x, y→y, ...)         │
 │                                                                  │
 │   Multi-type targets (e.g. Output's `float|vec3`) resolve to     │
@@ -189,7 +189,7 @@ NodeShader/
     │   ├── compiler.ts            ← graph → GLSL
     │   ├── functionGenerator.ts   ← custom-node GLSL functions, autoCast()
     │   ├── connectionValidator.ts ← strict type rules
-    │   ├── autoAdapterSystem.ts   ← Split/Combine auto-insertion
+    │   ├── autoAdapterSystem.ts   ← inline component-port adaptation
     │   ├── validator.ts / glslangValidation.ts ← shader correctness checks
     │   ├── runtimeResources.ts / threeResources.ts ← texture/audio/feedback uniforms
     │   ├── feedbackPasses.ts / feedbackPassRenderer.ts ← stateful multi-pass rendering

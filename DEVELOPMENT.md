@@ -24,7 +24,7 @@ flow. Quick orientation:
   plus dialogs (`SettingsDialog`, `CloudDialog`, `CreateCustomNodeDialog`).
 - **`src/core/`** — engine: `compiler.ts` (graph → GLSL),
   `connectionValidator.ts` + `autoAdapterSystem.ts` (strict typing +
-  auto Split/Combine insertion), `runtimeResources.ts`/`threeResources.ts`
+  inline component-port adaptation), `runtimeResources.ts`/`threeResources.ts`
   (texture/audio uniforms), `projectStorage.ts`/`supabaseStorage.ts`
   (local/cloud saves), `fileAccess.ts` (File System Access save/load).
 - **`src/nodes/`** — node definitions, registered in `index.ts`
@@ -85,9 +85,9 @@ type DataType = 'float' | 'impulse' | 'vec2' | 'vec3' | 'vec4' | 'buffer2d' | 'a
 
 Connections are validated strictly (`connectionValidator.ts`) — same type,
 `auto`, or a listed multi-type always connects directly; anything else is
-either blocked outright or triggers `autoAdapterSystem.ts` to insert a
-Split/Combine node automatically. There is **no** silent implicit casting at
-connect time. `autoCast()` (`functionGenerator.ts`) only casts expressions
+either blocked outright or triggers `autoAdapterSystem.ts` to expand the
+original ports into component pins. There is **no** silent implicit casting
+at connect time. `autoCast()` (`functionGenerator.ts`) only casts expressions
 that are already known-compatible (e.g. a vec3 feeding `gl_FragColor`).
 
 ## Testing

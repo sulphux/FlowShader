@@ -35,9 +35,10 @@ npm test           # ~630 tests (compiler, nodes, UI)
 ### Typed node graph with auto-adapters
 
 Ports are typed (`float`, `vec2`, `vec3`, `vec4`) and color-coded. Incompatible
-connections don't silently pass through — the **auto-adapter** inserts slim
-Split (≺) / Combine (≻) nodes automatically to decompose and recompose
-vectors:
+connections don't silently pass through — the **auto-adapter** expands the
+original vector ports into X/Y/Z/W pins inside their nodes and wires matching
+components directly. Split (≺) / Combine (≻) are still available as explicit
+nodes when a visible conversion block is useful:
 
 ![Node overview: code editor, value monitor, split/combine, color preview](docs/img/03-nodes.png)
 

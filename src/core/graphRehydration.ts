@@ -5,6 +5,7 @@ import type { ShaderNodeDefinition } from './types';
 import { reconcileDynamicPorts } from './dynamicPortSystem';
 import { TYPE_COLORS } from './theme';
 import { resolveFrameBufferMode, type FrameBufferMode } from './frameBufferMode';
+import { inlinePortHandleId, type VectorComponent } from './inlinePortAdapters';
 
 /**
  * Wspólna serializacja/rehydracja grafu.
@@ -45,6 +46,7 @@ interface SerializedNode {
     offsetY?: number;
     iterations?: number;
     loopStepId?: string;
+    inlinePortExpansion?: { inputs?: string[]; outputs?: string[] };
   };
   [key: string]: unknown;
 }
@@ -124,6 +126,7 @@ export function serializeGraph(nodes: Node[], edges: Edge[], viewport?: Viewport
           offsetY: n.data.offsetY,
           iterations: n.data.iterations,
           loopStepId: n.data.loopStepId,
+          inlinePortExpansion: n.data.inlinePortExpansion,
         },
       } as SerializedNode;
     }),
@@ -147,6 +150,127 @@ const migrateLegacyEdges = (nodes: SerializedNode[], edges: Edge[]): Edge[] => {
     }
     return edge;
   });
+};
+
+const isGeneratedAdapter = (node: SerializedNode | undefined, kind?: 'split' | 'combine'): boolean => {
+  if (!node) return false;
+  const definitionId = node.data.definition.id;
+  return node.id.includes('_adapter_') && (kind
+    ? definitionId.startsWith(`${kind}_vec`)
+    : definitionId.startsWith('split_vec') || definitionId.startsWith('combine_vec'));
+};
+
+const expandSerializedPort = (
+  node: SerializedNode,
+  direction: 'input' | 'output',
+  portId: string,
+): SerializedNode => {
+  const key = direction === 'input' ? 'inputs' : 'outputs';
+  const expansion = node.data.inlinePortExpansion || {};
+  const ports = new Set(expansion[key] || []);
+  ports.add(portId);
+  return {
+    ...node,
+    data: {
+      ...node.data,
+      inlinePortExpansion: { ...expansion, [key]: [...ports] },
+    },
+  };
+};
+
+const legacyComponent = (handle: string | null | undefined): VectorComponent =>
+  handle === 'y' || handle === 'z' || handle === 'w' ? handle : 'x';
+
+/**
+ * Versions before inline pins persisted generated Split/Combine nodes. Only
+ * nodes carrying the `_adapter_` id marker are folded; user-created adapters
+ * remain ordinary, editable graph nodes.
+ */
+const migrateGeneratedAdapterNodes = (
+  inputNodes: SerializedNode[],
+  inputEdges: Edge[],
+): { nodes: SerializedNode[]; edges: Edge[] } => {
+  let nodes = inputNodes.map(node => ({ ...node, data: { ...node.data } }));
+  let edges = [...inputEdges];
+  const removed = new Set<string>();
+  const replacements: Edge[] = [];
+
+  const updateExpansion = (nodeId: string, direction: 'input' | 'output', portId: string) => {
+    nodes = nodes.map(node => node.id === nodeId ? expandSerializedPort(node, direction, portId) : node);
+  };
+  const migratedEdge = (edge: Edge): Edge => ({
+    ...edge,
+    id: `inline_migrated_${edge.id}`,
+    style: { ...edge.style, stroke: TYPE_COLORS.float, strokeWidth: 3 },
+  });
+
+  // vecN -> Split -> Combine -> vecM
+  for (const split of nodes.filter(node => isGeneratedAdapter(node, 'split'))) {
+    if (removed.has(split.id)) continue;
+    const sourceEdge = edges.find(edge => edge.target === split.id && edge.targetHandle === 'in');
+    if (!sourceEdge) continue;
+    const componentEdges = edges.filter(edge => edge.source === split.id);
+    const combineId = componentEdges.find(edge => {
+      const target = nodes.find(node => node.id === edge.target);
+      return target && isGeneratedAdapter(target, 'combine');
+    })?.target;
+    if (!combineId) continue;
+    const targetEdge = edges.find(edge => edge.source === combineId && !isGeneratedAdapter(nodes.find(node => node.id === edge.target)));
+    if (!targetEdge) continue;
+
+    updateExpansion(sourceEdge.source, 'output', sourceEdge.sourceHandle || 'out');
+    updateExpansion(targetEdge.target, 'input', targetEdge.targetHandle || 'in');
+    for (const componentEdge of componentEdges.filter(edge => edge.target === combineId)) {
+      const component = legacyComponent(componentEdge.sourceHandle || componentEdge.targetHandle);
+      replacements.push(migratedEdge({
+        ...componentEdge,
+        source: sourceEdge.source,
+        sourceHandle: inlinePortHandleId('output', sourceEdge.sourceHandle || 'out', component),
+        target: targetEdge.target,
+        targetHandle: inlinePortHandleId('input', targetEdge.targetHandle || 'in', component),
+      }));
+    }
+    removed.add(split.id);
+    removed.add(combineId);
+  }
+
+  // vecN -> Split -> float
+  for (const split of nodes.filter(node => isGeneratedAdapter(node, 'split'))) {
+    if (removed.has(split.id)) continue;
+    const sourceEdge = edges.find(edge => edge.target === split.id && edge.targetHandle === 'in');
+    const targetEdge = edges.find(edge => edge.source === split.id && !removed.has(edge.target));
+    if (!sourceEdge || !targetEdge) continue;
+    const component = legacyComponent(targetEdge.sourceHandle);
+    updateExpansion(sourceEdge.source, 'output', sourceEdge.sourceHandle || 'out');
+    replacements.push(migratedEdge({
+      ...targetEdge,
+      source: sourceEdge.source,
+      sourceHandle: inlinePortHandleId('output', sourceEdge.sourceHandle || 'out', component),
+    }));
+    removed.add(split.id);
+  }
+
+  // float -> Combine -> vecN
+  for (const combine of nodes.filter(node => isGeneratedAdapter(node, 'combine'))) {
+    if (removed.has(combine.id)) continue;
+    const sourceEdges = edges.filter(edge => edge.target === combine.id);
+    const targetEdge = edges.find(edge => edge.source === combine.id);
+    if (sourceEdges.length === 0 || !targetEdge) continue;
+    updateExpansion(targetEdge.target, 'input', targetEdge.targetHandle || 'in');
+    for (const sourceEdge of sourceEdges) {
+      const component = legacyComponent(sourceEdge.targetHandle);
+      replacements.push(migratedEdge({
+        ...sourceEdge,
+        target: targetEdge.target,
+        targetHandle: inlinePortHandleId('input', targetEdge.targetHandle || 'in', component),
+      }));
+    }
+    removed.add(combine.id);
+  }
+
+  nodes = nodes.filter(node => !removed.has(node.id));
+  edges = edges.filter(edge => !removed.has(edge.source) && !removed.has(edge.target));
+  return { nodes, edges: [...edges, ...replacements] };
 };
 
 /**
@@ -173,8 +297,9 @@ export function rehydrateGraph(parsed: SerializedGraph): { nodes: Node[]; edges:
   }
 
   const migratedEdges = migrateLegacyEdges(parsed.nodes || [], parsed.edges || []);
-  const edges = dropOrphanedEdges(parsed.nodes || [], migratedEdges);
-  const restoredNodes: Node[] = (parsed.nodes || []).map(n => {
+  const migratedAdapters = migrateGeneratedAdapterNodes(parsed.nodes || [], migratedEdges);
+  const edges = dropOrphanedEdges(migratedAdapters.nodes, migratedAdapters.edges);
+  const restoredNodes: Node[] = migratedAdapters.nodes.map(n => {
     const savedDef = n.data.definition;
     const baseDef = findDefinition(savedDef.id) || buildMissingDefinition(savedDef.id);
 

@@ -49,21 +49,21 @@ describe('connectionValidator', () => {
         const result = validateConnection('float', 'vec2');
         expect(result.valid).toBe(false);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Combine');
+        expect(result.reason).toContain('Expanding VEC2 target components');
       });
 
       it('should block float → vec3', () => {
         const result = validateConnection('float', 'vec3');
         expect(result.valid).toBe(false);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Combine');
+        expect(result.reason).toContain('Expanding VEC3 target components');
       });
 
       it('should block float → vec4', () => {
         const result = validateConnection('float', 'vec4');
         expect(result.valid).toBe(false);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Combine');
+        expect(result.reason).toContain('Expanding VEC4 target components');
       });
     });
 
@@ -73,7 +73,7 @@ describe('connectionValidator', () => {
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Split');
+        expect(result.reason).toContain('Expanding VEC2 source components');
       });
 
       it('should block vec3 → float', () => {
@@ -81,7 +81,7 @@ describe('connectionValidator', () => {
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Split');
+        expect(result.reason).toContain('Expanding VEC3 source components');
       });
 
       it('should block vec4 → float', () => {
@@ -89,7 +89,7 @@ describe('connectionValidator', () => {
         expect(result.valid).toBe(false);
         expect(result.requiresSplit).toBe(true);
         expect(result.requiresAdapter).toBe(true);
-        expect(result.reason).toContain('Auto-inserting Split');
+        expect(result.reason).toContain('Expanding VEC4 source components');
       });
     });
 
@@ -99,7 +99,7 @@ describe('connectionValidator', () => {
         expect(result.valid).toBe(false);
         expect(result.requiresAdapter).toBe(true);
         expect(result.requiresSplit).toBe(false);
-        expect(result.reason).toContain('Auto-inserting Split + Combine');
+        expect(result.reason).toContain('Expanding matching components');
       });
 
       it('should block vec2 → vec4', () => {

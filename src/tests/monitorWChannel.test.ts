@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { NODE_REGISTRY } from '../nodes';
 import { compileGraphToGLSL, type GraphNode } from '../core/compiler';
 import { insertAutoAdapter } from '../core/autoAdapterSystem';
+import { inlinePortHandleId } from '../core/inlinePortAdapters';
 import { hasGlslangValidator, validateWithGlslangValidator } from './utils/glslangValidate';
 import type { Node } from 'reactflow';
 
@@ -61,7 +62,7 @@ describe('Monitor W channel (vec4 passthrough)', () => {
     expect(shader).not.toContain('vec3(var_comb1), 1.0');
   });
 
-  it('auto-adapter creates combine→target edges with sourceHandle "out"', () => {
+  it('auto-adapter expands the vec4 target and connects the float to X', () => {
     const nodes: Node[] = [
       { id: 'p1', type: 'shaderNode', position: { x: 0, y: 0 }, data: { definition: NODE_REGISTRY.param_float } },
       { id: 'mon1', type: 'monitorNode', position: { x: 300, y: 0 }, data: { definition: NODE_REGISTRY.monitor } },
@@ -72,11 +73,15 @@ describe('Monitor W channel (vec4 passthrough)', () => {
       'float', 'vec4'
     );
 
-    expect(result.newNodes[0].data.definition.id).toBe('combine_vec4');
-    const combineOutEdge = result.newEdges.find(e => e.target === 'mon1');
-    expect(combineOutEdge?.sourceHandle).toBe('out');
-    // Handle musi istnieć w definicji Combine (to była przyczyna regresji)
-    const outIds = NODE_REGISTRY.combine_vec4.outputs.map(o => o.id);
-    expect(outIds).toContain(combineOutEdge?.sourceHandle);
+    expect(result.newNodes).toEqual([]);
+    expect(result.updatedNodes[0].data.inlinePortExpansion.inputs).toEqual(['in']);
+    expect(result.newEdges).toEqual([
+      expect.objectContaining({
+        source: 'p1',
+        sourceHandle: 'out',
+        target: 'mon1',
+        targetHandle: inlinePortHandleId('input', 'in', 'x'),
+      }),
+    ]);
   });
 });

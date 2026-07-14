@@ -1,10 +1,12 @@
-import type { Node, Edge } from 'reactflow';
+import type { Edge, Node } from 'reactflow';
 import type { DataType } from './types';
-import { NODE_REGISTRY } from '../nodes';
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { TYPE_COLORS } from './theme';
+import {
+  inlinePortHandleId,
+  type InlinePortDirection,
+  type VectorType,
+  vectorComponents,
+} from './inlinePortAdapters';
 
 interface Connection {
   source: string;
@@ -13,347 +15,132 @@ interface Connection {
   targetHandle: string;
 }
 
-interface AdapterResult {
+export interface AdapterResult {
   newNodes: Node[];
+  updatedNodes: Node[];
   newEdges: Edge[];
 }
 
 type AdapterType = 'combine' | 'split' | 'split-combine' | null;
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
+const emptyResult = (): AdapterResult => ({ newNodes: [], updatedNodes: [], newEdges: [] });
 
-/**
- * Calculate midpoint between two nodes
- */
-function calculateMidpoint(nodeA: Node, nodeB: Node): { x: number; y: number } {
-  return {
-    x: (nodeA.position.x + nodeB.position.x) / 2,
-    y: (nodeA.position.y + nodeB.position.y) / 2
-  };
-}
-
-/**
- * Generate unique ID for adapter node
- */
-function generateAdapterId(type: string): string {
-  return `${type}_adapter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
- * Create adapter node (Split or Combine)
- */
-function createAdapterNode(
-  type: string, // 'split_vec3', 'combine_vec2', etc.
-  position: { x: number; y: number }
-): Node {
-  const nodeType = type; // e.g., 'split_vec3'
-  const definition = NODE_REGISTRY[nodeType as keyof typeof NODE_REGISTRY];
-
-  if (!definition) {
-    throw new Error(`Adapter node type "${nodeType}" not found in NODE_REGISTRY`);
-  }
-
-  return {
-    id: generateAdapterId(type),
-    type: 'shaderNode',
-    position,
-    data: {
-      definition,
-      value: undefined
-    }
-  };
-}
-
-/**
- * Get component ports for vector type
- */
-function getComponentPorts(vecType: 'vec2' | 'vec3' | 'vec4'): string[] {
-  const ports: Record<string, string[]> = {
-    vec2: ['x', 'y'],
-    vec3: ['x', 'y', 'z'],
-    vec4: ['x', 'y', 'z', 'w']
-  };
-  return ports[vecType] || [];
-}
-
-/**
- * Resolve a multi-type target (e.g. Output's 'float|vec3') to a concrete type.
- * Preference: exact match > vector→vector (keeps most information) > float.
- */
 function resolveTargetType(sourceType: DataType, targetType: string): DataType {
   if (!targetType.includes('|')) return targetType as DataType;
   const options = targetType.split('|') as DataType[];
   if (options.includes(sourceType)) return sourceType;
-
-  const vectorTypes = ['vec2', 'vec3', 'vec4'];
-  const vectorOption = options.find(o => vectorTypes.includes(o));
+  const vectorOption = options.find(option => ['vec2', 'vec3', 'vec4'].includes(option));
   if (vectorOption) return vectorOption;
   if (options.includes('float')) return 'float';
   return options[0];
 }
 
-/**
- * Detect which adapter type is needed
- */
 function detectAdapterType(sourceType: DataType, targetType: DataType): AdapterType {
-  // float → vec (requires Combine)
-  if (sourceType === 'float' && ['vec2', 'vec3', 'vec4'].includes(targetType)) {
-    return 'combine';
-  }
-
-  // vec → float (requires Split)
-  if (['vec2', 'vec3', 'vec4'].includes(sourceType) && targetType === 'float') {
-    return 'split';
-  }
-
-  // vec → different vec (requires Split + Combine)
-  if (
-    ['vec2', 'vec3', 'vec4'].includes(sourceType) &&
-    ['vec2', 'vec3', 'vec4'].includes(targetType) &&
-    sourceType !== targetType
-  ) {
-    return 'split-combine';
-  }
-
+  const sourceIsVector = ['vec2', 'vec3', 'vec4'].includes(sourceType);
+  const targetIsVector = ['vec2', 'vec3', 'vec4'].includes(targetType);
+  if (sourceType === 'float' && targetIsVector) return 'combine';
+  if (sourceIsVector && targetType === 'float') return 'split';
+  if (sourceIsVector && targetIsVector && sourceType !== targetType) return 'split-combine';
   return null;
 }
 
-// ============================================================================
-// CORE ADAPTER FUNCTIONS
-// ============================================================================
-
-/**
- * Insert Combine node for float → vec conversion
- * Example: float → vec3 creates Combine Vec3, connects float to .x input
- */
-function insertCombineNode(
-  _nodes: Node[],
-  _edges: Edge[],
-  sourceNode: Node,
-  targetNode: Node,
-  targetType: 'vec2' | 'vec3' | 'vec4',
-  params: Connection
-): AdapterResult {
-  const midpoint = calculateMidpoint(sourceNode, targetNode);
-  const combineNode = createAdapterNode(`combine_${targetType}`, midpoint);
-
-  // Edge 1: source → combine.x
-  const edge1: Edge = {
-    id: `${params.source}_${combineNode.id}_x`,
-    source: params.source,
-    sourceHandle: params.sourceHandle,
-    target: combineNode.id,
-    targetHandle: 'x' // float connects to first component
-  };
-
-  // Edge 2: combine.out → target
-  const edge2: Edge = {
-    id: `${combineNode.id}_${params.target}`,
-    source: combineNode.id,
-    sourceHandle: 'out',
-    target: params.target,
-    targetHandle: params.targetHandle
-  };
-
+function expandPort(node: Node, direction: InlinePortDirection, portId: string): Node {
+  const key = direction === 'input' ? 'inputs' : 'outputs';
+  const current = node.data.inlinePortExpansion || {};
+  const expanded = new Set<string>(current[key] || []);
+  expanded.add(portId);
   return {
-    newNodes: [combineNode],
-    newEdges: [edge1, edge2]
+    ...node,
+    data: {
+      ...node.data,
+      inlinePortExpansion: { ...current, [key]: [...expanded] },
+    },
+  };
+}
+
+function componentEdge(
+  params: Connection,
+  sourceHandle: string,
+  targetHandle: string,
+  component: string,
+): Edge {
+  return {
+    id: `inline_${params.source}_${sourceHandle}_${params.target}_${targetHandle}_${component}`,
+    source: params.source,
+    sourceHandle,
+    target: params.target,
+    targetHandle,
+    type: 'default',
+    style: { stroke: TYPE_COLORS.float, strokeWidth: 3 },
   };
 }
 
 /**
- * Insert Split node for vec → float conversion
- * Example: vec3 → float creates Split Vec3, connects .x output to target
- */
-function insertSplitNode(
-  _nodes: Node[],
-  _edges: Edge[],
-  sourceNode: Node,
-  targetNode: Node,
-  sourceType: 'vec2' | 'vec3' | 'vec4',
-  params: Connection
-): AdapterResult {
-  const midpoint = calculateMidpoint(sourceNode, targetNode);
-  const splitNode = createAdapterNode(`split_${sourceType}`, midpoint);
-
-  // Edge 1: source → split.in
-  const edge1: Edge = {
-    id: `${params.source}_${splitNode.id}`,
-    source: params.source,
-    sourceHandle: params.sourceHandle,
-    target: splitNode.id,
-    targetHandle: 'in'
-  };
-
-  // Edge 2: split.x → target (default to .x component)
-  const edge2: Edge = {
-    id: `${splitNode.id}_${params.target}`,
-    source: splitNode.id,
-    sourceHandle: 'x',
-    target: params.target,
-    targetHandle: params.targetHandle
-  };
-
-  return {
-    newNodes: [splitNode],
-    newEdges: [edge1, edge2]
-  };
-}
-
-/**
- * Insert Split + Combine for vec → different vec conversion
- * Example: vec2 → vec3 creates Split Vec2 and Combine Vec3
- */
-function insertSplitAndCombine(
-  _nodes: Node[],
-  _edges: Edge[],
-  sourceNode: Node,
-  targetNode: Node,
-  sourceType: 'vec2' | 'vec3' | 'vec4',
-  targetType: 'vec2' | 'vec3' | 'vec4',
-  params: Connection
-): AdapterResult {
-  const midpoint = calculateMidpoint(sourceNode, targetNode);
-
-  // Split on left, Combine on right
-  const splitNode = createAdapterNode(`split_${sourceType}`, {
-    x: midpoint.x - 100,
-    y: midpoint.y
-  });
-
-  const combineNode = createAdapterNode(`combine_${targetType}`, {
-    x: midpoint.x + 100,
-    y: midpoint.y
-  });
-
-  const newEdges: Edge[] = [];
-
-  // Edge 1: source → split.in
-  newEdges.push({
-    id: `${params.source}_${splitNode.id}`,
-    source: params.source,
-    sourceHandle: params.sourceHandle,
-    target: splitNode.id,
-    targetHandle: 'in'
-  });
-
-  // Connect matching components (x→x, y→y, z→z if exist)
-  const sourceComponents = getComponentPorts(sourceType);
-  const targetComponents = getComponentPorts(targetType);
-  const commonComponents = sourceComponents.filter(c => targetComponents.includes(c));
-
-  commonComponents.forEach(component => {
-    newEdges.push({
-      id: `${splitNode.id}_${combineNode.id}_${component}`,
-      source: splitNode.id,
-      sourceHandle: component,
-      target: combineNode.id,
-      targetHandle: component
-    });
-  });
-
-  // Edge N: combine.out → target
-  newEdges.push({
-    id: `${combineNode.id}_${params.target}`,
-    source: combineNode.id,
-    sourceHandle: 'out',
-    target: params.target,
-    targetHandle: params.targetHandle
-  });
-
-  return {
-    newNodes: [splitNode, combineNode],
-    newEdges
-  };
-}
-
-// ============================================================================
-// MAIN EXPORT
-// ============================================================================
-
-/**
- * Auto-Adapter System - Main Entry Point
- * 
- * Automatically inserts Split/Combine nodes when user attempts incompatible connection.
- * 
- * Examples:
- * - float → vec3: Inserts Combine Vec3, connects float to .x
- * - vec3 → float: Inserts Split Vec3, connects .x to target
- * - vec2 → vec3: Inserts Split Vec2 + Combine Vec3, maps x→x, y→y
- * 
- * @param nodes - Current graph nodes
- * @param edges - Current graph edges
- * @param params - Connection attempt parameters (source, target, handles)
- * @param sourceType - Source port type (e.g., 'float', 'vec3')
- * @param targetType - Target port type (e.g., 'vec3', 'float')
- * @returns New nodes and edges to add to graph
+ * Adapts incompatible scalar/vector connections by expanding the original
+ * ports inside their nodes. No standalone Split/Combine node is created.
  */
 export function insertAutoAdapter(
   nodes: Node[],
-  edges: Edge[],
+  _edges: Edge[],
   params: Connection,
   sourceType: DataType,
-  targetType: DataType
+  targetType: DataType,
 ): AdapterResult {
-  // Find source and target nodes
-  const sourceNode = nodes.find(n => n.id === params.source);
-  const targetNode = nodes.find(n => n.id === params.target);
-
+  const sourceNode = nodes.find(node => node.id === params.source);
+  const targetNode = nodes.find(node => node.id === params.target);
   if (!sourceNode || !targetNode) {
     console.error('Auto-Adapter: Source or target node not found', params);
-    return { newNodes: [], newEdges: [] };
+    return emptyResult();
   }
 
-  // Multi-type target (np. 'float|vec3' na wejściu Output) → konkretny typ
   const resolvedTargetType = resolveTargetType(sourceType, targetType);
-
-  // Detect which adapter is needed
   const adapterType = detectAdapterType(sourceType, resolvedTargetType);
+  if (!adapterType) return emptyResult();
 
-  if (!adapterType) {
-    console.warn('Auto-Adapter: No adapter needed or unsupported conversion', {
-      sourceType,
-      targetType: resolvedTargetType
-    });
-    return { newNodes: [], newEdges: [] };
+  if (adapterType === 'combine') {
+    const targetVectorType = resolvedTargetType as VectorType;
+    return {
+      newNodes: [],
+      updatedNodes: [expandPort(targetNode, 'input', params.targetHandle)],
+      newEdges: [componentEdge(
+        params,
+        params.sourceHandle,
+        inlinePortHandleId('input', params.targetHandle, vectorComponents(targetVectorType)[0]),
+        'x',
+      )],
+    };
   }
 
-  // Insert appropriate adapter(s)
-  switch (adapterType) {
-    case 'combine':
-      return insertCombineNode(
-        nodes,
-        edges,
-        sourceNode,
-        targetNode,
-        resolvedTargetType as 'vec2' | 'vec3' | 'vec4',
-        params
-      );
-
-    case 'split':
-      return insertSplitNode(
-        nodes,
-        edges,
-        sourceNode,
-        targetNode,
-        sourceType as 'vec2' | 'vec3' | 'vec4',
-        params
-      );
-
-    case 'split-combine':
-      return insertSplitAndCombine(
-        nodes,
-        edges,
-        sourceNode,
-        targetNode,
-        sourceType as 'vec2' | 'vec3' | 'vec4',
-        resolvedTargetType as 'vec2' | 'vec3' | 'vec4',
-        params
-      );
-
-    default:
-      return { newNodes: [], newEdges: [] };
+  if (adapterType === 'split') {
+    const sourceVectorType = sourceType as VectorType;
+    return {
+      newNodes: [],
+      updatedNodes: [expandPort(sourceNode, 'output', params.sourceHandle)],
+      newEdges: [componentEdge(
+        params,
+        inlinePortHandleId('output', params.sourceHandle, vectorComponents(sourceVectorType)[0]),
+        params.targetHandle,
+        'x',
+      )],
+    };
   }
+
+  const sourceVectorType = sourceType as VectorType;
+  const targetVectorType = resolvedTargetType as VectorType;
+  const sourceComponents = vectorComponents(sourceVectorType);
+  const targetComponents = vectorComponents(targetVectorType);
+  const commonComponents = sourceComponents.filter(component => targetComponents.includes(component));
+  return {
+    newNodes: [],
+    updatedNodes: [
+      expandPort(sourceNode, 'output', params.sourceHandle),
+      expandPort(targetNode, 'input', params.targetHandle),
+    ],
+    newEdges: commonComponents.map(component => componentEdge(
+      params,
+      inlinePortHandleId('output', params.sourceHandle, component),
+      inlinePortHandleId('input', params.targetHandle, component),
+      component,
+    )),
+  };
 }

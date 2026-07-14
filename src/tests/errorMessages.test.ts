@@ -6,7 +6,7 @@ describe('Error Messages Quality', () => {
     const result = validateConnection('vec3', 'float');
     
     expect(result.valid).toBe(false);
-    expect(result.reason).toContain('Split');
+    expect(result.reason).toContain('source components');
     expect(result.reason).toContain('vec3');
     expect(result.reason).toContain('float');
   });

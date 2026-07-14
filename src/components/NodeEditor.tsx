@@ -35,6 +35,7 @@ import { isEditableKeyboardTarget } from '../core/keyboardTarget';
 import { ImpulseEdge } from './ImpulseEdge';
 import { reconcileDynamicPorts } from '../core/dynamicPortSystem';
 import { useI18n } from '../core/i18n';
+import { inlineHandleType, parseInlinePortHandle, relatedInputHandles } from '../core/inlinePortAdapters';
 
 const initialNodesDefault = [
   { id: 'out1', type: 'shaderNode', position: { x: 500, y: 100 }, data: { definition: NODE_REGISTRY['output'] } },
@@ -74,8 +75,10 @@ const EDGE_TYPES: EdgeTypes = {
  */
 function getHandleType(node: Node | undefined, handleId: string | null): DataType {
   if (!node?.data?.definition || !handleId) return 'auto';
-  
+
   const def = node.data.definition;
+  const inlineType = inlineHandleType(def, handleId);
+  if (inlineType) return inlineType;
   
   // Check outputs
   const output = def.outputs?.find((o: { id: string; type: string }) => o.id === handleId);
@@ -759,8 +762,14 @@ function EditorInner({ onChange }: Props) {
 
         const sourceDef = sourceNode.data.definition; 
         const targetDef = targetNode.data.definition;
-        const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) => o.id === params.sourceHandle);
-        const inputDef = targetDef.inputs.find((i: { id: string; type: string }) => i.id === params.targetHandle);
+        const sourceInline = parseInlinePortHandle(params.sourceHandle);
+        const targetInline = parseInlinePortHandle(params.targetHandle);
+        const outputDef = sourceDef.outputs.find((o: { id: string; type: string }) =>
+          o.id === (sourceInline?.direction === 'output' ? sourceInline.portId : params.sourceHandle)
+        );
+        const inputDef = targetDef.inputs.find((i: { id: string; type: string }) =>
+          i.id === (targetInline?.direction === 'input' ? targetInline.portId : params.targetHandle)
+        );
         
         if (!outputDef) { 
             console.warn('Auto-Adapter: Source output definition not found');
@@ -773,9 +782,18 @@ function EditorInner({ onChange }: Props) {
 
         // === SINGLE CONNECTION PER INPUT ===
         // Remove any existing connection to the target input port FIRST
-        setEdges((eds) => eds.filter(edge => 
-            !(edge.target === params.target && edge.targetHandle === params.targetHandle)
-        ));
+        setEdges((eds) => {
+          const exclusiveHandles = inputDef
+            ? relatedInputHandles(inputDef.id, inputDef.type)
+            : [params.targetHandle!];
+          return eds.filter(edge => {
+            if (edge.target !== params.target) return true;
+            if (targetInline?.direction === 'input') {
+              return edge.targetHandle !== params.targetHandle && edge.targetHandle !== inputDef?.id;
+            }
+            return !exclusiveHandles.includes(edge.targetHandle || '');
+          });
+        });
 
         // === AUTO TYPE ADAPTATION (Smart Split + Relay) ===
         
@@ -904,12 +922,16 @@ function EditorInner({ onChange }: Props) {
                 nodes, edges, connectionParams, sourceType, targetType
             );
             
-            if (result.newNodes.length > 0) {
-                setNodes(nds => [...nds, ...result.newNodes]);
+            if (result.newEdges.length > 0) {
+                const updatedById = new Map(result.updatedNodes.map(node => [node.id, node]));
+                setNodes(nds => [
+                  ...nds.map(node => updatedById.get(node.id) || node),
+                  ...result.newNodes,
+                ]);
                 setEdges(eds => [...eds, ...result.newEdges]);
-                
-                console.log('✅ Auto-Adapter inserted:', {
-                    adapterNodes: result.newNodes.map(n => n.data.definition.label),
+
+                console.log('✅ Inline Auto-Adapter expanded:', {
+                    expandedNodes: result.updatedNodes.map(n => n.data.definition.label),
                     edgeCount: result.newEdges.length
                 });
                 
@@ -1128,13 +1150,17 @@ function EditorInner({ onChange }: Props) {
           };
           setEdges((eds) => addEdge(newEdge, eds));
         } else if (validation.requiresAdapter) {
-          // Typy się nie zgadzają — wstaw Split/Combine tak jak przy ręcznym łączeniu
+          // Typy się nie zgadzają — rozwiń Split/Combine wewnątrz sąsiednich nodów.
           const result = insertAutoAdapter(
             [...nodes, newNode], edges, connection,
             sourceType as DataType, targetType as DataType
           );
-          if (result.newNodes.length > 0) {
-            setNodes(nds => [...nds, ...result.newNodes]);
+          if (result.newEdges.length > 0) {
+            const updatedById = new Map(result.updatedNodes.map(node => [node.id, node]));
+            setNodes(nds => [
+              ...nds.map(node => updatedById.get(node.id) || node),
+              ...result.newNodes,
+            ]);
             setEdges(eds => [...eds, ...result.newEdges]);
           }
         }

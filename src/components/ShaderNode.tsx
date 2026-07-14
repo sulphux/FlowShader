@@ -30,6 +30,13 @@ import {
   loopStateType,
 } from '../core/loopNode';
 import { useI18n } from '../core/i18n';
+import {
+  inlinePortHandleId,
+  isVectorType,
+  parseInlinePortHandle,
+  vectorComponents,
+  type InlinePortDirection,
+} from '../core/inlinePortAdapters';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const { text } = useI18n();
@@ -149,6 +156,58 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         return node;
     }));
   }, [id, setNodes, def.id, def.label, data.label]);
+
+  const expandedInlineInputs = new Set<string>(data.inlinePortExpansion?.inputs || []);
+  const expandedInlineOutputs = new Set<string>(data.inlinePortExpansion?.outputs || []);
+  const isInlineExpanded = (direction: InlinePortDirection, portId: string) =>
+    (direction === 'input' ? expandedInlineInputs : expandedInlineOutputs).has(portId);
+  const hasParentPortEdge = (direction: InlinePortDirection, portId: string) =>
+    getEdges().some(edge => direction === 'input'
+      ? edge.target === id && edge.targetHandle === portId
+      : edge.source === id && edge.sourceHandle === portId);
+  const showParentPort = (direction: InlinePortDirection, portId: string) =>
+    !isInlineExpanded(direction, portId) || hasParentPortEdge(direction, portId);
+  const toggleInlinePort = (direction: InlinePortDirection, portId: string) => {
+    setNodes(nodes => nodes.map(node => {
+      if (node.id !== id) return node;
+      const current = node.data.inlinePortExpansion || {};
+      const key = direction === 'input' ? 'inputs' : 'outputs';
+      const ports = new Set<string>(current[key] || []);
+      if (ports.has(portId)) ports.delete(portId);
+      else ports.add(portId);
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          inlinePortExpansion: { ...current, [key]: [...ports] },
+        },
+      };
+    }));
+  };
+
+  const inlineToggle = (direction: InlinePortDirection, port: { id: string; label: string; type: string }) => {
+    if (!isVectorType(port.type)) return null;
+    const expanded = isInlineExpanded(direction, port.id);
+    return (
+      <button
+        type="button"
+        className="nodrag"
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${port.label} ${port.type} components`}
+        title={text(
+          `${expanded ? 'Collapse' : 'Expand'} ${port.type} components inside this node`,
+          `${expanded ? 'Zwiń' : 'Rozwiń'} składowe ${port.type} wewnątrz noda`,
+        )}
+        onClick={(event) => { event.stopPropagation(); toggleInlinePort(direction, port.id); }}
+        onMouseDown={(event) => event.stopPropagation()}
+        style={{
+          border: 0, background: 'transparent', color: TYPE_COLORS[port.type], cursor: 'pointer',
+          fontSize: '9px', lineHeight: 1, padding: '1px 2px', fontWeight: 'bold',
+        }}
+      >
+        {expanded ? '▾' : direction === 'input' ? '◂' : '▸'}
+      </button>
+    );
+  };
 
   const changeComposeType = (type: 'vec2' | 'vec3' | 'vec4') => {
       const ports = computeSmartComposePorts(type);
@@ -878,11 +937,24 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
       const oldId = ports[index].id;
       const nextId = uniquePortId(direction, ports[index].label, index);
       const next = ports.map((port, portIndex) => portIndex === index ? { ...port, id: nextId, label: nextId } : port);
-      updatePorts(direction, next);
+      const expansionDirection = direction === 'inputs' ? 'inputs' : 'outputs';
+      const expanded = new Set<string>(data.inlinePortExpansion?.[expansionDirection] || []);
+      if (expanded.delete(oldId)) expanded.add(nextId);
+      updateNodeData({
+        definition: { ...def, [direction]: next },
+        inlinePortExpansion: { ...data.inlinePortExpansion, [expansionDirection]: [...expanded] },
+      });
       if (nextId !== oldId) {
-        setEdges(current => current.map(edge => direction === 'inputs'
-          ? (edge.target === id && edge.targetHandle === oldId ? { ...edge, targetHandle: nextId } : edge)
-          : (edge.source === id && edge.sourceHandle === oldId ? { ...edge, sourceHandle: nextId } : edge)));
+        setEdges(current => current.map(edge => {
+          const handle = direction === 'inputs' ? edge.targetHandle : edge.sourceHandle;
+          const parsed = parseInlinePortHandle(handle);
+          const belongsToPort = handle === oldId || parsed?.portId === oldId;
+          if (!belongsToPort || (direction === 'inputs' ? edge.target !== id : edge.source !== id)) return edge;
+          const renamedHandle = parsed
+            ? inlinePortHandleId(parsed.direction, nextId, parsed.component)
+            : nextId;
+          return direction === 'inputs' ? { ...edge, targetHandle: renamedHandle } : { ...edge, sourceHandle: renamedHandle };
+        }));
       }
     };
 
@@ -900,10 +972,20 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     const removePort = (direction: 'inputs' | 'outputs', index: number) => {
       const port = def[direction][index];
       if (direction === 'outputs' && def.outputs.length === 1) return;
-      updatePorts(direction, def[direction].filter((_, portIndex) => portIndex !== index));
-      setEdges(current => current.filter(edge => direction === 'inputs'
-        ? !(edge.target === id && edge.targetHandle === port.id)
-        : !(edge.source === id && edge.sourceHandle === port.id)));
+      const expansionDirection = direction === 'inputs' ? 'inputs' : 'outputs';
+      updateNodeData({
+        definition: { ...def, [direction]: def[direction].filter((_, portIndex) => portIndex !== index) },
+        inlinePortExpansion: {
+          ...data.inlinePortExpansion,
+          [expansionDirection]: (data.inlinePortExpansion?.[expansionDirection] || []).filter((portId: string) => portId !== port.id),
+        },
+      });
+      setEdges(current => current.filter(edge => {
+        const handle = direction === 'inputs' ? edge.targetHandle : edge.sourceHandle;
+        const parsed = parseInlinePortHandle(handle);
+        const belongsToPort = handle === port.id || parsed?.portId === port.id;
+        return !(belongsToPort && (direction === 'inputs' ? edge.target === id : edge.source === id));
+      }));
     };
 
     const renderPortEditor = (direction: 'inputs' | 'outputs') => (
@@ -913,8 +995,10 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           <button className="nodrag" onClick={() => addPort(direction)} style={{ fontSize: '10px', cursor: 'pointer', background: '#333', color: '#ddd', border: '1px solid #555', borderRadius: '3px' }}>+</button>
         </div>
         {def[direction].map((port, index) => (
-          <div key={port.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '5px', position: 'relative' }}>
-            {direction === 'inputs' && <Handle type="target" position={Position.Left} id={port.id} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />}
+          <div key={port.id} style={{ marginBottom: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+            {direction === 'inputs' && showParentPort('input', port.id) && <Handle type="target" position={Position.Left} id={port.id} title={`${port.label} · ${port.type}`} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />}
+            {direction === 'inputs' && inlineToggle('input', port)}
             <input
               className="nodrag"
               value={port.label}
@@ -944,7 +1028,20 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
               title={text('Remove port', 'Usuń port')}
               style={{ border: 'none', background: 'transparent', color: '#888', cursor: 'pointer', padding: '1px 2px' }}
             >×</button>
-            {direction === 'outputs' && <Handle type="source" position={Position.Right} id={port.id} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />}
+            {direction === 'outputs' && inlineToggle('output', port)}
+            {direction === 'outputs' && showParentPort('output', port.id) && <Handle type="source" position={Position.Right} id={port.id} title={`${port.label} · ${port.type}`} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />}
+          </div>
+          {isInlineExpanded(direction === 'inputs' ? 'input' : 'output', port.id) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px', alignItems: direction === 'outputs' ? 'flex-end' : 'flex-start' }}>
+              {vectorComponents(port.type).map(component => (
+                <div key={component} style={{ position: 'relative', minWidth: '24px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: direction === 'outputs' ? 'flex-end' : 'flex-start' }}>
+                  {direction === 'inputs' && <Handle type="target" position={Position.Left} id={inlinePortHandleId('input', port.id, component)} title={`${port.label}.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', left: '-15px', border: '2px solid #111' }} />}
+                  <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
+                  {direction === 'outputs' && <Handle type="source" position={Position.Right} id={inlinePortHandleId('output', port.id, component)} title={`${port.label}.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', right: '-15px', border: '2px solid #111' }} />}
+                </div>
+              ))}
+            </div>
+          )}
           </div>
         ))}
       </div>
@@ -1176,21 +1273,39 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         <div style={{ padding: '6px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
             {def.inputs.map((input) => (
-              <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '14px', position: 'relative' }}>
-                <Handle
+              <div key={input.id} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', height: '14px', position: 'relative' }}>
+                {showParentPort('input', input.id) && <Handle
                   type="target" position={Position.Left} id={input.id}
                   style={{ background: TYPE_COLORS[input.type], width: '10px', height: '10px', left: '-13px', border: '2px solid #1a1a1a' }}
-                />
+                />}
+                {inlineToggle('input', input)}
                 <span style={{ fontSize: '10px', color: '#ccc', fontFamily: 'monospace' }}>{input.id}</span>
+              </div>
+              {isInlineExpanded('input', input.id) && vectorComponents(input.type).map(component => (
+                <div key={component} style={{ position: 'relative', height: '12px', paddingLeft: '10px', display: 'flex', alignItems: 'center' }}>
+                  <Handle type="target" position={Position.Left} id={inlinePortHandleId('input', input.id, component)} title={`${input.id}.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', left: '-13px', border: '2px solid #1a1a1a' }} />
+                  <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
+                </div>
+              ))}
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative', padding: '0 8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end', position: 'relative', padding: '0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
             <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>Out</span>
-            <Handle
+            {inlineToggle('output', def.outputs[0])}
+            {showParentPort('output', 'out') && <Handle
               type="source" position={Position.Right} id="out"
               style={{ background: TYPE_COLORS[outType], width: '10px', height: '10px', right: '-13px', border: '2px solid #1a1a1a' }}
-            />
+            />}
+            </div>
+            {isInlineExpanded('output', 'out') && vectorComponents(outType).map(component => (
+              <div key={component} style={{ position: 'relative', height: '12px', paddingRight: '8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
+                <Handle type="source" position={Position.Right} id={inlinePortHandleId('output', 'out', component)} title={`Out.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', right: '-13px', border: '2px solid #1a1a1a' }} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1267,10 +1382,29 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   }
 
   if (def.compact) {
+    const compactInputs = def.inputs.flatMap(input => [
+      ...(showParentPort('input', input.id) ? [{ ...input, inline: false }] : []),
+      ...(isInlineExpanded('input', input.id)
+        ? vectorComponents(input.type).map(component => ({
+            id: inlinePortHandleId('input', input.id, component),
+            label: component.toUpperCase(), type: 'float', inline: true,
+          }))
+        : []),
+    ]);
+    const compactOutputs = def.outputs.flatMap(output => [
+      ...(showParentPort('output', output.id) ? [{ ...output, inline: false }] : []),
+      ...(isInlineExpanded('output', output.id)
+        ? vectorComponents(output.type).map(component => ({
+            id: inlinePortHandleId('output', output.id, component),
+            label: component.toUpperCase(), type: 'float', inline: true,
+          }))
+        : []),
+    ]);
+    const compactHeight = Math.max(32, Math.max(compactInputs.length, compactOutputs.length) * 16 + 8);
     return (
-      <div 
+      <div
         title={def.description}
-        style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+        style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: `${compactHeight}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
       >
         {/* Left side - inputs with flexbox */}
         <div style={{ 
@@ -1283,7 +1417,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           justifyContent: 'space-evenly',
           alignItems: 'flex-start'
         }}>
-            {def.inputs.map((input, i) => {
+            {compactInputs.map((input, i) => {
                  const isAuto = input.type === 'auto';
                  const isMultiType = input.type.includes('|');
                  
@@ -1292,7 +1426,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                    type="target"
                    position={Position.Left}
                    id={input.id}
-                   title={input.label}
+                   title={input.inline ? `${input.label} · float` : input.label}
                    className={`handle-inline${isAuto ? ' port-auto' : ''}`}
                    style={{
                      background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
@@ -1314,8 +1448,14 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
             })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {def.inputs.filter(input => isVectorType(input.type)).map(input => (
+            <span key={`toggle-input-${input.id}`}>{inlineToggle('input', input)}</span>
+          ))}
           {isCustomNode && <span style={{ fontSize: '14px' }}>🔲</span>}
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
+          {def.outputs.filter(output => isVectorType(output.type)).map(output => (
+            <span key={`toggle-output-${output.id}`}>{inlineToggle('output', output)}</span>
+          ))}
         </div>
         {/* Right side - outputs with flexbox */}
         <div style={{ 
@@ -1328,7 +1468,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           justifyContent: 'space-evenly',
           alignItems: 'flex-end'
         }}>
-            {def.outputs.map((output, i) => {
+            {compactOutputs.map((output, i) => {
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 
@@ -1337,7 +1477,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                   type="source"
                   position={Position.Right}
                   id={output.id}
-                  title={output.label}
+                  title={output.inline ? `${output.label} · float` : output.label}
                   className={`handle-inline${isAuto ? ' port-auto' : ''}`}
                   style={{
                     background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
@@ -1490,10 +1630,11 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                 {def.inputs.map((input) => {
                     const isAuto = input.type === 'auto';
                     const isMultiType = input.type.includes('|');
-                    
+
                     return (
-                      <div key={input.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
-                          <Handle 
+                      <div key={input.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                          {showParentPort('input', input.id) && <Handle
                             type="target" 
                             position={Position.Left} 
                             id={input.id} 
@@ -1511,8 +1652,21 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                             }} 
                           >
                             {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
-                          </Handle>
+                          </Handle>}
+                          {inlineToggle('input', input)}
                           <span style={{ fontSize: '10px', color: '#ccc' }}>{input.label}</span>
+                        </div>
+                        {isInlineExpanded('input', input.id) && vectorComponents(input.type).map(component => (
+                          <div key={component} style={{ display: 'flex', alignItems: 'center', height: '14px', position: 'relative', paddingLeft: '10px' }}>
+                            <Handle
+                              type="target" position={Position.Left}
+                              id={inlinePortHandleId('input', input.id, component)}
+                              title={`${input.label}.${component} · float`}
+                              style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', left: '-13px', border: '2px solid #1a1a1a' }}
+                            />
+                            <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
+                          </div>
+                        ))}
                       </div>
                     )
                 })}
@@ -1523,9 +1677,11 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                     const isMultiType = output.type.includes('|');
                     
                     return (
-                      <div key={output.id} style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
+                      <div key={output.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', height: '16px', position: 'relative' }}>
                           <span style={{ fontSize: '10px', color: '#ccc', marginRight: '4px' }}>{output.label}</span>
-                          <Handle 
+                          {inlineToggle('output', output)}
+                          {showParentPort('output', output.id) && <Handle
                             type="source" 
                             position={Position.Right} 
                             id={output.id} 
@@ -1543,7 +1699,19 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                             }} 
                           >
                             {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
-                          </Handle>
+                          </Handle>}
+                        </div>
+                        {isInlineExpanded('output', output.id) && vectorComponents(output.type).map(component => (
+                          <div key={component} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '14px', position: 'relative', paddingRight: '10px' }}>
+                            <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
+                            <Handle
+                              type="source" position={Position.Right}
+                              id={inlinePortHandleId('output', output.id, component)}
+                              title={`${output.label}.${component} · float`}
+                              style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', right: '-13px', border: '2px solid #1a1a1a' }}
+                            />
+                          </div>
+                        ))}
                       </div>
                     )
                 })}

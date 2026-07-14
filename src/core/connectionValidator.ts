@@ -4,7 +4,7 @@ export interface ConnectionValidationResult {
   valid: boolean;
   reason?: string;
   requiresSplit?: boolean;
-  requiresAdapter?: boolean;  // NEW - triggers Auto-Adapter System
+  requiresAdapter?: boolean;
 }
 
 /**
@@ -23,14 +23,14 @@ function parseMultiType(typeString: string): DataType[] {
  * 
  * Rules (STRICT MODE - Unreal Engine style):
  * 1. Same types always connect: float→float, vec2→vec2, etc.
- * 2. float → vector BLOCKED (triggers Auto-Adapter: inserts Combine node)
- * 3. vector → float BLOCKED (triggers Auto-Adapter: inserts Split node)
- * 4. vector → different vector BLOCKED (triggers Auto-Adapter: inserts Split + Combine)
+ * 2. float → vector BLOCKED (triggers inline expansion of the target)
+ * 3. vector → float BLOCKED (triggers inline expansion of the source)
+ * 4. vector → different vector BLOCKED (expands both original ports)
  * 5. 'auto' type accepts ANY connection and adapts dynamically
  * 6. Multi-type ports (e.g., "float|vec3") accept any of the specified types
  * 
  * This enforces explicit conversions like in Unreal Engine.
- * Auto-Adapter System automatically inserts conversion nodes when requiresAdapter=true.
+ * The Auto-Adapter expands component pins when requiresAdapter=true.
  */
 export function validateConnection(
   sourceType: string,
@@ -76,32 +76,32 @@ function validateSingleConnection(
     return { valid: true };
   }
 
-  // Rule 2: float → vector BLOCKED (STRICT mode - requires Combine node)
+  // Rule 2: float → vector BLOCKED (STRICT mode - target expands to components)
   if (sourceType === 'float' && ['vec2', 'vec3', 'vec4'].includes(targetType)) {
     return {
       valid: false,
       requiresAdapter: true,
-      reason: `Cannot connect float to ${targetType} directly. Auto-inserting Combine ${targetType.toUpperCase()} node...`
+      reason: `Cannot connect float to ${targetType} directly. Expanding ${targetType.toUpperCase()} target components...`
     };
   }
 
-  // Rule 3: vector → float requires Split node (BLOCKED - triggers Auto-Adapter)
+  // Rule 3: vector → float expands the vector source.
   if (['vec2', 'vec3', 'vec4'].includes(sourceType) && targetType === 'float') {
     return {
       valid: false,
-      reason: `Cannot connect ${sourceType} to float directly. Auto-inserting Split ${sourceType.toUpperCase()} node...`,
+      reason: `Cannot connect ${sourceType} to float directly. Expanding ${sourceType.toUpperCase()} source components...`,
       requiresSplit: true,
-      requiresAdapter: true  // NEW - trigger Auto-Adapter
+      requiresAdapter: true
     };
   }
 
-  // Rule 4: Different vector types cannot connect (BLOCKED - triggers Auto-Adapter)
+  // Rule 4: Different vector types expand both original ports.
   if (['vec2', 'vec3', 'vec4'].includes(sourceType) && ['vec2', 'vec3', 'vec4'].includes(targetType)) {
     return {
       valid: false,
-      reason: `Cannot connect ${sourceType} to ${targetType} directly. Auto-inserting Split + Combine nodes...`,
+      reason: `Cannot connect ${sourceType} to ${targetType} directly. Expanding matching components inside both nodes...`,
       requiresSplit: false,
-      requiresAdapter: true  // NEW - trigger Auto-Adapter
+      requiresAdapter: true
     };
   }
 

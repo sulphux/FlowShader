@@ -14,6 +14,7 @@ import {
   isCodeBlockCallableNameAvailable,
 } from './codeBlock';
 import { clampLoopIterations, isCompatibleLoopStep, loopStateType } from './loopNode';
+import { inlinePortHandleId, isVectorType, parseInlinePortHandle, vectorComponents } from './inlinePortAdapters';
 
 export interface GraphNode {
   id: string;
@@ -171,6 +172,19 @@ function resolveSourceExpr(
   nodeVarMap: Record<string, string>,
   multiOutputVarMap: MultiOutputVarMap
 ): { expr: string; type: string } | undefined {
+  const inlineHandle = parseInlinePortHandle(edge.sourceHandle);
+  if (inlineHandle?.direction === 'output') {
+    const base = resolveSourceExpr(
+      { ...edge, sourceHandle: inlineHandle.portId },
+      sourceNode,
+      nodeVarMap,
+      multiOutputVarMap,
+    );
+    const parentPort = sourceNode?.data.definition.outputs.find(port => port.id === inlineHandle.portId);
+    if (!base || !parentPort || !vectorComponents(parentPort.type).includes(inlineHandle.component)) return undefined;
+    return { expr: `${base.expr}.${inlineHandle.component}`, type: 'float' };
+  }
+
   // Buffer2D is an opaque runtime resource, not a value that GLSL ES lets us
   // copy into a local variable. The Frame Buffer handle therefore resolves
   // directly to the sampler uniform owned by that particular buffer.
@@ -208,6 +222,42 @@ function resolveSourceExpr(
   return { expr, type };
 }
 
+function resolveInputExpr(
+  node: GraphNode,
+  inputDef: ShaderNodeDefinition['inputs'][number],
+  edges: GraphEdge[],
+  nodes: GraphNode[],
+  nodeVarMap: Record<string, string>,
+  multiOutputVarMap: MultiOutputVarMap,
+): string | undefined {
+  const directEdge = edges.find(edge => edge.target === node.id && edge.targetHandle === inputDef.id);
+  if (directEdge) {
+    const sourceNode = nodes.find(candidate => candidate.id === directEdge.source);
+    const resolved = resolveSourceExpr(directEdge, sourceNode, nodeVarMap, multiOutputVarMap);
+    return resolved ? autoCast(resolved.expr, resolved.type, inputDef.type) : undefined;
+  }
+
+  const vectorInputType = isVectorType(inputDef.type)
+    ? inputDef.type
+    : inputDef.type.split('|').find(isVectorType);
+  const components = vectorComponents(vectorInputType || inputDef.type);
+  if (components.length === 0) return undefined;
+  let hasComponent = false;
+  const expressions = components.map(component => {
+    const edge = edges.find(candidate =>
+      candidate.target === node.id
+      && candidate.targetHandle === inlinePortHandleId('input', inputDef.id, component)
+    );
+    if (!edge) return '0.0';
+    const sourceNode = nodes.find(candidate => candidate.id === edge.source);
+    const resolved = resolveSourceExpr(edge, sourceNode, nodeVarMap, multiOutputVarMap);
+    if (!resolved) return '0.0';
+    hasComponent = true;
+    return autoCast(resolved.expr, resolved.type, 'float');
+  });
+  return hasComponent && vectorInputType ? `${vectorInputType}(${expressions.join(', ')})` : undefined;
+}
+
 /**
  * Compile subgraph body (no uniforms/precision/main wrapper)
  * Used for generating custom node function bodies
@@ -236,14 +286,8 @@ function compileSubgraphMainBody(nodes: GraphNode[], edges: GraphEdge[], targetN
     // Map inputs
     const inputs: Record<string, string> = {};
     def.inputs.forEach(inputDef => {
-      const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
-      if (!edge) return;
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const resolved = resolveSourceExpr(edge, sourceNode, nodeVarMap, multiOutputVarMap);
-      if (!resolved) return;
-
-      // Auto-cast to target type
-      inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
+      const resolved = resolveInputExpr(node, inputDef, safeEdges, nodes, nodeVarMap, multiOutputVarMap);
+      if (resolved) inputs[inputDef.id] = resolved;
     });
 
     if (def.id === 'code_block') {
@@ -540,12 +584,8 @@ export const compileGraphToGLSLWithReport = (
     const inputs: Record<string, string> = {};
 
     def.inputs.forEach(inputDef => {
-      const edge = safeEdges.find(e => e.target === node.id && e.targetHandle === inputDef.id);
-      if (!edge) return;
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const resolved = resolveSourceExpr(edge, sourceNode, nodeVarMap, multiOutputVarMap);
-      if (!resolved) return;
-      inputs[inputDef.id] = autoCast(resolved.expr, resolved.type, inputDef.type);
+      const resolved = resolveInputExpr(node, inputDef, safeEdges, nodes, nodeVarMap, multiOutputVarMap);
+      if (resolved) inputs[inputDef.id] = resolved;
     });
 
     if (def.id === 'code_block') {
@@ -688,7 +728,20 @@ export const compileGraphToGLSLWithReport = (
     const lastEdge = safeEdges.find(e => e.target === targetId);
     if (lastEdge) {
       const srcNode = nodes.find(n => n.id === lastEdge.source);
-      const resolved = resolveSourceExpr(lastEdge, srcNode, nodeVarMap, multiOutputVarMap);
+      const targetNode = nodes.find(node => node.id === targetId);
+      const inlineTarget = parseInlinePortHandle(lastEdge.targetHandle);
+      const inlineInput = inlineTarget?.direction === 'input'
+        ? targetNode?.data.definition.inputs.find(input => input.id === inlineTarget.portId)
+        : undefined;
+      const inlineType = inlineInput && (isVectorType(inlineInput.type)
+        ? inlineInput.type
+        : inlineInput.type.split('|').find(isVectorType));
+      const inlineExpr = targetNode && inlineInput
+        ? resolveInputExpr(targetNode, inlineInput, safeEdges, nodes, nodeVarMap, multiOutputVarMap)
+        : undefined;
+      const resolved = inlineExpr && inlineType
+        ? { expr: inlineExpr, type: inlineType }
+        : resolveSourceExpr(lastEdge, srcNode, nodeVarMap, multiOutputVarMap);
 
       if (resolved) {
         // Unresolved custom-node port (e.g. its Custom Output was never wired
