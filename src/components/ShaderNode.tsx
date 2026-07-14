@@ -37,6 +37,7 @@ import {
   vectorComponents,
   type InlinePortDirection,
 } from '../core/inlinePortAdapters';
+import InlinePortContextMenu from './InlinePortContextMenu';
 
 export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const { text } = useI18n();
@@ -44,6 +45,14 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [inlinePortMenu, setInlinePortMenu] = useState<{
+    x: number;
+    y: number;
+    direction: InlinePortDirection;
+    portId: string;
+    portLabel: string;
+    portType: 'vec2' | 'vec3' | 'vec4';
+  } | null>(null);
   const [floatDraft, setFloatDraft] = useState(() => String(data.value ?? def.controls?.defaultValue ?? 0));
   const [floatEditing, setFloatEditing] = useState(false);
   const skipFloatCommitRef = useRef(false);
@@ -161,6 +170,13 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const expandedInlineOutputs = new Set<string>(data.inlinePortExpansion?.outputs || []);
   const isInlineExpanded = (direction: InlinePortDirection, portId: string) =>
     (direction === 'input' ? expandedInlineInputs : expandedInlineOutputs).has(portId);
+  const hasInlineComponentEdges = (direction: InlinePortDirection, portId: string) =>
+    getEdges().some(edge => {
+      const handle = direction === 'input' ? edge.targetHandle : edge.sourceHandle;
+      const parsed = parseInlinePortHandle(handle);
+      return parsed?.direction === direction && parsed.portId === portId
+        && (direction === 'input' ? edge.target === id : edge.source === id);
+    });
   const hasParentPortEdge = (direction: InlinePortDirection, portId: string) =>
     getEdges().some(edge => direction === 'input'
       ? edge.target === id && edge.targetHandle === portId
@@ -168,6 +184,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const showParentPort = (direction: InlinePortDirection, portId: string) =>
     !isInlineExpanded(direction, portId) || hasParentPortEdge(direction, portId);
   const toggleInlinePort = (direction: InlinePortDirection, portId: string) => {
+    if (isInlineExpanded(direction, portId) && hasInlineComponentEdges(direction, portId)) return;
     setNodes(nodes => nodes.map(node => {
       if (node.id !== id) return node;
       const current = node.data.inlinePortExpansion || {};
@@ -188,11 +205,13 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
   const inlineToggle = (direction: InlinePortDirection, port: { id: string; label: string; type: string }) => {
     if (!isVectorType(port.type)) return null;
     const expanded = isInlineExpanded(direction, port.id);
+    const collapseBlocked = expanded && hasInlineComponentEdges(direction, port.id);
     return (
       <button
         type="button"
         className="nodrag"
         aria-label={`${expanded ? 'Collapse' : 'Expand'} ${port.label} ${port.type} components`}
+        disabled={collapseBlocked}
         title={text(
           `${expanded ? 'Collapse' : 'Expand'} ${port.type} components inside this node`,
           `${expanded ? 'Zwiń' : 'Rozwiń'} składowe ${port.type} wewnątrz noda`,
@@ -200,7 +219,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         onClick={(event) => { event.stopPropagation(); toggleInlinePort(direction, port.id); }}
         onMouseDown={(event) => event.stopPropagation()}
         style={{
-          border: 0, background: 'transparent', color: TYPE_COLORS[port.type], cursor: 'pointer',
+          border: 0, background: 'transparent', color: collapseBlocked ? '#666' : TYPE_COLORS[port.type], cursor: collapseBlocked ? 'not-allowed' : 'pointer',
           fontSize: '9px', lineHeight: 1, padding: '1px 2px', fontWeight: 'bold',
         }}
       >
@@ -1383,28 +1402,30 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
 
   if (def.compact) {
     const compactInputs = def.inputs.flatMap(input => [
-      ...(showParentPort('input', input.id) ? [{ ...input, inline: false }] : []),
+      ...(showParentPort('input', input.id) ? [{ ...input, inline: false, parentId: input.id, parentLabel: input.label, parentType: input.type }] : []),
       ...(isInlineExpanded('input', input.id)
         ? vectorComponents(input.type).map(component => ({
             id: inlinePortHandleId('input', input.id, component),
-            label: component.toUpperCase(), type: 'float', inline: true,
+            label: `${input.label}.${component.toUpperCase()}`, type: 'float', inline: true,
+            parentId: input.id, parentLabel: input.label, parentType: input.type,
           }))
         : []),
     ]);
     const compactOutputs = def.outputs.flatMap(output => [
-      ...(showParentPort('output', output.id) ? [{ ...output, inline: false }] : []),
+      ...(showParentPort('output', output.id) ? [{ ...output, inline: false, parentId: output.id, parentLabel: output.label, parentType: output.type }] : []),
       ...(isInlineExpanded('output', output.id)
         ? vectorComponents(output.type).map(component => ({
             id: inlinePortHandleId('output', output.id, component),
-            label: component.toUpperCase(), type: 'float', inline: true,
+            label: `${output.label}.${component.toUpperCase()}`, type: 'float', inline: true,
+            parentId: output.id, parentLabel: output.label, parentType: output.type,
           }))
         : []),
     ]);
-    const compactHeight = Math.max(32, Math.max(compactInputs.length, compactOutputs.length) * 16 + 8);
+    const compactHeight = Math.max(38, Math.max(compactInputs.length, compactOutputs.length) * 19 + 10);
     return (
       <div
-        title={def.description}
-        style={{ ...baseStyle, borderRadius: '16px', padding: '0 12px', minWidth: '40px', height: `${compactHeight}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+        title={`${def.description || currentLabel}\n${text('Right-click a vector port to split or collapse its components.', 'Kliknij prawym przyciskiem port wektorowy, aby rozdzielić lub zwinąć składowe.')}`}
+        style={{ ...baseStyle, borderRadius: '16px', padding: '0 44px', minWidth: '72px', height: `${compactHeight}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
       >
         {/* Left side - inputs with flexbox */}
         <div style={{ 
@@ -1421,41 +1442,34 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                  const isAuto = input.type === 'auto';
                  const isMultiType = input.type.includes('|');
                  
-                 return <Handle
-                   key={`input-${input.id}-${i}`}
-                   type="target"
-                   position={Position.Left}
-                   id={input.id}
-                   title={input.inline ? `${input.label} · float` : input.label}
-                   className={`handle-inline${isAuto ? ' port-auto' : ''}`}
-                   style={{
-                     background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
-                     width: '10px',
-                     height: '10px',
-                     border: '2px solid #1a1a1a',
-                     position: 'relative',
-                     left: 0,
-                     top: 'auto',
-                     transform: 'none',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     overflow: 'hidden'
-                   }}
-                 >
-                   {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
-                 </Handle>
+                 return <div key={`input-${input.id}-${i}`} data-port-label={input.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: '52px', height: '16px' }}>
+                   <Handle
+                     type="target"
+                     position={Position.Left}
+                     id={input.id}
+                     title={`${input.label} · ${input.type}`}
+                     onContextMenu={(event) => {
+                       if (!isVectorType(input.parentType)) return;
+                       event.preventDefault(); event.stopPropagation();
+                       setInlinePortMenu({ x: event.clientX, y: event.clientY, direction: 'input', portId: input.parentId, portLabel: input.parentLabel, portType: input.parentType });
+                     }}
+                     className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                     style={{
+                       background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[input.type],
+                       width: '10px', height: '10px', border: '2px solid #1a1a1a', position: 'relative',
+                       left: 0, top: 'auto', transform: 'none', display: 'flex', alignItems: 'center',
+                       justifyContent: 'center', overflow: 'hidden', flex: '0 0 auto',
+                     }}
+                   >
+                     {isMultiType && <MultiTypeIndicator types={input.type} size={10} />}
+                   </Handle>
+                   <span style={{ fontSize: '8px', color: input.inline ? TYPE_COLORS.float : '#aaa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{input.label}</span>
+                 </div>
             })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {def.inputs.filter(input => isVectorType(input.type)).map(input => (
-            <span key={`toggle-input-${input.id}`}>{inlineToggle('input', input)}</span>
-          ))}
           {isCustomNode && <span style={{ fontSize: '14px' }}>🔲</span>}
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap' }}>{currentLabel}</span>
-          {def.outputs.filter(output => isVectorType(output.type)).map(output => (
-            <span key={`toggle-output-${output.id}`}>{inlineToggle('output', output)}</span>
-          ))}
         </div>
         {/* Right side - outputs with flexbox */}
         <div style={{ 
@@ -1472,32 +1486,40 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
                 const isAuto = output.type === 'auto';
                 const isMultiType = output.type.includes('|');
                 
-                return <Handle
-                  key={`output-${output.id}-${i}`}
-                  type="source"
-                  position={Position.Right}
-                  id={output.id}
-                  title={output.inline ? `${output.label} · float` : output.label}
-                  className={`handle-inline${isAuto ? ' port-auto' : ''}`}
-                  style={{
-                    background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
-                    width: '10px',
-                    height: '10px',
-                    border: '2px solid #1a1a1a',
-                    position: 'relative',
-                    right: 0,
-                    top: 'auto',
-                    transform: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
-                </Handle>
+                return <div key={`output-${output.id}-${i}`} data-port-label={output.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', minWidth: '60px', height: '16px' }}>
+                  <span style={{ fontSize: '8px', color: output.inline ? TYPE_COLORS.float : '#aaa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{output.label}</span>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={output.id}
+                    title={`${output.label} · ${output.type}`}
+                    onContextMenu={(event) => {
+                      if (!isVectorType(output.parentType)) return;
+                      event.preventDefault(); event.stopPropagation();
+                      setInlinePortMenu({ x: event.clientX, y: event.clientY, direction: 'output', portId: output.parentId, portLabel: output.parentLabel, portType: output.parentType });
+                    }}
+                    className={`handle-inline${isAuto ? ' port-auto' : ''}`}
+                    style={{
+                      background: (isAuto || isMultiType) ? 'transparent' : TYPE_COLORS[output.type],
+                      width: '10px', height: '10px', border: '2px solid #1a1a1a', position: 'relative',
+                      right: 0, top: 'auto', transform: 'none', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', overflow: 'hidden', flex: '0 0 auto',
+                    }}
+                  >
+                    {isMultiType && <MultiTypeIndicator types={output.type} size={10} />}
+                  </Handle>
+                </div>
             })}
         </div>
+        {inlinePortMenu && (
+          <InlinePortContextMenu
+            {...inlinePortMenu}
+            expanded={isInlineExpanded(inlinePortMenu.direction, inlinePortMenu.portId)}
+            canCollapse={!hasInlineComponentEdges(inlinePortMenu.direction, inlinePortMenu.portId)}
+            onToggle={() => toggleInlinePort(inlinePortMenu.direction, inlinePortMenu.portId)}
+            onClose={() => setInlinePortMenu(null)}
+          />
+        )}
       </div>
     );
   }

@@ -18,16 +18,34 @@ function renderDefinition(definition: typeof NODE_REGISTRY.uv) {
 
 describe('inline vector pin adapters', () => {
   it('expands a compact vec2 output into local X/Y float handles', async () => {
-    const { container } = renderDefinition(NODE_REGISTRY.uv);
-    const expand = container.querySelector('button[aria-label="Expand UV vec2 components"]');
-    expect(expand).toBeTruthy();
-    fireEvent.click(expand!);
+    const { container, getByRole } = renderDefinition(NODE_REGISTRY.uv);
+    const output = container.querySelector('[data-handleid="out"]');
+    expect(output).toBeTruthy();
+    fireEvent.contextMenu(output!);
+    fireEvent.click(getByRole('menuitem', { name: '⑂ Split into X / Y' }));
 
     await waitFor(() => expect(container.querySelectorAll('.react-flow__handle.source')).toHaveLength(2));
     expect(container.querySelector('[data-handleid="out"]')).toBeFalsy();
     expect(container.querySelector(`[data-handleid="${inlinePortHandleId('output', 'out', 'x')}"]`)).toBeTruthy();
     expect(container.querySelector(`[data-handleid="${inlinePortHandleId('output', 'out', 'y')}"]`)).toBeTruthy();
-    expect(container.querySelector('button[aria-label="Collapse UV vec2 components"]')).toBeTruthy();
+  });
+
+  it('labels compact ports and keeps them readable when only one Add Vec2 input is split', async () => {
+    const { container, getByRole } = renderDefinition(NODE_REGISTRY.vec_add2 as typeof NODE_REGISTRY.uv);
+    expect([...container.querySelectorAll('[data-port-label]')].map(element => element.getAttribute('data-port-label')))
+      .toEqual(['A', 'B', 'Sum']);
+
+    fireEvent.contextMenu(container.querySelector('[data-handleid="a"]')!);
+    fireEvent.click(getByRole('menuitem', { name: '⑂ Split into X / Y' }));
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-handleid="a"]')).toBeFalsy();
+      expect(container.querySelector(`[data-handleid="${inlinePortHandleId('input', 'a', 'x')}"]`)).toBeTruthy();
+      expect(container.querySelector(`[data-handleid="${inlinePortHandleId('input', 'a', 'y')}"]`)).toBeTruthy();
+    });
+    expect([...container.querySelectorAll('[data-port-label]')].map(element => element.getAttribute('data-port-label')))
+      .toEqual(['A.X', 'A.Y', 'B', 'Sum']);
+    expect(container.querySelectorAll('.react-flow__handle.target')).toHaveLength(3);
   });
 
   it('expands a regular vec2 input into local X/Y float handles', async () => {
