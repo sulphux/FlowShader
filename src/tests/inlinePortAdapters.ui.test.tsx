@@ -2,7 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import ReactFlow, { ReactFlowProvider } from 'reactflow';
 import { ShaderNode } from '../components/ShaderNode';
-import { inlinePortHandleId } from '../core/inlinePortAdapters';
+import { inlinePortHandleId, vectorComponents } from '../core/inlinePortAdapters';
 import { NODE_REGISTRY } from '../nodes';
 
 function renderDefinition(definition: typeof NODE_REGISTRY.uv) {
@@ -93,4 +93,40 @@ describe('inline vector pin adapters', () => {
       expect(container.querySelector(`[data-handleid="${inlinePortHandleId('output', 'normal', 'z')}"]`)).toBeTruthy();
     });
   });
+
+  it.each(['vec2', 'vec3', 'vec4'] as const)(
+    'opens the inline split menu on Code Block %s input and output handles',
+    async (type) => {
+      const definition = {
+        ...NODE_REGISTRY.code_block,
+        inputs: [{ id: 'value', label: 'value', type }],
+        outputs: [{ id: 'result', label: 'result', type }],
+      } as typeof NODE_REGISTRY.uv;
+      const { container, getByRole } = renderDefinition(definition);
+
+      fireEvent.contextMenu(container.querySelector('[data-handleid="value"]')!);
+      fireEvent.click(getByRole('menuitem', { name: new RegExp(`Split into`) }));
+      await waitFor(() => {
+        expect(container.querySelector('[data-handleid="value"]')).toBeFalsy();
+        vectorComponents(type).forEach(component => expect(container.querySelector(
+          `[data-handleid="${inlinePortHandleId('input', 'value', component)}"]`,
+        )).toBeTruthy());
+      });
+
+      fireEvent.contextMenu(container.querySelector('[data-handleid="result"]')!);
+      fireEvent.click(getByRole('menuitem', { name: new RegExp(`Split into`) }));
+      await waitFor(() => {
+        expect(container.querySelector('[data-handleid="result"]')).toBeFalsy();
+        vectorComponents(type).forEach(component => expect(container.querySelector(
+          `[data-handleid="${inlinePortHandleId('output', 'result', component)}"]`,
+        )).toBeTruthy());
+      });
+
+      fireEvent.contextMenu(container.querySelector(
+        `[data-handleid="${inlinePortHandleId('output', 'result', 'x')}"]`,
+      )!);
+      fireEvent.click(getByRole('menuitem', { name: /Collapse components/ }));
+      await waitFor(() => expect(container.querySelector('[data-handleid="result"]')).toBeTruthy());
+    },
+  );
 });

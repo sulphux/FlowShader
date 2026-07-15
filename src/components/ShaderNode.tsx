@@ -228,6 +228,24 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
     );
   };
 
+  const openInlinePortMenu = (
+    event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number },
+    direction: InlinePortDirection,
+    port: { id: string; label: string; type: string },
+  ) => {
+    if (!isVectorType(port.type)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setInlinePortMenu({
+      x: event.clientX,
+      y: event.clientY,
+      direction,
+      portId: port.id,
+      portLabel: port.label,
+      portType: port.type,
+    });
+  };
+
   const changeComposeType = (type: 'vec2' | 'vec3' | 'vec4') => {
       const ports = computeSmartComposePorts(type);
       updateNodeData({
@@ -1059,7 +1077,7 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
         {def[direction].map((port, index) => (
           <div key={port.id} style={{ marginBottom: '5px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
-            {direction === 'inputs' && showParentPort('input', port.id) && <Handle type="target" position={Position.Left} id={port.id} title={`${port.label} · ${port.type}`} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />}
+            {direction === 'inputs' && showParentPort('input', port.id) && <Handle type="target" position={Position.Left} id={port.id} title={`${port.label} · ${port.type}`} onContextMenu={event => openInlinePortMenu(event, 'input', port)} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', left: '-15px', border: '2px solid #111' }} />}
             {direction === 'inputs' && inlineToggle('input', port)}
             <input
               className="nodrag"
@@ -1091,15 +1109,15 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
               style={{ border: 'none', background: 'transparent', color: '#888', cursor: 'pointer', padding: '1px 2px' }}
             >×</button>
             {direction === 'outputs' && inlineToggle('output', port)}
-            {direction === 'outputs' && showParentPort('output', port.id) && <Handle type="source" position={Position.Right} id={port.id} title={`${port.label} · ${port.type}`} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />}
+            {direction === 'outputs' && showParentPort('output', port.id) && <Handle type="source" position={Position.Right} id={port.id} title={`${port.label} · ${port.type}`} onContextMenu={event => openInlinePortMenu(event, 'output', port)} style={{ background: TYPE_COLORS[port.type], width: '10px', height: '10px', right: '-15px', border: '2px solid #111' }} />}
           </div>
           {isInlineExpanded(direction === 'inputs' ? 'input' : 'output', port.id) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px', alignItems: direction === 'outputs' ? 'flex-end' : 'flex-start' }}>
               {vectorComponents(port.type).map(component => (
                 <div key={component} style={{ position: 'relative', minWidth: '24px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: direction === 'outputs' ? 'flex-end' : 'flex-start' }}>
-                  {direction === 'inputs' && <Handle type="target" position={Position.Left} id={inlinePortHandleId('input', port.id, component)} title={`${port.label}.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', left: '-15px', border: '2px solid #111' }} />}
+                  {direction === 'inputs' && <Handle type="target" position={Position.Left} id={inlinePortHandleId('input', port.id, component)} title={`${port.label}.${component} · float`} onContextMenu={event => openInlinePortMenu(event, 'input', port)} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', left: '-15px', border: '2px solid #111' }} />}
                   <span style={{ fontSize: '9px', color: TYPE_COLORS.float, fontFamily: 'monospace' }}>{component.toUpperCase()}</span>
-                  {direction === 'outputs' && <Handle type="source" position={Position.Right} id={inlinePortHandleId('output', port.id, component)} title={`${port.label}.${component} · float`} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', right: '-15px', border: '2px solid #111' }} />}
+                  {direction === 'outputs' && <Handle type="source" position={Position.Right} id={inlinePortHandleId('output', port.id, component)} title={`${port.label}.${component} · float`} onContextMenu={event => openInlinePortMenu(event, 'output', port)} style={{ background: TYPE_COLORS.float, width: '8px', height: '8px', right: '-15px', border: '2px solid #111' }} />}
                 </div>
               ))}
             </div>
@@ -1162,6 +1180,15 @@ export const ShaderNode = memo(({ id, data, selected }: NodeProps) => {
           {renderPortEditor('inputs')}
           {renderPortEditor('outputs')}
         </div>
+        {inlinePortMenu && (
+          <InlinePortContextMenu
+            {...inlinePortMenu}
+            expanded={isInlineExpanded(inlinePortMenu.direction, inlinePortMenu.portId)}
+            canCollapse={!hasInlineComponentEdges(inlinePortMenu.direction, inlinePortMenu.portId)}
+            onToggle={() => toggleInlinePort(inlinePortMenu.direction, inlinePortMenu.portId)}
+            onClose={() => setInlinePortMenu(null)}
+          />
+        )}
       </div>
     );
   }
